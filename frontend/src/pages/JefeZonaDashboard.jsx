@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Plus } from "lucide-react"; // Si usas lucide-react, instala con: npm i lucide-react
 
 const fetchData = async (endpoint, setter) => {
   try {
@@ -100,13 +101,12 @@ const JefeZonaDashboard = () => {
                           </td>
                           <td className="border border-gray-300 py-2 px-4">
                             <Link
-                              to={{
-                                pathname: `/dependencia/${sec.id}`,
-                                state: { sec }
-                              }}
-                              className="inline-block bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-xs"
+                              to={`/dependencia/${sec.id}`}
+                              state={{ sec }}
+                              className="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white p-2 rounded"
+                              title="Ver Panel"
                             >
-                              Ver Panel
+                              <Plus size={18} />
                             </Link>
                           </td>
                         </tr>

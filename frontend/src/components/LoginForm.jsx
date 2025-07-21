@@ -1,54 +1,67 @@
+// src/components/LoginForm.jsx
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
-const LoginForm = () => {
-  const navigate = useNavigate();
+const LoginForm = ({ login }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
+    setLoading(true);
 
-    // Aquí pones la lógica real de login
-    console.log("Login con:", email, password);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    // Ejemplo de validación simulada:
-    if (email && password) {
-      navigate("/jefe-zona"); // O la ruta a la que rediriges
-    } else {
-      alert("Completa todos los campos");
+      if (!res.ok) {
+        const errData = await res.json();
+        setError(errData.message || "Error al iniciar sesión");
+        setLoading(false);
+        return;
+      }
+
+      const userData = await res.json();
+      login(userData); // Actualiza el contexto con usuario
+      setLoading(false);
+    } catch (err) {
+      setError("Error de conexión");
+      setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleLogin}>
-      <div className="mb-4">
-        <label className="block mb-1 text-sm">Email</label>
-        <input
-          type="email"
-          className="w-full border border-gray-300 rounded px-3 py-2"
-          placeholder="correo@dominio.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-      </div>
-
-      <div className="mb-6">
-        <label className="block mb-1 text-sm">Contraseña</label>
-        <input
-          type="password"
-          className="w-full border border-gray-300 rounded px-3 py-2"
-          placeholder="********"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-      </div>
-
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && <p className="text-red-600">{error}</p>}
+      <input
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+        className="w-full border px-3 py-2 rounded"
+      />
+      <input
+        type="password"
+        placeholder="Contraseña"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+        className="w-full border px-3 py-2 rounded"
+      />
       <button
         type="submit"
-        className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+        disabled={loading}
+        className={`w-full py-2 rounded text-white ${
+          loading ? "bg-gray-400" : "bg-blue-700 hover:bg-blue-800"
+        }`}
       >
-        Entrar
+        {loading ? "Ingresando..." : "Iniciar sesión"}
       </button>
     </form>
   );

@@ -329,6 +329,13 @@ def login():
     usuario = Usuario.query.filter_by(correo=correo).first()
     if usuario and check_password_hash(usuario.password, password):
         token = create_access_token(identity=usuario.id)
-        return jsonify({"token": token}), 200
+
+        # Devuelve token + info usuario relevante (id, nombre, correo)
+        return jsonify({
+            "token": token,
+            "id": usuario.id,
+            "nombre": usuario.nombre,
+            "correo": usuario.correo,
+        }), 200
 
     return jsonify({"error": "Usuario o contraseña incorrectos"}), 401
