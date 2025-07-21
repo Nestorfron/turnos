@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useAppContext } from "../context/AppContext";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const Navbar = () => {
   const { usuario, logout } = useAppContext();
   const [open, setOpen] = useState(false);
   const menuRef = useRef();
+  const navigate = useNavigate();  // <-- agregar hook
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -17,7 +18,9 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (!usuario) return null; // NO mostrar navbar sin usuario
+  if (!usuario) {
+    return null; // No mostrar navbar si no hay usuario logueado
+  }
 
   const inicial = usuario.nombre?.charAt(0).toUpperCase() || "?";
 
@@ -51,6 +54,7 @@ const Navbar = () => {
               onClick={() => {
                 logout();
                 setOpen(false);
+                navigate("/");  // <-- redirigir a home después de logout
               }}
               className="w-full text-left px-4 py-2 hover:bg-gray-100"
             >

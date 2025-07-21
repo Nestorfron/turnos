@@ -29,16 +29,15 @@ const LoginForm = () => {
           nombre: data.nombre,
           correo: data.correo,
           token: data.token,
-          rol_jerarquico: data.rol_jerarquico,
+          rol_jerarquico: data.rol,
         });
 
-        // Redirigir según rol_jerarquico
-        if (data.rol_jerarquico === "jefe_zona") {
+        if (data.rol === "JEFE_ZONA") {
           navigate("/jefe-zona");
-        } else if (data.rol_jerarquico === "encargado_dependencia") {
-          navigate(`/dependencia/${data.id}`); // o la ruta que corresponda
+        } else if (data.rol === "encargado_dependencia") {
+          navigate(`/dependencia/${data.id}`); 
         } else {
-          navigate("/"); // ruta por defecto
+          navigate("/"); 
         }
       } else {
         alert(data.error || "Usuario o contraseña incorrectos");
