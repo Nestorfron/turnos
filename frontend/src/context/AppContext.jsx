@@ -1,4 +1,3 @@
-// src/context/AppContext.jsx
 import React, { createContext, useState, useEffect, useContext } from "react";
 
 const AppContext = createContext();
@@ -7,7 +6,6 @@ export const AppProvider = ({ children }) => {
   const [usuario, setUsuario] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Simula cargar usuario de localStorage o sesión
   useEffect(() => {
     const storedUser = localStorage.getItem("usuario");
     if (storedUser) {

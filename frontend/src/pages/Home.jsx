@@ -1,12 +1,9 @@
-// src/pages/Home.jsx
 import React, { useState } from "react";
-import { useAppContext } from "../context/AppContext";
-import LoginForm from "../components/LoginForm.jsx";
-import RegisterForm from "../components/RegisterFrom.jsx";
+import LoginForm from "../components/LoginForm";
+import RegisterForm from "../components/RegisterFrom";
 
 const Home = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const { login } = useAppContext();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
@@ -15,11 +12,7 @@ const Home = () => {
           {isLogin ? "Iniciar Sesión" : "Registrarse"}
         </h1>
 
-        {isLogin ? (
-          <LoginForm login={login} />
-        ) : (
-          <RegisterForm />
-        )}
+        {isLogin ? <LoginForm /> : <RegisterForm />}
 
         <p className="text-sm text-center mt-4">
           {isLogin ? (

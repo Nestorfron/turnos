@@ -336,6 +336,7 @@ def login():
             "id": usuario.id,
             "nombre": usuario.nombre,
             "correo": usuario.correo,
+            "rol": usuario.rol_jerarquico,
         }), 200
 
     return jsonify({"error": "Usuario o contraseña incorrectos"}), 401
