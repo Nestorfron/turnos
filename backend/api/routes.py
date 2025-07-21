@@ -254,6 +254,41 @@ def listar_usuarios():
     data = Usuario.query.all()
     return jsonify([x.serialize() for x in data]), 200
 
+@api.route('/usuarios/<int:id>/', methods=['PUT'])
+def actualizar_usuario(id):
+    body = request.json
+    grado = body.get("grado")
+    nombre = body.get("nombre")
+    correo = body.get("correo")
+    password = body.get("password")
+    rol_jerarquico = body.get("rol_jerarquico")
+    dependencia_id = body.get("dependencia_id")
+    zona_id = body.get("zona_id")
+
+    usuario = Usuario.query.get(id)
+    if not usuario:
+        return jsonify({"error": "Usuario no encontrado"}), 404
+
+    if usuario.rol_jerarquico == 'JEFE_ZONA':
+        if not zona_id:
+            return jsonify({"error": "Un jefe de zona debe tener zona_id"}), 400
+        dependencia_id = None  # Forzamos a None
+    else:
+        if not dependencia_id:
+            return jsonify({"error": "Este usuario debe tener dependencia_id"}), 400
+        zona_id = None  # Forzamos a None
+
+    usuario.grado = grado
+    usuario.nombre = nombre
+    usuario.correo = correo
+    usuario.password = password
+    usuario.rol_jerarquico = rol_jerarquico
+    usuario.dependencia_id = dependencia_id
+    usuario.zona_id = zona_id
+    db.session.commit()
+    return jsonify(usuario.serialize()), 200
+
+
 # -------------------------------------------------------------------
 # LOGIN
 # -------------------------------------------------------------------
