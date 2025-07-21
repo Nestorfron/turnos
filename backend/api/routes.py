@@ -257,17 +257,6 @@ def crear_usuario():
     if not grado or not nombre or not correo or not password or not rol_jerarquico or not dependencia_id:
         return jsonify({"error": "Todos los campos son requeridos: grado, nombre, correo, password, rol_jerarquico, dependencia_id"}), 400
 
-    # Validar permisos usando JWT
-    user_data = get_jwt_identity()
-    current_user_role = user_data["role"]
-
-    if current_user_role != "Master" and rol_jerarquico == "Master":
-        return jsonify({"error": "Solo un Master puede crear Masters"}), 403
-    if current_user_role != "Master" and rol_jerarquico == "Admin":
-        return jsonify({"error": "Solo un Master puede crear Administradores"}), 403
-    if current_user_role not in ["Master", "Admin"]:
-        return jsonify({"error": "No tienes permisos para realizar esta acción"}), 403
-
     # Validar unicidad del correo
     if Usuario.query.filter_by(correo=correo).first():
         return jsonify({"error": "El correo ya está en uso"}), 400
