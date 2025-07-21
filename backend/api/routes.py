@@ -1,7 +1,10 @@
 from flask import Blueprint, request, jsonify  # type: ignore
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity  # type: ignore
 from werkzeug.security import check_password_hash, generate_password_hash  # type: ignore
-from api.models import db, Jefatura, Zona, Dependencia, Usuario, RolOperativo, UsuarioRolOperativo, Turno, TurnoAsignado, SolicitudCambio, Guardia, Licencia
+from api.models import (
+    db, Jefatura, Zona, Dependencia, Usuario, RolOperativo, UsuarioRolOperativo,
+    Turno, TurnoAsignado, SolicitudCambio, Guardia, Licencia
+)
 
 api = Blueprint("api", __name__)
 
@@ -28,6 +31,8 @@ def listar_jefaturas():
 @api.route('/jefaturas/<int:id>/', methods=['DELETE'])
 def eliminar_jefatura(id):
     jefatura = Jefatura.query.get(id)
+    if not jefatura:
+        return jsonify({"error": "Jefatura no encontrada"}), 404
     db.session.delete(jefatura)
     db.session.commit()
     return jsonify({'status': 'ok'}), 200
@@ -60,6 +65,8 @@ def listar_zonas_por_jefatura(id):
 @api.route('/zonas/<int:id>/', methods=['DELETE'])
 def eliminar_zona(id):
     zona = Zona.query.get(id)
+    if not zona:
+        return jsonify({"error": "Zona no encontrada"}), 404
     db.session.delete(zona)
     db.session.commit()
     return jsonify({'status': 'ok'}), 200
@@ -158,11 +165,15 @@ def listar_dependencias_por_zona(id):
 @api.route('/dependencias/<int:id>/', methods=['GET'])
 def obtener_dependencia(id):
     dependencia = Dependencia.query.get(id)
+    if not dependencia:
+        return jsonify({"error": "Dependencia no encontrada"}), 404
     return jsonify(dependencia.serialize()), 200
 
 @api.route('/dependencias/<int:id>/', methods=['DELETE'])
 def eliminar_dependencia(id):
     dependencia = Dependencia.query.get(id)
+    if not dependencia:
+        return jsonify({"error": "Dependencia no encontrada"}), 404
     db.session.delete(dependencia)
     db.session.commit()
     return jsonify({'status': 'ok'}), 200
@@ -197,7 +208,13 @@ def crear_turno():
     hora_fin = body.get("hora_fin")
     descripcion = body.get("descripcion")
     dependencia_id = body.get("dependencia_id")
-    nuevo = Turno(nombre=nombre, hora_inicio=hora_inicio, hora_fin=hora_fin, descripcion=descripcion, dependencia_id=dependencia_id)
+    nuevo = Turno(
+        nombre=nombre,
+        hora_inicio=hora_inicio,
+        hora_fin=hora_fin,
+        descripcion=descripcion,
+        dependencia_id=dependencia_id
+    )
     db.session.add(nuevo)
     db.session.commit()
     return jsonify(nuevo.serialize()), 201
@@ -211,12 +228,6 @@ def listar_turnos():
         turnos = Turno.query.all()
     return jsonify([t.serialize() for t in turnos]), 200
 
-
-@api.route('/turnos', methods=['GET'])
-def listar_turnos():
-    data = Turno.query.all()
-    return jsonify([x.serialize() for x in data]), 200
-
 # -------------------------------------------------------------------
 # GUARDIAS
 # -------------------------------------------------------------------
@@ -229,7 +240,13 @@ def crear_guardia():
     fecha_fin = body.get("fecha_fin")
     tipo = body.get("tipo")
     comentario = body.get("comentario")
-    nueva = Guardia(usuario_id=usuario_id, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, tipo=tipo, comentario=comentario)
+    nueva = Guardia(
+        usuario_id=usuario_id,
+        fecha_inicio=fecha_inicio,
+        fecha_fin=fecha_fin,
+        tipo=tipo,
+        comentario=comentario
+    )
     db.session.add(nueva)
     db.session.commit()
     return jsonify(nueva.serialize()), 201
@@ -251,7 +268,13 @@ def crear_licencia():
     fecha_fin = body.get("fecha_fin")
     motivo = body.get("motivo")
     estado = body.get("estado")
-    nueva = Licencia(usuario_id=usuario_id, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, motivo=motivo, estado=estado)
+    nueva = Licencia(
+        usuario_id=usuario_id,
+        fecha_inicio=fecha_inicio,
+        fecha_fin=fecha_fin,
+        motivo=motivo,
+        estado=estado
+    )
     db.session.add(nueva)
     db.session.commit()
     return jsonify(nueva.serialize()), 201
@@ -272,7 +295,12 @@ def crear_solicitud():
     turno_original_id = body.get("turno_original_id")
     turno_solicitado_id = body.get("turno_solicitado_id")
     estado = body.get("estado")
-    nueva = SolicitudCambio(usuario_solicitante_id=usuario_id, turno_original_id=turno_original_id, turno_solicitado_id=turno_solicitado_id, estado=estado)
+    nueva = SolicitudCambio(
+        usuario_solicitante_id=usuario_id,
+        turno_original_id=turno_original_id,
+        turno_solicitado_id=turno_solicitado_id,
+        estado=estado
+    )
     db.session.add(nueva)
     db.session.commit()
     return jsonify(nueva.serialize()), 201
@@ -292,7 +320,11 @@ def crear_turno_asignado():
     usuario_id = body.get("usuario_id")
     turno_id = body.get("turno_id")
     estado = body.get("estado")
-    nuevo = TurnoAsignado(usuario_id=usuario_id, turno_id=turno_id, estado=estado)
+    nuevo = TurnoAsignado(
+        usuario_id=usuario_id,
+        turno_id=turno_id,
+        estado=estado
+    )
     db.session.add(nuevo)
     db.session.commit()
     return jsonify(nuevo.serialize()), 201
@@ -328,7 +360,14 @@ def crear_usuario():
         return jsonify({"error": "El correo ya está en uso"}), 400
 
     password_hash = generate_password_hash(password)
-    nuevo_usuario = Usuario(grado=grado, nombre=nombre, correo=correo, password=password_hash, rol_jerarquico=rol_jerarquico, dependencia_id=dependencia_id)
+    nuevo_usuario = Usuario(
+        grado=grado,
+        nombre=nombre,
+        correo=correo,
+        password=password_hash,
+        rol_jerarquico=rol_jerarquico,
+        dependencia_id=dependencia_id
+    )
 
     db.session.add(nuevo_usuario)
     db.session.commit()
