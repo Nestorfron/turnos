@@ -6,7 +6,6 @@ const fetchData = async (endpoint, setter) => {
     const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}`);
     const data = await res.json();
     setter(data[endpoint] || data);
-    console.log(data);
   } catch (err) {
     console.error(err);
   }

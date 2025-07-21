@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify # type: ignore
-from flask_jwt_extended import jwt_required, create_access_token # type: ignore
-from werkzeug.security import check_password_hash # type: ignore
+from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity # type: ignore
+from werkzeug.security import check_password_hash, generate_password_hash # type: ignore
 from api.models import db, Jefatura, Zona, Dependencia, Usuario, RolOperativo, UsuarioRolOperativo, Turno, TurnoAsignado, SolicitudCambio, Guardia, Licencia
 
 api = Blueprint("api", __name__)
@@ -240,18 +240,59 @@ def listar_usuarios():
     return jsonify([x.serialize() for x in data]), 200
 
 #REGISTRAR USUARIOS
+
 @api.route('/usuarios', methods=['POST'])
-#@jwt_required()
+@jwt_required()
 def crear_usuario():
     body = request.json
+
+    grado = body.get("grado")
     nombre = body.get("nombre")
     correo = body.get("correo")
     password = body.get("password")
     rol_jerarquico = body.get("rol_jerarquico")
-    nuevo = Usuario(nombre=nombre, correo=correo, password=password, rol_jerarquico=rol_jerarquico)
-    db.session.add(nuevo)
-    db.session.commit()
-    return jsonify(nuevo.serialize()), 201 
+    dependencia_id = body.get("dependencia_id")
+
+    # Validar campos obligatorios
+    if not grado or not nombre or not correo or not password or not rol_jerarquico or not dependencia_id:
+        return jsonify({"error": "Todos los campos son requeridos: grado, nombre, correo, password, rol_jerarquico, dependencia_id"}), 400
+
+    # Validar permisos usando JWT
+    user_data = get_jwt_identity()
+    current_user_role = user_data["role"]
+
+    if current_user_role != "Master" and rol_jerarquico == "Master":
+        return jsonify({"error": "Solo un Master puede crear Masters"}), 403
+    if current_user_role != "Master" and rol_jerarquico == "Admin":
+        return jsonify({"error": "Solo un Master puede crear Administradores"}), 403
+    if current_user_role not in ["Master", "Admin"]:
+        return jsonify({"error": "No tienes permisos para realizar esta acción"}), 403
+
+    # Validar unicidad del correo
+    if Usuario.query.filter_by(correo=correo).first():
+        return jsonify({"error": "El correo ya está en uso"}), 400
+
+    # Hashear password
+    password_hash = generate_password_hash(password)
+
+    # Crear nuevo usuario
+    nuevo_usuario = Usuario(
+        grado=grado,
+        nombre=nombre,
+        correo=correo,
+        password=password_hash,
+        rol_jerarquico=rol_jerarquico,
+        dependencia_id=dependencia_id
+    )
+
+    try:
+        db.session.add(nuevo_usuario)
+        db.session.commit()
+        return jsonify({"new_user": nuevo_usuario.serialize()}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 #LOGIN
 @api.route('/login', methods=['POST'])
