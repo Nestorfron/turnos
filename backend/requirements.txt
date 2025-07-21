@@ -1,0 +1,12 @@
+Flask
+Flask-JWT-Extended
+Flask-SQLAlchemy
+Flask-Cors
+Flask-Migrate
+Flask-Admin
+psycopg2-binary
+Werkzeug
+python-dotenv
+gunicorn
+WTForms-SQLAlchemy
+
