@@ -19,13 +19,11 @@ class Jefatura(db.Model):
             'id': self.id,
             'nombre': self.nombre,
             'descripcion': self.descripcion,
-            'zonas': [x.serialize() for x in self.zonas]
+            'zonas': [z.serialize() for z in self.zonas]
         }
 
     def __repr__(self):
         return f'<Jefatura {self.nombre}>'
-    
-    
 
 
 class Zona(db.Model):
@@ -35,7 +33,15 @@ class Zona(db.Model):
     descripcion = db.Column(db.Text)
 
     jefatura_id = db.Column(db.Integer, db.ForeignKey('jefaturas.id'), nullable=False)
+
+    # Dependencias hijas
     dependencias = db.relationship('Dependencia', backref='zona', lazy=True)
+
+    # Dependencia propia de la zona (opcional)
+    dependencia_id = db.Column(db.Integer, db.ForeignKey('dependencias.id'))
+
+    # Relación reversa: acceso a la dependencia propia de la zona
+    dependencia_propia = db.relationship('Dependencia', foreign_keys=[dependencia_id], uselist=False)
 
     def serialize(self):
         return {
@@ -43,9 +49,10 @@ class Zona(db.Model):
             'jefatura_id': self.jefatura_id,
             'nombre': self.nombre,
             'descripcion': self.descripcion,
-            'dependencias': [x.serialize() for x in self.dependencias]
+            'dependencia_propia': self.dependencia_propia.serialize() if self.dependencia_propia else None,
+            'dependencias': [d.serialize() for d in self.dependencias]
         }
-    
+
     def __repr__(self):
         return f'<Zona {self.nombre}>'
 
@@ -56,7 +63,8 @@ class Dependencia(db.Model):
     nombre = db.Column(db.String(100), nullable=False)
     descripcion = db.Column(db.Text)
 
-    zona_id = db.Column(db.Integer, db.ForeignKey('zonas.id'), nullable=False)
+    zona_id = db.Column(db.Integer, db.ForeignKey('zonas.id'), nullable=True)
+
     usuarios = db.relationship('Usuario', backref='dependencia', lazy=True)
     turnos = db.relationship('Turno', backref='dependencia', lazy=True)
 
@@ -67,9 +75,10 @@ class Dependencia(db.Model):
             'nombre': self.nombre,
             'descripcion': self.descripcion
         }
-    
+
     def __repr__(self):
         return f'<Dependencia {self.nombre}>'
+
 
 class Usuario(db.Model):
     __tablename__ = 'usuarios'
@@ -87,8 +96,18 @@ class Usuario(db.Model):
     guardias = db.relationship('Guardia', backref='usuario', lazy=True)
     licencias = db.relationship('Licencia', backref='usuario', lazy=True)
 
-    solicitudes_cambio = db.relationship('SolicitudCambio', foreign_keys='SolicitudCambio.usuario_solicitante_id', backref='solicitante', lazy=True)
-    aprobaciones = db.relationship('SolicitudCambio', foreign_keys='SolicitudCambio.aprobado_por_id', backref='aprobador', lazy=True)
+    solicitudes_cambio = db.relationship(
+        'SolicitudCambio',
+        foreign_keys='SolicitudCambio.usuario_solicitante_id',
+        backref='solicitante',
+        lazy=True
+    )
+    aprobaciones = db.relationship(
+        'SolicitudCambio',
+        foreign_keys='SolicitudCambio.aprobado_por_id',
+        backref='aprobador',
+        lazy=True
+    )
 
     def serialize(self):
         return {
@@ -100,9 +119,10 @@ class Usuario(db.Model):
             'password': self.password,
             'rol_jerarquico': self.rol_jerarquico
         }
-    
+
     def __repr__(self):
         return f'<Usuario {self.nombre}>'
+
 
 class RolOperativo(db.Model):
     __tablename__ = 'roles_operativos'
@@ -116,9 +136,10 @@ class RolOperativo(db.Model):
             'id': self.id,
             'nombre': self.nombre
         }
-    
+
     def __repr__(self):
         return f'<RolOperativo {self.nombre}>'
+
 
 class UsuarioRolOperativo(db.Model):
     __tablename__ = 'usuarios_roles_operativos'
@@ -132,10 +153,11 @@ class UsuarioRolOperativo(db.Model):
             'usuario_id': self.usuario_id,
             'rol_operativo_id': self.rol_operativo_id
         }
-    
+
     def __repr__(self):
         return f'<UsuarioRolOperativo {self.usuario_id}>'
-    
+
+
 # -------------------------
 # TURNOS Y RELACIONADOS
 # -------------------------
@@ -162,9 +184,9 @@ class Turno(db.Model):
             'dependencia_id': self.dependencia_id
         }
 
-    
     def __repr__(self):
-        return f'<Turno {self.descripcion}>'
+        return f'<Turno {self.nombre}>'
+
 
 class TurnoAsignado(db.Model):
     __tablename__ = 'turnos_asignados'
@@ -180,9 +202,10 @@ class TurnoAsignado(db.Model):
             'usuario_id': self.usuario_id,
             'estado': self.estado
         }
-    
+
     def __repr__(self):
         return f'<TurnoAsignado {self.turno_id}>'
+
 
 class SolicitudCambio(db.Model):
     __tablename__ = 'solicitudes_cambio'
@@ -207,9 +230,9 @@ class SolicitudCambio(db.Model):
             'fecha_aprobacion': self.fecha_aprobacion,
             'comentarios': self.comentarios
         }
-    
+
     def __repr__(self):
-        return f'<SolicitudCambio {self.turno_original_id}>'
+        return f'<SolicitudCambio {self.id}>'
 
 
 # -------------------------
@@ -234,9 +257,10 @@ class Guardia(db.Model):
             'tipo': self.tipo,
             'comentario': self.comentario
         }
-    
+
     def __repr__(self):
         return f'<Guardia {self.usuario_id}>'
+
 
 class Licencia(db.Model):
     __tablename__ = 'licencias'
@@ -256,6 +280,6 @@ class Licencia(db.Model):
             'motivo': self.motivo,
             'estado': self.estado
         }
-    
+
     def __repr__(self):
         return f'<Licencia {self.usuario_id}>'
