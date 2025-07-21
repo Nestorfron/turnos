@@ -1,4 +1,4 @@
-from flask_sqlalchemy import SQLAlchemy # type: ignore
+from flask_sqlalchemy import SQLAlchemy  # type: ignore
 
 db = SQLAlchemy()
 
@@ -26,6 +26,36 @@ class Jefatura(db.Model):
         return f'<Jefatura {self.nombre}>'
 
 
+class Dependencia(db.Model):
+    __tablename__ = 'dependencias'
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100), nullable=False)
+    descripcion = db.Column(db.Text)
+
+    zona_id = db.Column(db.Integer, db.ForeignKey('zonas.id'), nullable=True)
+
+    usuarios = db.relationship('Usuario', backref='dependencia', lazy=True)
+    turnos = db.relationship('Turno', backref='dependencia', lazy=True)
+
+    zonas = db.relationship(
+        'Zona',
+        backref='dependencia_propia',
+        lazy=True,
+        foreign_keys='Zona.dependencia_id'
+    )
+
+    def serialize(self):
+        return {
+            'id': self.id,
+            'zona_id': self.zona_id,
+            'nombre': self.nombre,
+            'descripcion': self.descripcion
+        }
+
+    def __repr__(self):
+        return f'<Dependencia {self.nombre}>'
+
+
 class Zona(db.Model):
     __tablename__ = 'zonas'
     id = db.Column(db.Integer, primary_key=True)
@@ -34,14 +64,13 @@ class Zona(db.Model):
 
     jefatura_id = db.Column(db.Integer, db.ForeignKey('jefaturas.id'), nullable=False)
 
-    # Dependencias hijas
-    dependencias = db.relationship('Dependencia', backref='zona', lazy=True)
+    dependencias = db.relationship('Dependencia', backref='zona', lazy=True, foreign_keys=[Dependencia.zona_id])
 
-    # Dependencia propia de la zona (opcional)
-    dependencia_id = db.Column(db.Integer, db.ForeignKey('dependencias.id'))
-
-    # Relación reversa: acceso a la dependencia propia de la zona
-    dependencia_propia = db.relationship('Dependencia', foreign_keys=[dependencia_id], uselist=False)
+    dependencia_id = db.Column(
+        db.Integer,
+        db.ForeignKey('dependencias.id', use_alter=True, name='fk_zona_dependencia'),
+        nullable=True
+    )
 
     def serialize(self):
         return {
@@ -55,29 +84,6 @@ class Zona(db.Model):
 
     def __repr__(self):
         return f'<Zona {self.nombre}>'
-
-
-class Dependencia(db.Model):
-    __tablename__ = 'dependencias'
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(100), nullable=False)
-    descripcion = db.Column(db.Text)
-
-    zona_id = db.Column(db.Integer, db.ForeignKey('zonas.id'), nullable=True)
-
-    usuarios = db.relationship('Usuario', backref='dependencia', lazy=True)
-    turnos = db.relationship('Turno', backref='dependencia', lazy=True)
-
-    def serialize(self):
-        return {
-            'id': self.id,
-            'zona_id': self.zona_id,
-            'nombre': self.nombre,
-            'descripcion': self.descripcion
-        }
-
-    def __repr__(self):
-        return f'<Dependencia {self.nombre}>'
 
 
 class Usuario(db.Model):
@@ -204,7 +210,7 @@ class TurnoAsignado(db.Model):
         }
 
     def __repr__(self):
-        return f'<TurnoAsignado {self.turno_id}>'
+        return f'<TurnoAsignado {self.id}>'
 
 
 class SolicitudCambio(db.Model):
@@ -259,7 +265,7 @@ class Guardia(db.Model):
         }
 
     def __repr__(self):
-        return f'<Guardia {self.usuario_id}>'
+        return f'<Guardia {self.id}>'
 
 
 class Licencia(db.Model):
@@ -282,4 +288,4 @@ class Licencia(db.Model):
         }
 
     def __repr__(self):
-        return f'<Licencia {self.usuario_id}>'
+        return f'<Licencia {self.id}>'
