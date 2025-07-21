@@ -257,26 +257,29 @@ def listar_usuarios():
 @api.route('/usuarios/<int:id>/', methods=['PUT'])
 def actualizar_usuario(id):
     body = request.json
-    grado = body.get("grado")
-    nombre = body.get("nombre")
-    correo = body.get("correo")
-    password = body.get("password")
-    rol_jerarquico = body.get("rol_jerarquico")
-    dependencia_id = body.get("dependencia_id")
-    zona_id = body.get("zona_id")
 
     usuario = Usuario.query.get(id)
     if not usuario:
         return jsonify({"error": "Usuario no encontrado"}), 404
 
-    if usuario.rol_jerarquico == 'JEFE_ZONA':
+    # Usa los datos existentes como fallback
+    grado = body.get("grado", usuario.grado)
+    nombre = body.get("nombre", usuario.nombre)
+    correo = body.get("correo", usuario.correo)
+    password = body.get("password", usuario.password)
+    rol_jerarquico = body.get("rol_jerarquico", usuario.rol_jerarquico)
+    dependencia_id = body.get("dependencia_id", usuario.dependencia_id)
+    zona_id = body.get("zona_id", usuario.zona_id)
+
+    # Valida según el NUEVO rol
+    if rol_jerarquico == 'JEFE_ZONA':
         if not zona_id:
             return jsonify({"error": "Un jefe de zona debe tener zona_id"}), 400
-        dependencia_id = None  # Forzamos a None
+        dependencia_id = None
     else:
         if not dependencia_id:
             return jsonify({"error": "Este usuario debe tener dependencia_id"}), 400
-        zona_id = None  # Forzamos a None
+        zona_id = None
 
     usuario.grado = grado
     usuario.nombre = nombre
@@ -285,6 +288,7 @@ def actualizar_usuario(id):
     usuario.rol_jerarquico = rol_jerarquico
     usuario.dependencia_id = dependencia_id
     usuario.zona_id = zona_id
+
     db.session.commit()
     return jsonify(usuario.serialize()), 200
 
