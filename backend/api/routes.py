@@ -96,6 +96,12 @@ def listar_dependencias_por_zona(id):
     data = Dependencia.query.filter_by(zona_id=id).all()
     return jsonify([x.serialize() for x in data]), 200
 
+@api.route('/dependencias/<int:id>/', methods=['GET'])
+#@jwt_required()
+def obtener_dependencia(id):
+    dependencia = Dependencia.query.get(id)
+    return jsonify(dependencia.serialize()), 200
+
 @api.route('/dependencias/<int:id>/', methods=['DELETE'])
 #@jwt_required()
 def eliminar_dependencia(id):

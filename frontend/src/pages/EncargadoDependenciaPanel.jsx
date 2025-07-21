@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from "react";
+import { useLocation, useParams } from "react-router-dom";
 
 const fetchData = async (url, setter) => {
   try {
     const res = await fetch(url);
     const data = await res.json();
     setter(data);
+    console.log(data);
   } catch (err) {
     console.error(err);
   }
 };
 
 const Table = ({ title, columns, data }) => (
-
   <section className="mb-8">
     <h2 className="text-xl font-semibold text-blue-900 border-b border-blue-900 pb-1 mb-4">
       {title}
@@ -60,48 +61,60 @@ const Table = ({ title, columns, data }) => (
   </section>
 );
 
-const EncargadoDependenciaPanel = ({ dependenciaId }) => {
-  const [dependencia, setDependencia] = useState(null);
+const EncargadoDependenciaPanel = () => {
+  const location = useLocation();
+  const { id } = useParams();
+
+  const [dependencia, setDependencia] = useState(location.state?.sec || null);
   const [turnos, setTurnos] = useState([]);
   const [guardias, setGuardias] = useState([]);
 
+  // Si no vino por state, lo pido al backend
   useEffect(() => {
-    if (!dependenciaId) return;
+    if (!dependencia && id) {
+      fetchData(
+        `${import.meta.env.VITE_API_URL}/dependencias/${id}`,
+        setDependencia
+      );
+    }
+  }, [dependencia, id]);
+
+  // Fetch de turnos y guardias solo cuando tengo la dependencia
+  useEffect(() => {
+    if (!dependencia?.id) return;
 
     fetchData(
-      `${import.meta.env.VITE_API_URL}/dependencias/${dependenciaId}`,
-      setDependencia
-    );
-
-    fetchData(
-      `${import.meta.env.VITE_API_URL}/turnos?dependencia_id=${dependenciaId}`,
+      `${import.meta.env.VITE_API_URL}/turnos?dependencia_id=${dependencia.id}`,
       setTurnos
     );
 
     fetchData(
-      `${import.meta.env.VITE_API_URL}/guardias?dependencia_id=${dependenciaId}`,
+      `${import.meta.env.VITE_API_URL}/guardias?dependencia_id=${dependencia.id}`,
       setGuardias
     );
-  }, [dependenciaId]);
+  }, [dependencia]);
 
-  if (!dependenciaId) {
-    return <p className="text-red-600">No se indicó la dependencia.</p>;
+  if (!dependencia) {
+    return (
+      <p className="text-red-600">
+        Cargando dependencia...
+      </p>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800">
       <header className="mb-8">
-        <h1 className="text-3xl font-semibold mb-1">Panel Encargado de Dependencia</h1>
-        {dependencia ? (
-          <div className="bg-white rounded-md shadow p-6 mb-10">
-            <h2 className="text-2xl font-bold text-blue-900 mb-2">{dependencia.nombre}</h2>
-            <p><strong>Jefe:</strong> {dependencia.jefe_nombre || "Sin jefe"}</p>
-            <p><strong>Cantidad de funcionarios:</strong> {dependencia.funcionarios_count || 0}</p>
-            <p><strong>Descripción:</strong> {dependencia.descripcion || "-"}</p>
-          </div>
-        ) : (
-          <p>Cargando datos de la dependencia...</p>
-        )}
+        <h1 className="text-3xl font-semibold mb-1">
+          Panel Encargado de Dependencia
+        </h1>
+
+        <div className="bg-white rounded-md shadow p-6 mb-10">
+          <h2 className="text-2xl font-bold text-blue-900 mb-2">{dependencia.nombre}</h2>
+          <p><strong>Jefe:</strong> {dependencia.jefe_nombre || "Sin jefe"}</p>
+          <p><strong>Cantidad de funcionarios:</strong> {dependencia.funcionarios_count || 0}</p>
+          <p><strong>Descripción:</strong> {dependencia.descripcion || "-"}</p>
+        </div>
       </header>
 
       <main className="space-y-10">

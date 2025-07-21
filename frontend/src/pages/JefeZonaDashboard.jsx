@@ -1,4 +1,3 @@
-// src/pages/JefeZonaDashboard.jsx
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -7,6 +6,7 @@ const fetchData = async (endpoint, setter) => {
     const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}`);
     const data = await res.json();
     setter(data[endpoint] || data);
+    console.log(data);
   } catch (err) {
     console.error(err);
   }
@@ -101,7 +101,10 @@ const JefeZonaDashboard = () => {
                           </td>
                           <td className="border border-gray-300 py-2 px-4">
                             <Link
-                              to={`/dependencia/${sec.id}`}
+                              to={{
+                                pathname: `/dependencia/${sec.id}`,
+                                state: { sec }
+                              }}
                               className="inline-block bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-xs"
                             >
                               Ver Panel
