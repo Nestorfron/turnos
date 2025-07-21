@@ -1,6 +1,6 @@
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import create_access_token
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Blueprint, request, jsonify # type: ignore
+from flask_jwt_extended import create_access_token # type: ignore
+from werkzeug.security import generate_password_hash, check_password_hash # type: ignore
 from api.models import db, Jefatura, Zona, Dependencia, Usuario, RolOperativo, Turno, TurnoAsignado, Guardia, Licencia, SolicitudCambio
 
 api = Blueprint("api", __name__)
@@ -111,6 +111,21 @@ def crear_turno():
     db.session.add(nuevo)
     db.session.commit()
     return jsonify(nuevo.serialize()), 201
+
+@api.route('/turnos/<int:id>', methods=['PUT'])
+def actualizar_turno(id):
+    body = request.json
+    turno = Turno.query.get(id)
+    if not turno:
+        return jsonify({"error": "Turno no encontrado"}), 404
+    turno.nombre = body.get("nombre")
+    turno.hora_inicio = body.get("hora_inicio")
+    turno.hora_fin = body.get("hora_fin")
+    turno.descripcion = body.get("descripcion")
+    turno.dependencia_id = body.get("dependencia_id")
+    db.session.commit()
+    return jsonify(turno.serialize()), 200
+
 
 @api.route('/turnos', methods=['GET'])
 def listar_turnos():
