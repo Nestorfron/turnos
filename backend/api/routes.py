@@ -136,6 +136,15 @@ def listar_turnos():
         turnos = Turno.query.all()
     return jsonify([t.serialize() for t in turnos]), 200
 
+@api.route('/turnos/<int:turno_id>', methods=['DELETE'])
+def eliminar_turno(turno_id):
+    turno = Turno.query.get(turno_id)
+    if not turno:
+        return jsonify({"error": "Turno no encontrado"}), 404
+    db.session.delete(turno)
+    db.session.commit()
+    return jsonify({"turno": turno.serialize()}), 200
+
 # -------------------------------------------------------------------
 # GUARDIAS
 # -------------------------------------------------------------------
