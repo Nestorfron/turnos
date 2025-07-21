@@ -242,7 +242,7 @@ def listar_usuarios():
 #REGISTRAR USUARIOS
 
 @api.route('/usuarios', methods=['POST'])
-@jwt_required()
+#@jwt_required()
 def crear_usuario():
     body = request.json
 
