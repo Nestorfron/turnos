@@ -204,6 +204,16 @@ def crear_turno():
 
 @api.route('/turnos', methods=['GET'])
 def listar_turnos():
+    dependencia_id = request.args.get('dependencia_id', type=int)
+    if dependencia_id:
+        turnos = Turno.query.filter_by(dependencia_id=dependencia_id).all()
+    else:
+        turnos = Turno.query.all()
+    return jsonify([t.serialize() for t in turnos]), 200
+
+
+@api.route('/turnos', methods=['GET'])
+def listar_turnos():
     data = Turno.query.all()
     return jsonify([x.serialize() for x in data]), 200
 
