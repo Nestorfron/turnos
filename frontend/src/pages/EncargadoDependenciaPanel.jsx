@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 
 const fetchData = async (url, setter) => {
   try {
     const res = await fetch(url);
     const data = await res.json();
     setter(data);
-    console.log(data);
   } catch (err) {
     console.error(err);
   }
@@ -64,12 +63,12 @@ const Table = ({ title, columns, data }) => (
 const EncargadoDependenciaPanel = () => {
   const location = useLocation();
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const [dependencia, setDependencia] = useState(location.state?.sec || null);
   const [turnos, setTurnos] = useState([]);
   const [guardias, setGuardias] = useState([]);
 
-  // Si no vino por state, lo pido al backend
   useEffect(() => {
     if (!dependencia && id) {
       fetchData(
@@ -79,7 +78,6 @@ const EncargadoDependenciaPanel = () => {
     }
   }, [dependencia, id]);
 
-  // Fetch de turnos y guardias solo cuando tengo la dependencia
   useEffect(() => {
     if (!dependencia?.id) return;
 
@@ -87,23 +85,30 @@ const EncargadoDependenciaPanel = () => {
       `${import.meta.env.VITE_API_URL}/turnos?dependencia_id=${dependencia.id}`,
       setTurnos
     );
-
-    fetchData(
-      `${import.meta.env.VITE_API_URL}/guardias?dependencia_id=${dependencia.id}`,
-      setGuardias
-    );
   }, [dependencia]);
 
-  if (!dependencia) {
-    return (
-      <p className="text-red-600">
-        Cargando dependencia...
-      </p>
+  useEffect(() => {
+    if (!turnos.length) {
+      setGuardias([]);
+      return;
+    }
+
+    fetchData(
+      `${import.meta.env.VITE_API_URL}/guardias`,
+      (allGuardias) => {
+        const turnoIds = new Set(turnos.map((t) => t.id));
+        const filtradas = allGuardias.filter((g) => turnoIds.has(g.turno_id));
+        setGuardias(filtradas);
+      }
     );
+  }, [turnos]);
+
+  if (!dependencia) {
+    return <p className="text-red-600">Cargando dependencia...</p>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800">
+    <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800 relative">
       <header className="mb-8">
         <h1 className="text-3xl font-semibold mb-1">
           Panel Encargado de Dependencia
@@ -120,23 +125,34 @@ const EncargadoDependenciaPanel = () => {
       <main className="space-y-10">
         <Table
           title="Turnos Actuales"
-          columns={["Nombre", "Fecha Inicio", "Fecha Fin"]}
+          columns={["Nombre", "Hora Inicio", "Hora Fin"]}
           data={turnos.map((t) => ({
             nombre: t.nombre,
-            fecha_inicio: new Date(t.fecha_inicio).toLocaleString(),
-            fecha_fin: new Date(t.fecha_fin).toLocaleString(),
+            hora_inicio: t.hora_inicio,
+            hora_fin: t.hora_fin,
           }))}
         />
 
         <Table
           title="Guardias Asignadas"
-          columns={["Funcionario", "Fecha"]}
+          columns={["Funcionario", "Turno", "Fecha Inicio", "Fecha Fin"]}
           data={guardias.map((g) => ({
             funcionario: g.usuario_id,
-            fecha: new Date(g.fecha).toLocaleDateString(),
+            turno: g.turno_id,
+            fecha_inicio: new Date(g.fecha_inicio).toLocaleString(),
+            fecha_fin: new Date(g.fecha_fin).toLocaleString(),
           }))}
         />
       </main>
+
+      {/* Botón flotante para regresar */}
+      <button
+        onClick={() => navigate("/jefe-zona")}
+        className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"
+        aria-label="Volver al panel de Jefe de Zona"
+      >
+        ← Volver
+      </button>
     </div>
   );
 };
