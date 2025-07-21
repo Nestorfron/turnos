@@ -1,0 +1,106 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Contenedor general */
+.container {
+  max-width: 400px;
+  margin: 0 auto;
+  margin-top: 15px;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  font-family: Arial, sans-serif;
+}
+
+.img-fluid {
+  max-width: 100%;
+  height: auto;
+  border-radius: 50%;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+  cursor: pointer;
+  margin: auto;
+}
+
+.title {
+  font-size: 2rem;
+}
+
+/* Grupos de entrada */
+.input-group {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Etiquetas */
+.input-group label {
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+/* Campos de entrada */
+.input-field {
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.input-field:focus {
+  border-color: #007bff;
+}
+
+/* Botones */
+.btn {
+  margin-top: 10px;
+  padding: 10px;
+  font-size: 16px;
+  color: #fff;
+  background-color: #007bff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.btn:hover {
+  background-color: #0056b3;
+}
+
+.btn:active {
+  background-color: #003f7f;
+}
+
+.btn-validate {
+  background-color: #28a745;
+}
+
+.btn-validate:hover {
+  background-color: #218838;
+}
+
+.btn-validate:active {
+  background-color: #1e7e34;
+}
+
+.btn-calculate {
+  background-color: #ffc107;
+}
+
+.btn-calculate:hover {
+  background-color: #e0a800;
+}
+
+.btn-calculate:active {
+  background-color: #c69500;
+}

@@ -1,28 +1,20 @@
-import { useEffect, useState } from 'react';
+// src/App.jsx
+import React from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import JefeZonaDashboard from "./pages/JefeZonaDashboard";
+import EncargadoDependenciaPanel from "./pages/EncargadoDependenciaPanel";
+import "./styles/App.css";
 
 function App() {
-  const [turnos, setTurnos] = useState([]);
-
-  useEffect(() => {
-    const apiUrl = import.meta.env.VITE_API_URL;
-
-    fetch(`${apiUrl}/turnos`)
-      .then(res => res.json())
-      .then(data => setTurnos(data))
-      .catch(err => console.error('Error fetching turnos:', err));
-  }, []);
-
   return (
-    <div>
-      <h1>Turnos</h1>
-      <ul>
-        {turnos.map(turno => (
-          <li key={turno.id}>
-            {turno.descripcion} - {turno.hora_inicio} a {turno.hora_fin}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <BrowserRouter>
+      <div className="min-h-screen bg-gray-50">
+        <Routes>
+          <Route path="/" element={<JefeZonaDashboard />} />
+          <Route path="/dependencia/:dependenciaId" element={<EncargadoDependenciaPanel />} />
+        </Routes>
+      </div>
+    </BrowserRouter>
   );
 }
 
