@@ -26,18 +26,51 @@ class Jefatura(db.Model):
         return f'<Jefatura {self.nombre}>'
 
 
+class Zona(db.Model):
+    __tablename__ = 'zonas'
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100), nullable=False)
+    descripcion = db.Column(db.Text)
+    jefatura_id = db.Column(db.Integer, db.ForeignKey('jefaturas.id'), nullable=False)
+
+    dependencia_id = db.Column(
+        db.Integer,
+        db.ForeignKey('dependencias.id', use_alter=True, name='fk_zona_dependencia'),
+        nullable=True
+    )
+
+    dependencias = db.relationship(
+        'Dependencia',
+        backref='zona',
+        lazy=True,
+        foreign_keys='Dependencia.zona_id'
+    )
+
+    def serialize(self):
+        return {
+            'id': self.id,
+            'nombre': self.nombre,
+            'descripcion': self.descripcion,
+            'jefatura_id': self.jefatura_id,
+            'dependencia_propia': self.dependencia_propia.serialize() if self.dependencia_propia else None,
+            'dependencias': [d.serialize() for d in self.dependencias]
+        }
+
+    def __repr__(self):
+        return f'<Zona {self.nombre}>'
+
+
 class Dependencia(db.Model):
     __tablename__ = 'dependencias'
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
     descripcion = db.Column(db.Text)
-
     zona_id = db.Column(db.Integer, db.ForeignKey('zonas.id'), nullable=True)
 
     usuarios = db.relationship('Usuario', backref='dependencia', lazy=True)
     turnos = db.relationship('Turno', backref='dependencia', lazy=True)
 
-    zonas = db.relationship(
+    zonas_asignadas = db.relationship(
         'Zona',
         backref='dependencia_propia',
         lazy=True,
@@ -47,43 +80,13 @@ class Dependencia(db.Model):
     def serialize(self):
         return {
             'id': self.id,
-            'zona_id': self.zona_id,
             'nombre': self.nombre,
-            'descripcion': self.descripcion
+            'descripcion': self.descripcion,
+            'zona_id': self.zona_id
         }
 
     def __repr__(self):
         return f'<Dependencia {self.nombre}>'
-
-
-class Zona(db.Model):
-    __tablename__ = 'zonas'
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(100), nullable=False)
-    descripcion = db.Column(db.Text)
-
-    jefatura_id = db.Column(db.Integer, db.ForeignKey('jefaturas.id'), nullable=False)
-
-    dependencias = db.relationship('Dependencia', backref='zona', lazy=True, foreign_keys=[Dependencia.zona_id])
-
-    dependencia_id = db.Column(
-        db.Integer,
-        db.ForeignKey('dependencias.id', use_alter=True, name='fk_zona_dependencia'),
-        nullable=True
-    )
-
-    def serialize(self):
-        return {
-            'id': self.id,
-            'jefatura_id': self.jefatura_id,
-            'nombre': self.nombre,
-            'descripcion': self.descripcion,
-            'dependencia_propia': self.dependencia_propia.serialize() if self.dependencia_propia else None,
-            'dependencias': [d.serialize() for d in self.dependencias]
-        }
-
-    def __repr__(self):
-        return f'<Zona {self.nombre}>'
 
 
 class Usuario(db.Model):
@@ -95,7 +98,8 @@ class Usuario(db.Model):
     password = db.Column(db.String(255), nullable=False)
     rol_jerarquico = db.Column(db.String(50), nullable=False)
 
-    dependencia_id = db.Column(db.Integer, db.ForeignKey('dependencias.id'), nullable=False)
+    dependencia_id = db.Column(db.Integer, db.ForeignKey('dependencias.id'), nullable=True)
+    zona_id = db.Column(db.Integer, db.ForeignKey('zonas.id'), nullable=True)
 
     roles_operativos = db.relationship('UsuarioRolOperativo', backref='usuario', lazy=True)
     turnos_asignados = db.relationship('TurnoAsignado', backref='usuario', lazy=True)
@@ -118,12 +122,12 @@ class Usuario(db.Model):
     def serialize(self):
         return {
             'id': self.id,
-            'dependencia_id': self.dependencia_id,
             'grado': self.grado,
             'nombre': self.nombre,
             'correo': self.correo,
-            'password': self.password,
-            'rol_jerarquico': self.rol_jerarquico
+            'rol_jerarquico': self.rol_jerarquico,
+            'dependencia_id': self.dependencia_id,
+            'zona_id': self.zona_id
         }
 
     def __repr__(self):
@@ -175,7 +179,6 @@ class Turno(db.Model):
     hora_inicio = db.Column(db.Time, nullable=False)
     hora_fin = db.Column(db.Time, nullable=False)
     descripcion = db.Column(db.Text)
-
     dependencia_id = db.Column(db.Integer, db.ForeignKey('dependencias.id'), nullable=False)
 
     turnos_asignados = db.relationship('TurnoAsignado', backref='turno', lazy=True)
