@@ -24,7 +24,7 @@ def listar_jefaturas():
     data = Jefatura.query.all()
     return jsonify([x.serialize() for x in data]), 200
 
-@api.route('/jefaturas/<int:id>/', methods=['DELETE'])
+@api.route('/jefaturas/<int:id>', methods=['DELETE'])
 def eliminar_jefatura(id):
     jefatura = Jefatura.query.get(id)
     db.session.delete(jefatura)
@@ -51,7 +51,7 @@ def listar_zonas():
     data = Zona.query.all()
     return jsonify([x.serialize() for x in data]), 200
 
-@api.route('/zonas/<int:id>/', methods=['DELETE'])
+@api.route('/zonas/<int:id>', methods=['DELETE'])
 def eliminar_zona(id):
     zona = Zona.query.get(id)
     db.session.delete(zona)
@@ -77,12 +77,12 @@ def listar_dependencias():
     data = Dependencia.query.all()
     return jsonify([x.serialize() for x in data]), 200
 
-@api.route('/dependencias/<int:id>/', methods=['GET'])
+@api.route('/dependencias/<int:id>', methods=['GET'])
 def obtener_dependencia(id):
     dependencia = Dependencia.query.get(id)
     return jsonify(dependencia.serialize()), 200
 
-@api.route('/dependencias/<int:id>/', methods=['PUT'])
+@api.route('/dependencias/<int:id>', methods=['PUT'])
 def actualizar_dependencia(id):
     body = request.json
     dependencia = Dependencia.query.get(id)
@@ -93,7 +93,7 @@ def actualizar_dependencia(id):
     db.session.commit()
     return jsonify(dependencia.serialize()), 200
 
-@api.route('/dependencias/<int:id>/', methods=['DELETE'])
+@api.route('/dependencias/<int:id>', methods=['DELETE'])
 def eliminar_dependencia(id):
     dependencia = Dependencia.query.get(id)
     db.session.delete(dependencia)
@@ -289,7 +289,7 @@ def listar_usuarios():
     data = Usuario.query.all()
     return jsonify([x.serialize() for x in data]), 200
 
-@api.route('/usuarios/<int:id>/', methods=['PUT'])
+@api.route('/usuarios/<int:id>', methods=['PUT'])
 def actualizar_usuario(id):
     body = request.json
 
