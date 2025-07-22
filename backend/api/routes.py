@@ -254,6 +254,7 @@ def crear_usuario():
     rol_jerarquico = body.get("rol_jerarquico")
     dependencia_id = body.get("dependencia_id")
     zona_id = body.get("zona_id")
+    estado = body.get("estado")
 
     if not grado or not nombre or not correo or not password or not rol_jerarquico:
         return jsonify({"error": "Faltan campos obligatorios"}), 400
@@ -264,13 +265,14 @@ def crear_usuario():
     if rol_jerarquico == 'JEFE_ZONA':
         if not zona_id:
             return jsonify({"error": "Un jefe de zona debe tener zona_id"}), 400
-        dependencia_id = None  # Forzamos a None
+        dependencia_id = None
     else:
         if not dependencia_id:
             return jsonify({"error": "Este usuario debe tener dependencia_id"}), 400
-        zona_id = None  # Forzamos a None
+        zona_id = None
 
     password_hash = generate_password_hash(password)
+
     nuevo_usuario = Usuario(
         grado=grado,
         nombre=nombre,
@@ -278,11 +280,14 @@ def crear_usuario():
         password=password_hash,
         rol_jerarquico=rol_jerarquico,
         dependencia_id=dependencia_id,
-        zona_id=zona_id
+        zona_id=zona_id,
+        estado=estado
     )
     db.session.add(nuevo_usuario)
     db.session.commit()
     return jsonify(nuevo_usuario.serialize()), 201
+
+
 
 @api.route('/usuarios', methods=['GET'])
 def listar_usuarios():
@@ -297,7 +302,6 @@ def actualizar_usuario(id):
     if not usuario:
         return jsonify({"error": "Usuario no encontrado"}), 404
 
-    # Usa los datos existentes como fallback
     grado = body.get("grado", usuario.grado)
     nombre = body.get("nombre", usuario.nombre)
     correo = body.get("correo", usuario.correo)
@@ -305,8 +309,7 @@ def actualizar_usuario(id):
     rol_jerarquico = body.get("rol_jerarquico", usuario.rol_jerarquico)
     dependencia_id = body.get("dependencia_id", usuario.dependencia_id)
     zona_id = body.get("zona_id", usuario.zona_id)
-
-    # Valida según el NUEVO rol
+    estado = body.get("estado", usuario.estado) 
     if rol_jerarquico == 'JEFE_ZONA':
         if not zona_id:
             return jsonify({"error": "Un jefe de zona debe tener zona_id"}), 400
@@ -323,9 +326,11 @@ def actualizar_usuario(id):
     usuario.rol_jerarquico = rol_jerarquico
     usuario.dependencia_id = dependencia_id
     usuario.zona_id = zona_id
+    usuario.estado = estado 
 
     db.session.commit()
     return jsonify(usuario.serialize()), 200
+
 
 
 # -------------------------------------------------------------------
