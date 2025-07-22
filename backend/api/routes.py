@@ -255,6 +255,7 @@ def crear_usuario():
     dependencia_id = body.get("dependencia_id")
     zona_id = body.get("zona_id")
     estado = body.get("estado")
+    turno_id = body.get("turno_id")  # ✅ nuevo campo
 
     if not grado or not nombre or not correo or not password or not rol_jerarquico:
         return jsonify({"error": "Faltan campos obligatorios"}), 400
@@ -281,11 +282,14 @@ def crear_usuario():
         rol_jerarquico=rol_jerarquico,
         dependencia_id=dependencia_id,
         zona_id=zona_id,
-        estado=estado
+        estado=estado,
+        turno_id=turno_id  # ✅ se incluye en la creación
     )
+
     db.session.add(nuevo_usuario)
     db.session.commit()
     return jsonify(nuevo_usuario.serialize()), 201
+
 
 
 
@@ -309,7 +313,9 @@ def actualizar_usuario(id):
     rol_jerarquico = body.get("rol_jerarquico", usuario.rol_jerarquico)
     dependencia_id = body.get("dependencia_id", usuario.dependencia_id)
     zona_id = body.get("zona_id", usuario.zona_id)
-    estado = body.get("estado", usuario.estado) 
+    estado = body.get("estado", usuario.estado)
+    turno_id = body.get("turno_id", usuario.turno_id)  
+
     if rol_jerarquico == 'JEFE_ZONA':
         if not zona_id:
             return jsonify({"error": "Un jefe de zona debe tener zona_id"}), 400
@@ -326,7 +332,8 @@ def actualizar_usuario(id):
     usuario.rol_jerarquico = rol_jerarquico
     usuario.dependencia_id = dependencia_id
     usuario.zona_id = zona_id
-    usuario.estado = estado 
+    usuario.estado = estado
+    usuario.turno_id = turno_id
 
     db.session.commit()
     return jsonify(usuario.serialize()), 200

@@ -13,10 +13,9 @@ const EncargadoDependenciaPanel = () => {
   const [dependencia, setDependencia] = useState(location.state?.sec || null);
   const [turnos, setTurnos] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
+  const [guardias, setGuardias] = useState([]);
 
   const [asignacionTurno, setAsignacionTurno] = useState(null);
-
-  const [guardias, setGuardias] = useState([]);
 
   const [turnoEdit, setTurnoEdit] = useState(null);
   const [nuevoTurno, setNuevoTurno] = useState(null);
@@ -29,18 +28,18 @@ const EncargadoDependenciaPanel = () => {
 
   useEffect(() => {
     if (!dependencia?.id) return;
-
     fetchData(`turnos?dependencia_id=${dependencia.id}`, setTurnos);
+    console.log("turnos", turnos);
   }, [dependencia]);
 
   useEffect(() => {
     if (!dependencia?.id) return;
-
     fetchData(`usuarios`, (allUsuarios) => {
       const filtrados = allUsuarios.filter(
         (u) => u.dependencia_id === dependencia.id
       );
       setFuncionarios(filtrados);
+      console.log("funcionarios", filtrados);
     });
   }, [dependencia]);
 
@@ -97,8 +96,7 @@ const EncargadoDependenciaPanel = () => {
   };
 
   const handleDelete = async (turno) => {
-    if (!window.confirm(`¿Seguro que deseas eliminar "${turno.nombre}"?`))
-      return;
+    if (!window.confirm(`¿Seguro que deseas eliminar "${turno.nombre}"?`)) return;
 
     const deleted = await deleteData(`turnos/${turno.id}`);
 
@@ -118,17 +116,25 @@ const EncargadoDependenciaPanel = () => {
       return;
     }
 
-    const result = await postData("turnos_asignados", {
-      usuario_id,
+    const result = await putData(`usuarios/${usuario_id}`, {
       turno_id,
       estado,
     });
 
     if (result) {
-      alert("Turno asignado");
+      alert("Turno asignado correctamente");
       setAsignacionTurno(null);
-      // Si quieres refrescar guardias:
-      fetchData("guardias", (allGuardias) => {
+
+      // Refrescar lista de usuarios
+      fetchData(`usuarios`, (allUsuarios) => {
+        const filtrados = allUsuarios.filter(
+          (u) => u.dependencia_id === dependencia.id
+        );
+        setFuncionarios(filtrados);
+      });
+
+      // Refrescar guardias si es necesario
+      fetchData(`guardias`, (allGuardias) => {
         const turnoIds = new Set(turnos.map((t) => t.id));
         const filtradas = allGuardias.filter((g) => turnoIds.has(g.turno_id));
         setGuardias(filtradas);
@@ -145,23 +151,12 @@ const EncargadoDependenciaPanel = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800 relative">
       <header className="mb-8">
-        <h1 className="text-3xl font-semibold mb-1">
-          Panel Encargado de Dependencia
-        </h1>
+        <h1 className="text-3xl font-semibold mb-1">Panel Encargado de Dependencia</h1>
         <div className="bg-white rounded-md shadow p-6 mb-10">
-          <h2 className="text-2xl font-bold text-blue-900 mb-2">
-            {dependencia.nombre}
-          </h2>
-          <p>
-            <strong>Jefe:</strong> {dependencia.jefe_nombre || "Sin jefe"}
-          </p>
-          <p>
-            <strong>Cantidad de funcionarios:</strong>{" "}
-            {dependencia.funcionarios_count || 0}
-          </p>
-          <p>
-            <strong>Descripción:</strong> {dependencia.descripcion || "-"}
-          </p>
+          <h2 className="text-2xl font-bold text-blue-900 mb-2">{dependencia.nombre}</h2>
+          <p><strong>Jefe:</strong> {dependencia.jefe_nombre || "Sin jefe"}</p>
+          <p><strong>Cantidad de funcionarios:</strong> {dependencia.funcionarios_count || 0}</p>
+          <p><strong>Descripción:</strong> {dependencia.descripcion || "-"}</p>
         </div>
       </header>
 
@@ -169,21 +164,14 @@ const EncargadoDependenciaPanel = () => {
         <Table
           title={
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-blue-900">
-                Turnos Actuales
-              </h2>
+              <h2 className="text-xl font-semibold text-blue-900">Turnos Actuales</h2>
               <button
                 onClick={() =>
-                  setNuevoTurno({
-                    nombre: "",
-                    hora_inicio: "",
-                    hora_fin: "",
-                    descripcion: "",
-                  })
+                  setNuevoTurno({ nombre: "", hora_inicio: "", hora_fin: "", descripcion: "" })
                 }
-                className="ml-4 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                className="flex items-center gap-2 ml-4 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
               >
-                + Agregar Turno
+                +
               </button>
             </div>
           }
@@ -199,32 +187,58 @@ const EncargadoDependenciaPanel = () => {
           onDelete={handleDelete}
         />
 
-        <Table
-          title="Guardias Asignadas"
-          columns={["Funcionario", "Turno", "Fecha Inicio", "Fecha Fin"]}
-          data={guardias.map((g) => ({
-            funcionario: g.usuario_id,
-            turno: g.turno_id,
-            fecha_inicio: new Date(g.fecha_inicio).toLocaleString(),
-            fecha_fin: new Date(g.fecha_fin).toLocaleString(),
-          }))}
-        />
+        {/* Guardias separadas por turno */}
+        {turnos.map((turno) => {
+          const guardiasTurno = guardias.filter((g) => g.turno_id === turno.id);
+          return (
+            <Table
+              key={turno.id}
+              title={`Guardias - Turno ${turno.nombre}`}
+              columns={["Funcionario", "Fecha Inicio", "Fecha Fin"]}
+              data={guardiasTurno.map((g) => {
+                const funcionario = funcionarios.find((f) => f.id === g.usuario_id);
+                return {
+                  funcionario: funcionario ? funcionario.nombre : `ID ${g.usuario_id}`,
+                  fecha_inicio: new Date(g.fecha_inicio).toLocaleString(),
+                  fecha_fin: new Date(g.fecha_fin).toLocaleString(),
+                };
+              })}
+            />
+          );
+        })}
 
+        {/* Funcionarios con turno y estado */}
         <Table
           title="Funcionarios de la Unidad"
-          columns={["Nombre", "Grado"]}
-          data={funcionarios.map((f) => ({
-            nombre: `${f.nombre}`,
-            grado: f.grado || "No especificado",
-          }))}
+          columns={["Nombre", "Grado", "Estado", "Turno Asignado", "Acción"]}
+          data={funcionarios.map((f) => {
+            const turnoAsignado = turnos.find((t) => t.id === f.turno_id);
+            return {
+              nombre: f.nombre,
+              grado: f.grado || "No especificado",
+              estado: f.estado || "Sin estado",
+              "turno asignado": f.turno_id ? f.turno_id : "Sin asignar",
+              acción: (
+                <button
+                  onClick={() =>
+                    setAsignacionTurno({
+                      usuario_id: f.id,
+                      turno_id: f.turno_id || "",
+                      estado: f.estado || "asignado",
+                    })
+                  }
+                  className="px-2 py-1 text-sm bg-yellow-400 rounded hover:bg-yellow-500"
+                >
+                  ✎
+                </button>
+              ),
+            };
+          })}
         />
+
         <button
           onClick={() =>
-            setAsignacionTurno({
-              usuario_id: "",
-              turno_id: "",
-              estado: "asignado",
-            })
+            setAsignacionTurno({ usuario_id: "", turno_id: "", estado: "asignado" })
           }
           className="ml-4 px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700"
         >

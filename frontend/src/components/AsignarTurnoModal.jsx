@@ -1,6 +1,7 @@
-// src/components/AsignarTurnoModal.jsx
-
 import React from "react";
+
+// Podés reemplazar esta lista por una que venga del backend en el futuro
+const estadosDisponibles = ["asignado", "activo", "completado"];
 
 const AsignarTurnoModal = ({
   funcionarios,
@@ -11,6 +12,10 @@ const AsignarTurnoModal = ({
   onSubmit,
 }) => {
   if (!asignacion) return null;
+
+  const handleChange = (field, value) => {
+    setAsignacion({ ...asignacion, [field]: value });
+  };
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
@@ -23,13 +28,13 @@ const AsignarTurnoModal = ({
             className="w-full border px-3 py-2 rounded mt-1"
             value={asignacion.usuario_id || ""}
             onChange={(e) =>
-              setAsignacion({ ...asignacion, usuario_id: parseInt(e.target.value) })
+              handleChange("usuario_id", e.target.value ? parseInt(e.target.value) : "")
             }
           >
             <option value="">Seleccione un funcionario</option>
             {funcionarios.map((f) => (
               <option key={f.id} value={f.id}>
-                {f.nombre} ({f.grado})
+                {f.nombre} ({f.grado || "Sin grado"})
               </option>
             ))}
           </select>
@@ -41,7 +46,7 @@ const AsignarTurnoModal = ({
             className="w-full border px-3 py-2 rounded mt-1"
             value={asignacion.turno_id || ""}
             onChange={(e) =>
-              setAsignacion({ ...asignacion, turno_id: parseInt(e.target.value) })
+              handleChange("turno_id", e.target.value ? parseInt(e.target.value) : "")
             }
           >
             <option value="">Seleccione un turno</option>
@@ -57,14 +62,15 @@ const AsignarTurnoModal = ({
           Estado
           <select
             className="w-full border px-3 py-2 rounded mt-1"
-            value={asignacion.estado || "asignado"}
-            onChange={(e) =>
-              setAsignacion({ ...asignacion, estado: e.target.value })
-            }
+            value={asignacion.estado ?? ""}
+            onChange={(e) => handleChange("estado", e.target.value || null)}
           >
-            <option value="asignado">Asignado</option>
-            <option value="activo">Activo</option>
-            <option value="completado">Completado</option>
+            <option value="">Seleccione un estado</option>
+            {estadosDisponibles.map((estado) => (
+              <option key={estado} value={estado}>
+                {estado.charAt(0).toUpperCase() + estado.slice(1)}
+              </option>
+            ))}
           </select>
         </label>
 
