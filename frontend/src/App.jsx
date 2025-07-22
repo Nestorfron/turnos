@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import AdminPanel from "./pages/AdminPanel";
 import JefeZonaDashboard from "./pages/JefeZonaDashboard";
+import DetalleDependencia from "./pages/DetalleDependencia";
 import EncargadoDependenciaPanel from "./pages/EncargadoDependenciaPanel";
 import Navbar from "./components/Navbar";
 
@@ -13,6 +14,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/jefe-zona" element={<JefeZonaDashboard />} />
+        <Route path="/detalle-dependencia/:id" element={<DetalleDependencia />} />
         <Route path="/dependencia/:id" element={<EncargadoDependenciaPanel />} />
       </Routes>
     </BrowserRouter>

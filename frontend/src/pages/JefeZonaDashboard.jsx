@@ -12,23 +12,54 @@ const JefeZonaDashboard = () => {
   const [dependencias, setDependencias] = useState([]);
   const [selectedDep, setSelectedDep] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [isEditing, setIsEditing] = useState(false); // saber si es editar o crear
+  const [isEditing, setIsEditing] = useState(false); 
 
   useEffect(() => {
     fetchData("jefaturas", (data) => {
       setJefatura(Array.isArray(data) && data.length > 0 ? data[0] : null);
     });
+  
 
-    fetchData("dependencias", setDependencias);
+    fetchData("dependencias", async (deps) => {
+      fetchData("usuarios", (usuarios) => {
+        const actualizadas = deps.map((dep) => {
+          const funcionarios = usuarios.filter(u => u.dependencia_id === dep.id);
+          return {
+            ...dep,
+            funcionarios_count: funcionarios.length
+          };
+        });
+        setDependencias(actualizadas);
+      });
+    });
   }, []);
+  
 
   if (!usuario) {
     return <p className="p-6">Acceso no autorizado. Por favor inicia sesión.</p>;
   }
 
-  const dependenciasZona = dependencias.filter(
-    (dep) => dep.zona_id === usuario?.zona_id
-  );
+  const dependenciasZona = dependencias
+  .filter((dep) => dep.zona_id === usuario?.zona_id)
+  .sort((a, b) => {
+    const getNombre = (d) => d.nombre?.toLowerCase() ?? "";
+    const extractNumber = (str) => {
+      const match = str.match(/\d+/);
+      return match ? parseInt(match[0], 10) : null;
+    };
+
+    const numA = extractNumber(getNombre(a));
+    const numB = extractNumber(getNombre(b));
+
+    if (numA !== null && numB !== null) {
+      // Ordenar por número descendente si ambos tienen número
+      return numA - numB;
+    }
+
+    // Ordenar alfabéticamente si no tienen número o solo uno lo tiene
+    return getNombre(a).localeCompare(getNombre(b));
+  });
+
 
   const handleModalClose = () => {
     setShowModal(false);
@@ -89,7 +120,7 @@ const JefeZonaDashboard = () => {
                       <td className="border border-gray-300 py-2 px-4">{sec.funcionarios_count || 0}</td>
                       <td className="border border-gray-300 py-2 px-4 flex items-center gap-2">
                         <Link
-                          to={`/dependencia/${sec.id}`}
+                          to={`/detalle-dependencia/${sec.id}`}
                           state={{ sec }}
                           className="inline-flex items-center gap-1 text-blue-600 hover:underline"
                         >

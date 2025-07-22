@@ -38,9 +38,26 @@ const AdminPanel = () => {
     );
   }
 
-  const dependenciasZona = dependencias.filter(
-    (dep) => dep.zona_id === usuario?.zona_id
-  );
+  const dependenciasZona = dependencias
+  .filter((dep) => dep.zona_id === usuario?.zona_id)
+  .sort((a, b) => {
+    const getNombre = (d) => d.nombre?.toLowerCase() ?? "";
+    const extractNumber = (str) => {
+      const match = str.match(/\d+/);
+      return match ? parseInt(match[0], 10) : null;
+    };
+
+    const numA = extractNumber(getNombre(a));
+    const numB = extractNumber(getNombre(b));
+
+    if (numA !== null && numB !== null) {
+      // Ordenar por número descendente si ambos tienen número
+      return numA - numB;
+    }
+
+    // Ordenar alfabéticamente si no tienen número o solo uno lo tiene
+    return getNombre(a).localeCompare(getNombre(b));
+  });
 
   const handleEdit = (dep) => {
     setSelectedDep(dep);

@@ -1,18 +1,19 @@
 import React from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Users } from "lucide-react";
 
 const COLORS = ["#3b82f6", "#60a5fa", "#93c5fd"];
 
 const DependenciaChart = ({ funcionarios, dependenciaNombre }) => {
-  // Solo para un solo valor
+  const cantidad = funcionarios ?? 0;
+
   const data = [
-    { name: dependenciaNombre, value: funcionarios }
+    { name: dependenciaNombre, value: cantidad }
   ];
 
   return (
     <div className="flex flex-col items-center justify-center p-4">
-      {funcionarios > 0 ? (
+      {cantidad > 0 ? (
         <ResponsiveContainer width={200} height={200}>
           <PieChart>
             <Pie
@@ -22,6 +23,7 @@ const DependenciaChart = ({ funcionarios, dependenciaNombre }) => {
               innerRadius={50}
               outerRadius={80}
               dataKey="value"
+              nameKey="name"
             >
               {data.map((_, index) => (
                 <Cell
@@ -30,6 +32,9 @@ const DependenciaChart = ({ funcionarios, dependenciaNombre }) => {
                 />
               ))}
             </Pie>
+            <Tooltip
+              formatter={(value, name) => [`${value} funcionario${value > 1 ? 's' : ''}`, name]}
+            />
           </PieChart>
         </ResponsiveContainer>
       ) : (
