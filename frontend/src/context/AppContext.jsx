@@ -16,6 +16,7 @@ export const AppProvider = ({ children }) => {
 
   const login = (userData) => {
     setUsuario(userData);
+    console.log("login", userData);
     localStorage.setItem("usuario", JSON.stringify(userData));
   };
 

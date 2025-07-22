@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import Table from "../components/Table";
 import TurnoModal from "../components/TurnoModal";
+import AsignarTurnoModal from "../components/AsignarTurnoModal";
 import { fetchData, putData, postData, deleteData } from "../utils/api";
 
 const EncargadoDependenciaPanel = () => {
@@ -11,6 +12,10 @@ const EncargadoDependenciaPanel = () => {
 
   const [dependencia, setDependencia] = useState(location.state?.sec || null);
   const [turnos, setTurnos] = useState([]);
+  const [funcionarios, setFuncionarios] = useState([]);
+
+  const [asignacionTurno, setAsignacionTurno] = useState(null);
+
   const [guardias, setGuardias] = useState([]);
 
   const [turnoEdit, setTurnoEdit] = useState(null);
@@ -26,6 +31,17 @@ const EncargadoDependenciaPanel = () => {
     if (!dependencia?.id) return;
 
     fetchData(`turnos?dependencia_id=${dependencia.id}`, setTurnos);
+  }, [dependencia]);
+
+  useEffect(() => {
+    if (!dependencia?.id) return;
+
+    fetchData(`usuarios`, (allUsuarios) => {
+      const filtrados = allUsuarios.filter(
+        (u) => u.dependencia_id === dependencia.id
+      );
+      setFuncionarios(filtrados);
+    });
   }, [dependencia]);
 
   useEffect(() => {
@@ -91,6 +107,34 @@ const EncargadoDependenciaPanel = () => {
       fetchData(`turnos?dependencia_id=${dependencia.id}`, setTurnos);
     } else {
       alert("Error al eliminar");
+    }
+  };
+
+  const handleAsignarTurno = async () => {
+    const { usuario_id, turno_id, estado } = asignacionTurno;
+
+    if (!usuario_id || !turno_id) {
+      alert("Debe seleccionar un funcionario y un turno");
+      return;
+    }
+
+    const result = await postData("turnos_asignados", {
+      usuario_id,
+      turno_id,
+      estado,
+    });
+
+    if (result) {
+      alert("Turno asignado");
+      setAsignacionTurno(null);
+      // Si quieres refrescar guardias:
+      fetchData("guardias", (allGuardias) => {
+        const turnoIds = new Set(turnos.map((t) => t.id));
+        const filtradas = allGuardias.filter((g) => turnoIds.has(g.turno_id));
+        setGuardias(filtradas);
+      });
+    } else {
+      alert("Error al asignar turno");
     }
   };
 
@@ -165,6 +209,27 @@ const EncargadoDependenciaPanel = () => {
             fecha_fin: new Date(g.fecha_fin).toLocaleString(),
           }))}
         />
+
+        <Table
+          title="Funcionarios de la Unidad"
+          columns={["Nombre", "Grado"]}
+          data={funcionarios.map((f) => ({
+            nombre: `${f.nombre}`,
+            grado: f.grado || "No especificado",
+          }))}
+        />
+        <button
+          onClick={() =>
+            setAsignacionTurno({
+              usuario_id: "",
+              turno_id: "",
+              estado: "asignado",
+            })
+          }
+          className="ml-4 px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+        >
+          + Asignar Turno
+        </button>
       </main>
 
       <button
@@ -190,6 +255,17 @@ const EncargadoDependenciaPanel = () => {
           onChange={setNuevoTurno}
           onClose={closeNuevoModal}
           onSubmit={handleCreate}
+        />
+      )}
+
+      {asignacionTurno && (
+        <AsignarTurnoModal
+          funcionarios={funcionarios}
+          turnos={turnos}
+          asignacion={asignacionTurno}
+          setAsignacion={setAsignacionTurno}
+          onClose={() => setAsignacionTurno(null)}
+          onSubmit={handleAsignarTurno}
         />
       )}
     </div>

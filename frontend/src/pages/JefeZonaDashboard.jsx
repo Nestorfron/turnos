@@ -30,33 +30,6 @@ const JefeZonaDashboard = () => {
     (dep) => dep.zona_id === usuario?.zona_id
   );
 
-  const handleEdit = (dep) => {
-    setSelectedDep(dep);
-    setIsEditing(true);
-    setShowModal(true);
-  };
-
-  const handleAdd = () => {
-    setSelectedDep({
-      nombre: "",
-      jefe_nombre: "",
-      descripcion: "",
-      funcionarios_count: 0,
-      zona_id: usuario.zona_id, // necesario para agregar
-    });
-    setIsEditing(false);
-    setShowModal(true);
-  };
-
-  const handleDelete = async (depId) => {
-    if (confirm("¿Seguro que deseas eliminar esta seccional?")) {
-      const ok = await deleteData(`dependencias/${depId}`);
-      if (ok) {
-        setDependencias((prev) => prev.filter((d) => d.id !== depId));
-      }
-    }
-  };
-
   const handleModalClose = () => {
     setShowModal(false);
     setSelectedDep(null);
@@ -92,12 +65,6 @@ const JefeZonaDashboard = () => {
       <main className="space-y-10">
         <div className="flex justify-between items-center mb-8">
           <h3 className="text-lg font-semibold text-blue-700">Seccionales</h3>
-          <button
-            onClick={handleAdd}
-            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
-          >
-            + Agregar Seccional
-          </button>
         </div>
 
         {dependenciasZona.length === 0 ? (
@@ -129,20 +96,6 @@ const JefeZonaDashboard = () => {
                           <Plus size={16} className="text-blue-600" />
                           Ver más
                         </Link>
-                        <button
-                          onClick={() => handleEdit(sec)}
-                          title="Editar"
-                          className="text-yellow-500 hover:text-yellow-600"
-                        >
-                          <Edit3 size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(sec.id)}
-                          title="Eliminar"
-                          className="text-red-500 hover:text-red-600"
-                        >
-                          <Trash2 size={16} />
-                        </button>
                       </td>
                     </tr>
                   ))}

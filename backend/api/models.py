@@ -101,6 +101,9 @@ class Usuario(db.Model):
     dependencia_id = db.Column(db.Integer, db.ForeignKey('dependencias.id'), nullable=True)
     zona_id = db.Column(db.Integer, db.ForeignKey('zonas.id'), nullable=True)
 
+    turno_id = db.Column(db.Integer, db.ForeignKey('turnos.id'), nullable=True)
+    turno = db.relationship('Turno', backref='usuarios_asignados_directamente', foreign_keys=[turno_id])
+
     roles_operativos = db.relationship('UsuarioRolOperativo', backref='usuario', lazy=True)
     turnos_asignados = db.relationship('TurnoAsignado', backref='usuario', lazy=True)
     guardias = db.relationship('Guardia', backref='usuario', lazy=True)
@@ -127,7 +130,8 @@ class Usuario(db.Model):
             'correo': self.correo,
             'rol_jerarquico': self.rol_jerarquico,
             'dependencia_id': self.dependencia_id,
-            'zona_id': self.zona_id
+            'zona_id': self.zona_id,
+            'turno_id': self.turno_id
         }
 
     def __repr__(self):
