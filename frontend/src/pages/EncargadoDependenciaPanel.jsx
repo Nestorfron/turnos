@@ -47,7 +47,12 @@ const EncargadoDependenciaPanel = () => {
   const handleUpdate = async () => {
     if (!turnoEdit) return;
 
-    const updated = await putData(`turnos/${turnoEdit.id}`, turnoEdit);
+    const updatedData = {
+      ...turnoEdit,
+      dependencia_id: dependencia.id,
+    };
+
+    const updated = await putData(`turnos/${turnoEdit.id}`, updatedData);
 
     if (updated) {
       alert("Turno actualizado");
@@ -76,7 +81,8 @@ const EncargadoDependenciaPanel = () => {
   };
 
   const handleDelete = async (turno) => {
-    if (!window.confirm(`¿Seguro que deseas eliminar "${turno.nombre}"?`)) return;
+    if (!window.confirm(`¿Seguro que deseas eliminar "${turno.nombre}"?`))
+      return;
 
     const deleted = await deleteData(`turnos/${turno.id}`);
 

@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { putData } from "../utils/api";
+import { postData, fetchData, putData } from "../utils/api";
 
-const DependenciaModal = ({ dependencia, onClose, onUpdated }) => {
+const DependenciaModal = ({ dependencia, onClose, onSubmitted, isEditing }) => {
   const [formData, setFormData] = useState({
     nombre: "",
     descripcion: "",
     zona_id: null,
   });
+  const [zonas, setZonas] = useState([]);
+
+  useEffect(() => {
+    fetchData("zonas", setZonas);
+  }, []);
 
   useEffect(() => {
     if (dependencia) {
       setFormData({
         nombre: dependencia.nombre || "",
         descripcion: dependencia.descripcion || "",
-        zona_id: dependencia.zona_id || null,
+        zona_id: dependencia.zona_id ?? null,
       });
     }
   }, [dependencia]);
@@ -22,19 +27,26 @@ const DependenciaModal = ({ dependencia, onClose, onUpdated }) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: name === "zona_id" ? (value === "" ? null : Number(value)) : value,
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     try {
-      const updated = await putData(`dependencias/${dependencia.id}`, formData);
-      if (updated) {
-        alert("Seccional actualizada correctamente");
-        onUpdated(updated);
+      let result;
+      if (isEditing && dependencia?.id) {
+        result = await putData(`dependencias/${dependencia.id}`, formData);
       } else {
-        alert("Error al actualizar la seccional");
+        result = await postData("dependencias", formData);
+      }
+
+      if (result) {
+        alert(isEditing ? "Seccional actualizada correctamente" : "Seccional agregada correctamente");
+        onSubmitted(result);
+      } else {
+        alert("Error al guardar la seccional");
       }
     } catch (err) {
       console.error(err);
@@ -45,7 +57,9 @@ const DependenciaModal = ({ dependencia, onClose, onUpdated }) => {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
       <div className="bg-white rounded p-6 w-full max-w-md">
-        <h2 className="text-xl font-bold mb-4">Editar Seccional</h2>
+        <h2 className="text-xl font-bold mb-4">
+          {isEditing ? "Editar Seccional" : "Agregar Seccional"}
+        </h2>
 
         <form onSubmit={handleSubmit}>
           <label className="block mb-3">
@@ -71,14 +85,20 @@ const DependenciaModal = ({ dependencia, onClose, onUpdated }) => {
           </label>
 
           <label className="block mb-4">
-            Zona ID
-            <input
+            Zona
+            <select
               name="zona_id"
-              type="number"
               className="w-full border px-3 py-2 rounded mt-1"
-              value={formData.zona_id || ""}
+              value={formData.zona_id ?? ""}
               onChange={handleChange}
-            />
+            >
+              <option value="">-- Seleccionar zona --</option>
+              {zonas.map((zona) => (
+                <option key={zona.id} value={zona.id}>
+                  {zona.nombre}
+                </option>
+              ))}
+            </select>
           </label>
 
           <div className="flex justify-end space-x-2">
@@ -93,7 +113,7 @@ const DependenciaModal = ({ dependencia, onClose, onUpdated }) => {
               type="submit"
               className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
             >
-              Guardar
+              {isEditing ? "Guardar" : "Agregar"}
             </button>
           </div>
         </form>

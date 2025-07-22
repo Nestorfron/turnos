@@ -4,8 +4,7 @@ import { Plus, Edit3, Trash2 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import DonutChart from "../components/DonutChart";
 import DependenciaModal from "../components/DependenciaModal.jsx";
-
-import { fetchData, deleteData } from "../utils/api"; // ✅ importa utils
+import { fetchData, deleteData } from "../utils/api";
 
 const JefeZonaDashboard = () => {
   const { usuario } = useAppContext();
@@ -13,14 +12,11 @@ const JefeZonaDashboard = () => {
   const [dependencias, setDependencias] = useState([]);
   const [selectedDep, setSelectedDep] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false); // saber si es editar o crear
 
   useEffect(() => {
     fetchData("jefaturas", (data) => {
-      if (Array.isArray(data) && data.length > 0) {
-        setJefatura(data[0]);
-      } else {
-        setJefatura(null);
-      }
+      setJefatura(Array.isArray(data) && data.length > 0 ? data[0] : null);
     });
 
     fetchData("dependencias", setDependencias);
@@ -36,6 +32,19 @@ const JefeZonaDashboard = () => {
 
   const handleEdit = (dep) => {
     setSelectedDep(dep);
+    setIsEditing(true);
+    setShowModal(true);
+  };
+
+  const handleAdd = () => {
+    setSelectedDep({
+      nombre: "",
+      jefe_nombre: "",
+      descripcion: "",
+      funcionarios_count: 0,
+      zona_id: usuario.zona_id, // necesario para agregar
+    });
+    setIsEditing(false);
     setShowModal(true);
   };
 
@@ -43,9 +52,25 @@ const JefeZonaDashboard = () => {
     if (confirm("¿Seguro que deseas eliminar esta seccional?")) {
       const ok = await deleteData(`dependencias/${depId}`);
       if (ok) {
-        setDependencias(dependencias.filter((d) => d.id !== depId));
+        setDependencias((prev) => prev.filter((d) => d.id !== depId));
       }
     }
+  };
+
+  const handleModalClose = () => {
+    setShowModal(false);
+    setSelectedDep(null);
+  };
+
+  const handleModalSubmit = (savedDep) => {
+    if (isEditing) {
+      setDependencias((prev) =>
+        prev.map((d) => (d.id === savedDep.id ? savedDep : d))
+      );
+    } else {
+      setDependencias((prev) => [...prev, savedDep]);
+    }
+    handleModalClose();
   };
 
   return (
@@ -65,16 +90,21 @@ const JefeZonaDashboard = () => {
       </header>
 
       <main className="space-y-10">
+        <div className="flex justify-between items-center mb-8">
+          <h3 className="text-lg font-semibold text-blue-700">Seccionales</h3>
+          <button
+            onClick={handleAdd}
+            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+          >
+            + Agregar Seccional
+          </button>
+        </div>
+
         {dependenciasZona.length === 0 ? (
-          <p className="text-gray-500">
-            No hay seccionales asignadas a tu zona.
-          </p>
+          <p className="text-gray-500">No hay seccionales asignadas a tu zona.</p>
         ) : (
           <>
             <section className="mb-8 bg-white rounded-md shadow p-4">
-              <h3 className="text-lg font-semibold text-blue-700 mb-3">
-                Seccionales
-              </h3>
               <table className="min-w-full border-collapse border border-gray-300 text-sm">
                 <thead>
                   <tr className="bg-gray-100 text-gray-700 uppercase text-xs font-medium tracking-wide">
@@ -86,17 +116,10 @@ const JefeZonaDashboard = () => {
                 </thead>
                 <tbody>
                   {dependenciasZona.map((sec) => (
-                    <tr
-                      key={sec.id}
-                      className="even:bg-gray-50 hover:bg-blue-50 transition-colors"
-                    >
+                    <tr key={sec.id} className="even:bg-gray-50 hover:bg-blue-50 transition-colors">
                       <td className="border border-gray-300 py-2 px-4">{sec.nombre}</td>
-                      <td className="border border-gray-300 py-2 px-4">
-                        {sec.jefe_nombre || "Sin jefe"}
-                      </td>
-                      <td className="border border-gray-300 py-2 px-4">
-                        {sec.funcionarios_count || 0}
-                      </td>
+                      <td className="border border-gray-300 py-2 px-4">{sec.jefe_nombre || "Sin jefe"}</td>
+                      <td className="border border-gray-300 py-2 px-4">{sec.funcionarios_count || 0}</td>
                       <td className="border border-gray-300 py-2 px-4 flex items-center gap-2">
                         <Link
                           to={`/dependencia/${sec.id}`}
@@ -128,25 +151,19 @@ const JefeZonaDashboard = () => {
             </section>
 
             <section className="mb-8 bg-white rounded-md shadow p-4">
-              <h3 className="text-lg font-semibold text-blue-700 mb-3">
-                Funcionarios por Seccional
-              </h3>
+              <h3 className="text-lg font-semibold text-blue-700 mb-3">Funcionarios por Seccional</h3>
               <DonutChart data={dependenciasZona} />
             </section>
           </>
         )}
       </main>
 
-      {showModal && selectedDep && (
+      {showModal && (
         <DependenciaModal
           dependencia={selectedDep}
-          onClose={() => setShowModal(false)}
-          onUpdated={(updatedDep) => {
-            setDependencias((prev) =>
-              prev.map((d) => (d.id === updatedDep.id ? updatedDep : d))
-            );
-            setShowModal(false);
-          }}
+          isEditing={isEditing}
+          onClose={handleModalClose}
+          onSubmitted={handleModalSubmit}
         />
       )}
     </div>
