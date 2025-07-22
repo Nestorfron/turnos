@@ -82,6 +82,17 @@ def obtener_dependencia(id):
     dependencia = Dependencia.query.get(id)
     return jsonify(dependencia.serialize()), 200
 
+@api.route('/dependencias/<int:id>/', methods=['PUT'])
+def actualizar_dependencia(id):
+    body = request.json
+    dependencia = Dependencia.query.get(id)
+    if not dependencia:
+        return jsonify({"error": "Dependencia no encontrada"}), 404
+    dependencia.nombre = body.get("nombre")
+    dependencia.descripcion = body.get("descripcion")
+    db.session.commit()
+    return jsonify(dependencia.serialize()), 200
+
 @api.route('/dependencias/<int:id>/', methods=['DELETE'])
 def eliminar_dependencia(id):
     dependencia = Dependencia.query.get(id)

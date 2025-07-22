@@ -30,6 +30,8 @@ const LoginForm = () => {
           correo: data.correo,
           token: data.token,
           rol_jerarquico: data.rol,
+          dependencia_id: data.dependencia_id,
+          zona_id: data.zona_id,
         });
 
         if (data.rol === "JEFE_ZONA") {
