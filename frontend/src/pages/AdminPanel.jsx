@@ -108,12 +108,20 @@ const AdminPanel = () => {
 
   const handleDeleteFuncionario = async (id) => {
     if (confirm("¿Seguro que deseas eliminar este funcionario?")) {
-      const ok = await deleteData(`usuarios/${id}`);
-      if (ok) {
-        setUsuarios((prev) => prev.filter((u) => u.id !== id));
+      try {
+        const ok = await deleteData(`usuarios/${id}`);
+        if (ok) {
+          setUsuarios((prev) => prev.filter((u) => u.id !== id));
+        } else {
+          alert("No se pudo eliminar el funcionario. Intenta de nuevo.");
+        }
+      } catch (error) {
+        console.error("Error al eliminar funcionario:", error);
+        alert("Ocurrió un error al intentar eliminar al funcionario.");
       }
     }
   };
+  
 
   const dataChart = dependenciasZona.map((d) => {
     const cantidad = usuarios.filter((u) => u.dependencia_id === d.id).length;
