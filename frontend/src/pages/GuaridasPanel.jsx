@@ -1,18 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
-import { fetchData } from "../utils/api";
+import { useLocation, useNavigate } from "react-router-dom";
+import { fetchData } from "../utils/api.js";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+dayjs.extend(utc);
+
+
+const apiUrl = import.meta.env.VITE_API_URL;
 
 const GuardiasPanel = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const dependencia = location.state?.sec;
 
   const [funcionarios, setFuncionarios] = useState([]);
   const [guardias, setGuardias] = useState([]);
   const [turnos, setTurnos] = useState([]);
-
-  const [hovered, setHovered] = useState(null); // { usuarioId, fecha }
-  const [editando, setEditando] = useState(null); // { usuarioId, fecha }
 
   const startDate = dayjs("2025-07-01");
   const daysToShow = 7;
@@ -37,116 +40,70 @@ const GuardiasPanel = () => {
       });
     });
 
-    fetchData(`turnos?dependencia_id=${dependencia.id}`, (data) => {
-      const unicos = Array.from(new Map(data.map((t) => [t.id, t])).values());
-      setTurnos(unicos);
-    });
+    fetchData(`turnos?dependencia_id=${dependencia.id}`, setTurnos);
   }, [dependencia]);
 
   const getCelda = (usuario, dia) => {
     const fecha = dia.format("YYYY-MM-DD");
-
     const guardia = guardias.find(
       (g) =>
         g.usuario_id === usuario.id &&
-        dayjs(g.fecha_inicio).format("YYYY-MM-DD") === fecha
+        dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD") === fecha
     );
 
     if (guardia) {
       if (guardia.tipo === "licencia") return "L";
-      return guardia.tipo === "D" ? "D" : "T";
+      return "T";
     }
 
-    const inicio = guardias
-      .filter((g) => g.usuario_id === usuario.id)
-      .map((g) => dayjs(g.fecha_inicio))
-      .sort((a, b) => a.unix() - b.unix())[0];
+    return "D";
+  };
 
-    if (!inicio) return "";
+  const actualizarCelda = async (usuario, dia, nuevoTipo) => {
+    const fechaStr = dia.format("YYYY-MM-DD");
+    const existente = guardias.find(
+      (g) =>
+        g.usuario_id === usuario.id &&
+        dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD") === fechaStr
+    );
 
-    const diff = dia.diff(inicio, "day");
-    const ciclo = diff % 6;
+    if (nuevoTipo === "T" && !existente) {
+      const nueva = {
+        usuario_id: usuario.id,
+        fecha_inicio: fechaStr,
+        fecha_fin: fechaStr,
+        tipo: "guardia",
+        comentario: "Agregada manualmente",
+      };
 
-    return ciclo < 5 ? "T" : "D";
+      const resp = await fetch(`${apiUrl}/guardias`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nueva),
+      });
+
+      if (resp.ok) {
+        const nuevaGuardia = await resp.json();
+        setGuardias((prev) => [...prev, nuevaGuardia]);
+      }
+    }
+
+    if (nuevoTipo === "D" && existente && existente.tipo === "guardia") {
+      const resp = await fetch(
+        `${apiUrl}/guardias/${existente.id}`,
+        { method: "DELETE" }
+      );
+
+      if (resp.ok) {
+        setGuardias((prev) => prev.filter((g) => g.id !== existente.id));
+      }
+    }
   };
 
   const funcionariosPorTurno = (turnoId) =>
     funcionarios
       .filter((f) => f.turno_id === turnoId)
       .sort((a, b) => (b.grado || 0) - (a.grado || 0));
-
-  const alguienDescansa = (fecha, turnoId, exceptUsuarioId = null) => {
-    const fechaStr = fecha.format("YYYY-MM-DD");
-    return funcionarios.some((f) =>
-      f.turno_id === turnoId &&
-      f.id !== exceptUsuarioId &&
-      guardias.some(
-        (g) =>
-          g.usuario_id === f.id &&
-          g.tipo === "D" &&
-          dayjs(g.fecha_inicio).format("YYYY-MM-DD") === fechaStr
-      )
-    );
-  };
-
-  const actualizarTipoGuardia = (usuarioId, fechaStr, nuevoTipo) => {
-    const fecha = dayjs(fechaStr);
-    const usuario = funcionarios.find((f) => f.id === usuarioId);
-    const turnoId = usuario?.turno_id;
-
-    const futuras = dias.filter((d) => d.isSame(fecha) || d.isAfter(fecha));
-    const nuevasGuardias = [];
-
-    for (let i = 0; i < futuras.length; i++) {
-      let tipo = i % 6 < 5 ? nuevoTipo : nuevoTipo === "T" ? "D" : "T";
-
-      // Verificar si otro ya descansa ese día
-      const estaFecha = futuras[i];
-      if (tipo === "D" && alguienDescansa(estaFecha, turnoId, usuarioId)) {
-        tipo = "T"; // evitar doble descanso
-      }
-
-      nuevasGuardias.push({
-        usuario_id: usuarioId,
-        fecha_inicio: estaFecha.format("YYYY-MM-DD"),
-        fecha_fin: estaFecha.format("YYYY-MM-DD"),
-        tipo,
-        comentario: `Modificado manualmente desde ${fechaStr}`,
-      });
-    }
-
-    // Eliminar guardias futuras del usuario
-    const actuales = guardias.filter(
-      (g) =>
-        g.usuario_id === usuarioId &&
-        (dayjs(g.fecha_inicio).isSame(fecha) ||
-          dayjs(g.fecha_inicio).isAfter(fecha))
-    );
-
-    Promise.all(
-      actuales.map((g) =>
-        fetch(`/api/guardias/${g.id}`, { method: "DELETE" })
-      )
-    ).then(() => {
-      Promise.all(
-        nuevasGuardias.map((g) =>
-          fetch("/api/guardias", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(g),
-          })
-        )
-      ).then(() => {
-        fetchData("guardias", (todas) => {
-          const filtradas = todas.filter((g) =>
-            funcionarios.some((f) => f.id === g.usuario_id)
-          );
-          setGuardias(filtradas);
-          setEditando(null);
-        });
-      });
-    });
-  };
 
   return (
     <div className="p-6 space-y-12 bg-gray-50 min-h-screen">
@@ -182,64 +139,31 @@ const GuardiasPanel = () => {
                         G{f.grado} {f.nombre}
                       </td>
                       {dias.map((d) => {
-                        const celdaFecha = d.format("YYYY-MM-DD");
                         const valor = getCelda(f, d);
-
                         return (
                           <td
-                            key={celdaFecha}
-                            className="border px-2 py-1 relative group"
-                            onMouseEnter={() =>
-                              setHovered({ usuarioId: f.id, fecha: celdaFecha })
-                            }
-                            onMouseLeave={() => setHovered(null)}
+                            key={d.format("YYYY-MM-DD")}
+                            className={`border px-2 py-1 relative group ${
+                              valor === "T"
+                                ? "bg-blue-100"
+                                : valor === "D"
+                                ? "bg-yellow-100"
+                                : valor === "L"
+                                ? "bg-red-100"
+                                : ""
+                            }`}
                           >
-                            {editando &&
-                            editando.usuarioId === f.id &&
-                            editando.fecha === celdaFecha ? (
-                              <div className="flex justify-center gap-2">
-                                <button
-                                  onClick={() =>
-                                    actualizarTipoGuardia(f.id, celdaFecha, "T")
-                                  }
-                                  className="text-green-600 hover:underline text-xs"
-                                >
-                                  T
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    actualizarTipoGuardia(f.id, celdaFecha, "D")
-                                  }
-                                  className="text-yellow-600 hover:underline text-xs"
-                                >
-                                  D
-                                </button>
-                                <button
-                                  onClick={() => setEditando(null)}
-                                  className="text-gray-400 hover:text-black text-xs"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            ) : (
-                              <>
-                                {valor}
-                                {hovered &&
-                                  hovered.usuarioId === f.id &&
-                                  hovered.fecha === celdaFecha && (
-                                    <button
-                                      onClick={() =>
-                                        setEditando({
-                                          usuarioId: f.id,
-                                          fecha: celdaFecha,
-                                        })
-                                      }
-                                      className="absolute top-0 right-0 p-1 text-xs text-blue-600 hover:text-blue-800"
-                                    >
-                                      ✏️
-                                    </button>
-                                  )}
-                              </>
+                            {valor}
+                            {valor !== "L" && (
+                              <button
+                                onClick={() =>
+                                  actualizarCelda(f, d, valor === "T" ? "D" : "T")
+                                }
+                                className="absolute top-0 right-0 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-blue-700 transition"
+                                title="Editar"
+                              >
+                                ✏️
+                              </button>
                             )}
                           </td>
                         );
@@ -262,6 +186,12 @@ const GuardiasPanel = () => {
           </div>
         );
       })}
+        <button
+        onClick={() => navigate("/dependencia/" + dependencia.id)}
+        className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"
+      >
+        ← Volver
+      </button>
     </div>
   );
 };

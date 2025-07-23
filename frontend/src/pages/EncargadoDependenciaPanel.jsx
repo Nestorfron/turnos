@@ -180,14 +180,6 @@ const EncargadoDependenciaPanel = () => {
             <strong>Descripción:</strong> {dependencia.descripcion || "-"}
           </p>
         </div>
-        <button
-          onClick={() =>
-            navigate("/guardias", { state: { sec: dependencia } })
-          }
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-        >
-          Ver Guardias (Calendario)
-        </button>
       </header>
 
       <main className="space-y-10">
@@ -224,7 +216,13 @@ const EncargadoDependenciaPanel = () => {
           onDelete={handleDelete}
         />
 
-        {/* Guardias separadas por turno */}
+        <button
+          onClick={() => navigate("/guardias", { state: { sec: dependencia } })}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+        >
+          Ver Guardias (Calendario)
+        </button>
+
         {/* Guardias separadas por turno */}
         {turnos.map((turno) => {
           const funcionariosDelTurno = funcionarios

@@ -218,6 +218,29 @@ def crear_licencia():
     db.session.commit()
     return jsonify(nueva.serialize()), 201
 
+@api.route('/licencias/<int:id>', methods=['PUT'])
+def actualizar_licencia(id):
+    body = request.json
+    licencia = Licencia.query.get(id)
+    if not licencia:
+        return jsonify({"error": "Licencia no encontrada"}), 404
+
+    licencia.usuario_id = body.get("usuario_id")
+    licencia.fecha_inicio = body.get("fecha_inicio")
+    licencia.fecha_fin = body.get("fecha_fin")
+    licencia.motivo = body.get("motivo")
+    licencia.estado = body.get("estado")
+
+    db.session.commit()
+    return jsonify(licencia.serialize()), 200
+
+@api.route('/licencias/<int:id>', methods=['DELETE'])
+def eliminar_licencia(id):
+    licencia = Licencia.query.get(id)
+    db.session.delete(licencia)
+    db.session.commit()
+    return jsonify({'status': 'ok'}), 200
+
 @api.route('/licencias', methods=['GET'])
 def listar_licencias():
     data = Licencia.query.all()
