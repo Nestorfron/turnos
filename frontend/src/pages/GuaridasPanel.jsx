@@ -375,15 +375,7 @@ const GuardiasPanel = () => {
 
           return (
             <div key={turno.id} className="bg-white rounded shadow p-4">
-              <div className="flex">
-                <button
-                  onClick={() => setModalEliminar({ turno })}
-                  className="ms-auto text-sm text-red-700 hover:text-red-900 border border-red-300 px-3 py-1 rounded hover:bg-red-50 transition"
-                >
-                  🗑
-                </button>
-              </div>
-
+              
               <div className="overflow-x-auto">
                 <table className="min-w-full border border-gray-300 text-sm text-center">
                   <thead>

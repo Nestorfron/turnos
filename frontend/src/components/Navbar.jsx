@@ -26,7 +26,7 @@ const Navbar = () => {
 
   return (
     <nav className="bg-blue-700 text-white px-6 py-3 flex justify-between items-center relative">
-      <div className="text-xl font-bold">Mi App</div>
+      <div className="text-xl font-bold">Gestión de Servicio</div>
 
       <div className="relative" ref={menuRef}>
         <button
