@@ -33,13 +33,29 @@ const EncargadoDependenciaPanel = () => {
 
   useEffect(() => {
     if (!dependencia?.id) return;
-    fetchData(`usuarios`, (allUsuarios) => {
-      const filtrados = allUsuarios.filter(
+
+    fetchData("usuarios", (allUsuarios) => {
+      const usuariosDep = allUsuarios.filter(
         (u) => u.dependencia_id === dependencia.id
       );
-      setFuncionarios(filtrados);
+
+      const jefe = usuariosDep.find(
+        (u) => u.rol_jerarquico === "JEFE_DEPENDENCIA"
+      );
+
+      const soloFuncionarios = usuariosDep.filter(
+        (u) => u.rol_jerarquico !== "JEFE_DEPENDENCIA"
+      );
+
+      setFuncionarios(usuariosDep); // ← incluimos a todos para mostrar en las tablas
+
+      setDependencia((prev) => ({
+        ...prev,
+        jefe_nombre: jefe ? `G${jefe.grado} ${jefe.nombre}` : "Sin jefe",
+        funcionarios_count: soloFuncionarios.length, // ← excluye al jefe
+      }));
     });
-  }, [dependencia]);
+  }, [dependencia?.id]);
 
   useEffect(() => {
     if (!turnos.length) {
@@ -149,9 +165,6 @@ const EncargadoDependenciaPanel = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800 relative">
       <header className="mb-8">
-        <h1 className="text-3xl font-semibold mb-1">
-          Panel Encargado de Dependencia
-        </h1>
         <div className="bg-white rounded-md shadow p-6 mb-10">
           <h2 className="text-2xl font-bold text-blue-900 mb-2">
             {dependencia.nombre}
@@ -167,6 +180,14 @@ const EncargadoDependenciaPanel = () => {
             <strong>Descripción:</strong> {dependencia.descripcion || "-"}
           </p>
         </div>
+        <button
+          onClick={() =>
+            navigate("/guardias", { state: { sec: dependencia } })
+          }
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+        >
+          Ver Guardias (Calendario)
+        </button>
       </header>
 
       <main className="space-y-10">
@@ -205,39 +226,38 @@ const EncargadoDependenciaPanel = () => {
 
         {/* Guardias separadas por turno */}
         {/* Guardias separadas por turno */}
-{turnos.map((turno) => {
-  const funcionariosDelTurno = funcionarios
-    .filter((f) => f.turno_id === turno.id)
-    .sort((a, b) => (b.grado || 0) - (a.grado || 0));
+        {turnos.map((turno) => {
+          const funcionariosDelTurno = funcionarios
+            .filter((f) => f.turno_id === turno.id)
+            .sort((a, b) => (b.grado || 0) - (a.grado || 0));
 
-  return (
-    <Table
-      key={turno.id}
-      title={turno.nombre}
-      columns={["Grado", "Nombre", "Estado", "Acción"]}
-      data={funcionariosDelTurno.map((f) => ({
-        grado: f.grado || "No especificado",
-        nombre: f.nombre,
-        estado: f.estado || "Sin estado",
-        acción: (
-          <button
-            onClick={() =>
-              setAsignacionTurno({
-                usuario_id: f.id,
-                turno_id: f.turno_id || "",
-                estado: f.estado || "asignado",
-              })
-            }
-            className="px-2 py-1 text-sm bg-yellow-400 rounded hover:bg-yellow-500"
-          >
-            ✎
-          </button>
-        ),
-      }))}
-    />
-  );
-})}
-
+          return (
+            <Table
+              key={turno.id}
+              title={turno.nombre}
+              columns={["Grado", "Nombre", "Estado", "Acción"]}
+              data={funcionariosDelTurno.map((f) => ({
+                grado: f.grado || "No especificado",
+                nombre: f.nombre,
+                estado: f.estado || "Sin estado",
+                acción: (
+                  <button
+                    onClick={() =>
+                      setAsignacionTurno({
+                        usuario_id: f.id,
+                        turno_id: f.turno_id || "",
+                        estado: f.estado || "asignado",
+                      })
+                    }
+                    className="px-2 py-1 text-sm bg-yellow-400 rounded hover:bg-yellow-500"
+                  >
+                    ✎
+                  </button>
+                ),
+              }))}
+            />
+          );
+        })}
 
         {/* Funcionarios con turno y estado */}
         <Table
@@ -273,13 +293,6 @@ const EncargadoDependenciaPanel = () => {
             })}
         />
       </main>
-
-      <button
-        onClick={() => navigate("/jefe-zona")}
-        className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"
-      >
-        ← Volver
-      </button>
 
       {turnoEdit && (
         <TurnoModal

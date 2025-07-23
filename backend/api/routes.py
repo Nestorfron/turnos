@@ -173,6 +173,29 @@ def crear_guardia():
     db.session.commit()
     return jsonify(nueva.serialize()), 201
 
+@api.route('/guardias/<int:id>', methods=['PUT'])
+def actualizar_guardia(id):
+    body = request.json
+    guardia = Guardia.query.get(id)
+    if not guardia:
+        return jsonify({"error": "Guardia no encontrada"}), 404
+
+    guardia.usuario_id = body.get("usuario_id")
+    guardia.fecha_inicio = body.get("fecha_inicio")
+    guardia.fecha_fin = body.get("fecha_fin")
+    guardia.tipo = body.get("tipo")
+    guardia.comentario = body.get("comentario")
+
+    db.session.commit()
+    return jsonify(guardia.serialize()), 200
+
+@api.route('/guardias/<int:id>', methods=['DELETE'])
+def eliminar_guardia(id):
+    guardia = Guardia.query.get(id)
+    db.session.delete(guardia)
+    db.session.commit()
+    return jsonify({'status': 'ok'}), 200
+
 @api.route('/guardias', methods=['GET'])
 def listar_guardias():
     data = Guardia.query.all()

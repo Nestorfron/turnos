@@ -36,8 +36,8 @@ const LoginForm = () => {
 
         if (data.rol === "JEFE_ZONA") {
           navigate("/jefe-zona");
-        } else if (data.rol === "encargado_dependencia") {
-          navigate(`/dependencia/${data.id}`); 
+        } else if (data.rol === "JEFE_DEPENDENCIA") {
+          navigate(`/dependencia/${data.dependencia_id}`);
         } else {
           navigate("/"); 
         }

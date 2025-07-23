@@ -23,15 +23,21 @@ const JefeZonaDashboard = () => {
     fetchData("dependencias", async (deps) => {
       fetchData("usuarios", (usuarios) => {
         const actualizadas = deps.map((dep) => {
-          const funcionarios = usuarios.filter(u => u.dependencia_id === dep.id);
+          const usuariosDep = usuarios.filter((u) => u.dependencia_id === dep.id);
+          const jefe = usuariosDep.find((u) => u.rol_jerarquico === "JEFE_DEPENDENCIA");
+          const funcionarios = usuariosDep.filter((u) => u.rol_jerarquico !== "JEFE_DEPENDENCIA");
+    
           return {
             ...dep,
-            funcionarios_count: funcionarios.length
+            funcionarios_count: funcionarios.length,
+            jefe_nombre: jefe ? `G${jefe.grado} ${jefe.nombre}` : "Sin jefe"
+
           };
         });
         setDependencias(actualizadas);
       });
     });
+    
   }, []);
   
 
