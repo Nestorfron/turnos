@@ -329,7 +329,7 @@ def crear_usuario():
         dependencia_id=dependencia_id,
         zona_id=zona_id,
         estado=estado,
-        turno_id=turno_id  # ✅ se incluye en la creación
+        turno_id=turno_id 
     )
 
     db.session.add(nuevo_usuario)

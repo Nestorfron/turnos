@@ -111,19 +111,18 @@ const GuardiasPanel = () => {
         "tercer turno",
         "destacados",
       ];
-    
+
       const turnosOrdenados = [...turnosData].sort((a, b) => {
         const nombreA = a.nombre.trim().toLowerCase();
         const nombreB = b.nombre.trim().toLowerCase();
         const ia = ordenDeseado.indexOf(nombreA);
         const ib = ordenDeseado.indexOf(nombreB);
-    
+
         return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
       });
-    
+
       setTurnos(turnosOrdenados);
     });
-    
   }, [dependencia]);
 
   const getCelda = (usuario, dia) => {
@@ -358,12 +357,15 @@ const GuardiasPanel = () => {
             className="border rounded px-2 py-1"
           />
         </div>
-        <button
+
+        <div className="ml-auto">
+          <button
             onClick={exportarPDF}
-            className="mb-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow"
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow"
           >
-            📄 Exportar todas las guardias a PDF
+            📄 Exportar a PDF
           </button>
+        </div>
       </div>
 
       {/* Contenedor Principal */}
@@ -373,13 +375,10 @@ const GuardiasPanel = () => {
 
           return (
             <div key={turno.id} className="bg-white rounded shadow p-4">
-              <div className="flex justify-between items-center">
-                <h2 className="text-lg font-semibold text-blue-800">
-                  {turno.nombre}
-                </h2>
+              <div className="flex">
                 <button
                   onClick={() => setModalEliminar({ turno })}
-                  className="flex items-center gap-2 text-sm text-red-700 hover:text-red-900 border border-red-300 px-3 py-1 rounded hover:bg-red-50 transition"
+                  className="ms-auto text-sm text-red-700 hover:text-red-900 border border-red-300 px-3 py-1 rounded hover:bg-red-50 transition"
                 >
                   🗑
                 </button>
@@ -389,7 +388,11 @@ const GuardiasPanel = () => {
                 <table className="min-w-full border border-gray-300 text-sm text-center">
                   <thead>
                     <tr className="bg-gray-200">
-                      <th className="border px-2 py-1">Funcionario</th>
+                      <th className="border px-2 py-1 w-48">
+                        <h2 className="text-lg font-semibold text-blue-800">
+                          {turno.nombre}
+                        </h2>
+                      </th>
                       {dias.map((d) => (
                         <th
                           key={d.format("YYYY-MM-DD")}
@@ -403,7 +406,7 @@ const GuardiasPanel = () => {
                   <tbody>
                     {lista.map((f) => (
                       <tr key={f.id}>
-                        <td className="border px-2 text-left whitespace-nowrap">
+                        <td className="border px-2 text-left whitespace-nowrap w-48 min-w-48">
                           G{f.grado} {f.nombre}
                         </td>
                         {dias.map((d) => {
@@ -413,6 +416,7 @@ const GuardiasPanel = () => {
                           let bgBase = "";
                           let textColor = "text-black";
                           let fontWeight = "font-normal";
+                          let textSize = "text-sm";
 
                           switch (valor) {
                             case "D":
@@ -426,24 +430,42 @@ const GuardiasPanel = () => {
                               fontWeight = "font-normal";
                               break;
                             case "L":
-                              bgBase = "bg-yellow-400";
-                              textColor = "text-black";
-                              fontWeight = "font-normal";
-                              break;
-                            case "1ro":
-                              bgBase = "bg-green-500";
-                              textColor = "text-white";
-                              fontWeight = "font-bold";
-                              break;
-                            case "2do":
                               bgBase = "bg-green-600";
                               textColor = "text-white";
                               fontWeight = "font-bold";
                               break;
-                            case "3er":
-                              bgBase = "bg-green-400";
+                            case "1ro":
+                              bgBase = "bg-blue-600";
                               textColor = "text-white";
                               fontWeight = "font-bold";
+                              break;
+                            case "2do":
+                              bgBase = "bg-blue-600";
+                              textColor = "text-white";
+                              fontWeight = "font-bold";
+                              break;
+                            case "3er":
+                              bgBase = "bg-blue-600";
+                              textColor = "text-white";
+                              fontWeight = "font-bold";
+                              break;
+                            case "CURSO":
+                              bgBase = "bg-green-600";
+                              textColor = "text-white";
+                              fontWeight = "font-bold";
+                              textSize = "text-xs";
+                              break;
+                            case "BROU":
+                              bgBase = "bg-white";
+                              textColor = "text-black";
+                              fontWeight = "font-normal";
+                              textSize = "text-xs";
+                              break;
+                            case "CUSTODIA":
+                              bgBase = "bg-blue-600";
+                              textColor = "text-white";
+                              fontWeight = "font-bold";
+                              textSize = "text-xs";
                               break;
                             default:
                               bgBase = "";
@@ -458,7 +480,7 @@ const GuardiasPanel = () => {
                           return (
                             <td
                               key={d.format("YYYY-MM-DD")}
-                              className={`border px-2 py-1 relative group ${bgBase} ${textColor} ${fontWeight}`}
+                              className={`border py-1 h-5 relative group ${bgBase} ${textColor} ${fontWeight} ${textSize}`}
                             >
                               {valor}
                               {valor === "L" ? (
@@ -598,26 +620,32 @@ const GuardiasPanel = () => {
               Seleccionar tipo de guardia
             </h3>
 
-            {["D", "T", "1ro", "2do", "3er"].map((tipo) => (
-              <button
-                key={tipo}
-                onClick={async () => {
-                  await actualizarCelda(
-                    selectorTipo.usuario,
-                    selectorTipo.dia,
-                    tipo
-                  );
-                  setSelectorTipo(null);
-                }}
-                className={`w-full ${
-                  tipo === "D"
-                    ? "bg-gray-100 hover:bg-gray-200 text-gray-800"
-                    : "bg-blue-100 hover:bg-blue-200 text-blue-900"
-                } font-medium py-2 px-4 rounded transition`}
-              >
-                {tipo === "D" ? "Descanso (D)" : tipo}
-              </button>
-            ))}
+            {["D", "T", "1ro", "2do", "3er", "CURSO", "BROU", "CUSTODIA"].map(
+              (tipo) => (
+                <button
+                  key={tipo}
+                  onClick={async () => {
+                    await actualizarCelda(
+                      selectorTipo.usuario,
+                      selectorTipo.dia,
+                      tipo
+                    );
+                    setSelectorTipo(null);
+                  }}
+                  className={`w-full ${
+                    tipo === "D"
+                      ? "bg-gray-100 hover:bg-gray-200 text-gray-800"
+                      : tipo === "CURSO" || tipo === "CUSTODIA"
+                      ? "bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                      : tipo === "BROU"
+                      ? "bg-white hover:bg-gray-100 text-black"
+                      : "bg-blue-100 hover:bg-blue-200 text-blue-900"
+                  } font-medium py-2 px-4 rounded transition`}
+                >
+                  {tipo === "D" ? "Descanso (D)" : tipo}
+                </button>
+              )
+            )}
 
             <button
               onClick={() => setSelectorTipo(null)}
