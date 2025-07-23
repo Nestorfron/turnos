@@ -11,6 +11,7 @@ const DetalleDependencia = () => {
   const [dependencia, setDependencia] = useState(location.state?.sec || null);
   const [turnos, setTurnos] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     if (!dependencia && id) {
@@ -35,12 +36,14 @@ const DetalleDependencia = () => {
     return <p className="text-red-600">Cargando dependencia...</p>;
   }
 
+  const funcionariosFiltrados = funcionarios
+    .filter((f) => f.nombre?.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => (b.grado || 0) - (a.grado || 0));
+
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800">
       <header className="mb-8">
-        <h1 className="text-3xl font-semibold mb-1">
-          Detalle de Dependencia
-        </h1>
+        <h1 className="text-3xl font-semibold mb-1">Detalle de Dependencia</h1>
         <div className="bg-white rounded-md shadow p-6 mb-10">
           <h2 className="text-2xl font-bold text-blue-900 mb-2">
             {dependencia.nombre}
@@ -91,13 +94,24 @@ const DetalleDependencia = () => {
         })}
 
         {/* Tabla final de todos los funcionarios */}
-        <Table
-          title="Todos los Funcionarios de la Unidad"
-          columns={["Grado", "Nombre", "Estado", "Turno Asignado"]}
-          data={funcionarios
-            .slice()
-            .sort((a, b) => (b.grado || 0) - (a.grado || 0))
-            .map((f) => {
+        <section className="bg-white rounded-md shadow p-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+            <h3 className="text-lg font-semibold text-blue-700 mb-2 md:mb-0">
+              Todos los Funcionarios de la Unidad
+            </h3>
+            <input
+              type="text"
+              placeholder="Buscar funcionario por nombre..."
+              className="w-full md:w-64 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <Table
+            title={null}
+            columns={["Grado", "Nombre", "Estado", "Turno Asignado"]}
+            data={funcionariosFiltrados.map((f) => {
               const turno = turnos.find((t) => t.id === f.turno_id);
               return {
                 grado: f.grado ?? "No especificado",
@@ -106,7 +120,8 @@ const DetalleDependencia = () => {
                 "turno asignado": turno ? turno.nombre : "Sin asignar",
               };
             })}
-        />
+          />
+        </section>
       </main>
 
       <button

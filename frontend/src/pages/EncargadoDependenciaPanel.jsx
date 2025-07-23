@@ -20,6 +20,8 @@ const EncargadoDependenciaPanel = () => {
   const [turnoEdit, setTurnoEdit] = useState(null);
   const [nuevoTurno, setNuevoTurno] = useState(null);
 
+  const [searchTerm, setSearchTerm] = useState("");
+
   useEffect(() => {
     if (!dependencia && id) {
       fetchData(`dependencias/${id}`, setDependencia);
@@ -47,12 +49,12 @@ const EncargadoDependenciaPanel = () => {
         (u) => u.rol_jerarquico !== "JEFE_DEPENDENCIA"
       );
 
-      setFuncionarios(usuariosDep); // ← incluimos a todos para mostrar en las tablas
+      setFuncionarios(usuariosDep); 
 
       setDependencia((prev) => ({
         ...prev,
         jefe_nombre: jefe ? `G${jefe.grado} ${jefe.nombre}` : "Sin jefe",
-        funcionarios_count: soloFuncionarios.length, // ← excluye al jefe
+        funcionarios_count: soloFuncionarios.length, 
       }));
     });
   }, [dependencia?.id]);
@@ -179,6 +181,13 @@ const EncargadoDependenciaPanel = () => {
           <p>
             <strong>Descripción:</strong> {dependencia.descripcion || "-"}
           </p>
+          <button
+          onClick={() => navigate("/guardias", { state: { sec: dependencia } })}
+          className="bg-blue-600 text-white mt-4 px-4 py-2 rounded hover:bg-blue-700 transition"
+        >
+          Ver Guardias (Calendario)
+        </button>
+
         </div>
       </header>
 
@@ -216,13 +225,7 @@ const EncargadoDependenciaPanel = () => {
           onDelete={handleDelete}
         />
 
-        <button
-          onClick={() => navigate("/guardias", { state: { sec: dependencia } })}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-        >
-          Ver Guardias (Calendario)
-        </button>
-
+    
         {/* Guardias separadas por turno */}
         {turnos.map((turno) => {
           const funcionariosDelTurno = funcionarios
@@ -258,38 +261,55 @@ const EncargadoDependenciaPanel = () => {
         })}
 
         {/* Funcionarios con turno y estado */}
-        <Table
-          title="Funcionarios de la Unidad"
-          columns={["Grado", "Nombre", "Estado", "Turno Asignado", "Acción"]}
-          data={funcionarios
-            .slice()
-            .sort((a, b) => (b.grado || 0) - (a.grado || 0)) // ordenar por grado descendente
-            .map((f) => {
-              const turnoAsignado = turnos.find((t) => t.id === f.turno_id);
-              return {
-                grado: f.grado ?? "No especificado",
-                nombre: f.nombre,
-                estado: f.estado || "Sin estado",
-                "turno asignado": turnoAsignado
-                  ? turnoAsignado.nombre
-                  : "Sin asignar",
-                acción: (
-                  <button
-                    onClick={() =>
-                      setAsignacionTurno({
-                        usuario_id: f.id,
-                        turno_id: f.turno_id || "",
-                        estado: f.estado || "asignado",
-                      })
-                    }
-                    className="px-2 py-1 text-sm bg-yellow-400 rounded hover:bg-yellow-500"
-                  >
-                    ✎
-                  </button>
-                ),
-              };
-            })}
-        />
+        <section className="bg-white rounded-md shadow p-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+            <h3 className="text-lg font-semibold text-blue-700 mb-2 md:mb-0">
+              Funcionarios de la Unidad
+            </h3>
+            <input
+              type="text"
+              placeholder="Buscar funcionario por nombre..."
+              className="w-full md:w-64 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <Table
+            title={null}
+            columns={["Grado", "Nombre", "Estado", "Turno Asignado", "Acción"]}
+            data={funcionarios
+              .filter((f) =>
+                f.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
+              )
+              .sort((a, b) => (b.grado || 0) - (a.grado || 0))
+              .map((f) => {
+                const turnoAsignado = turnos.find((t) => t.id === f.turno_id);
+                return {
+                  grado: f.grado ?? "No especificado",
+                  nombre: f.nombre,
+                  estado: f.estado || "Sin estado",
+                  "turno asignado": turnoAsignado
+                    ? turnoAsignado.nombre
+                    : "Sin asignar",
+                  acción: (
+                    <button
+                      onClick={() =>
+                        setAsignacionTurno({
+                          usuario_id: f.id,
+                          turno_id: f.turno_id || "",
+                          estado: f.estado || "asignado",
+                        })
+                      }
+                      className="px-2 py-1 text-sm bg-yellow-400 rounded hover:bg-yellow-500"
+                    >
+                      ✎
+                    </button>
+                  ),
+                };
+              })}
+          />
+        </section>
       </main>
 
       {turnoEdit && (

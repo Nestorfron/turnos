@@ -13,6 +13,7 @@ const JefeZonaDashboard = () => {
   const [selectedDep, setSelectedDep] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false); 
+  
 
   useEffect(() => {
     fetchData("jefaturas", (data) => {
@@ -58,11 +59,11 @@ const JefeZonaDashboard = () => {
     const numB = extractNumber(getNombre(b));
 
     if (numA !== null && numB !== null) {
-      // Ordenar por número descendente si ambos tienen número
+      
       return numA - numB;
     }
 
-    // Ordenar alfabéticamente si no tienen número o solo uno lo tiene
+    
     return getNombre(a).localeCompare(getNombre(b));
   });
 

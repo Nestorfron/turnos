@@ -63,6 +63,8 @@ const TurnoModal = ({
             <option value="Horario mañana">Horario mañana</option>
             <option value="Horario tarde">Horario tarde</option>
             <option value="Horario noche">Horario noche</option>
+            <option value="Full Time">Full Time</option>
+            <option value="Brou">Brou</option>
           </select>
         </label>
 

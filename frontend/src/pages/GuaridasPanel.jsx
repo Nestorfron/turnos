@@ -12,7 +12,10 @@ import LicenciaModal from "../components/LicenciaModal.jsx";
 import EliminarGuardiasModal from "../components/EliminarGuardiasModal.jsx";
 
 dayjs.extend(utc);
-dayjs.locale("es"); // Activar español
+dayjs.locale("es");
+
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
@@ -21,6 +24,8 @@ const GuardiasPanel = () => {
   const navigate = useNavigate();
   const dependencia = location.state?.sec;
 
+  const [selectorTipo, setSelectorTipo] = useState(null); // { usuario, dia }
+
   const [funcionarios, setFuncionarios] = useState([]);
   const [guardias, setGuardias] = useState([]);
   const [turnos, setTurnos] = useState([]);
@@ -28,12 +33,45 @@ const GuardiasPanel = () => {
   const [modalEliminar, setModalEliminar] = useState(null);
 
   const [modalData, setModalData] = useState(null);
-  const [daysToShow, setDaysToShow] = useState(7);
+  const [daysToShow, setDaysToShow] = useState(14);
 
-  const [startDate, setStartDate] = useState(dayjs("2025-07-01"));
+  const [startDate, setStartDate] = useState(dayjs().startOf("day"));
   const dias = Array.from({ length: daysToShow }, (_, i) =>
     startDate.add(i, "day")
   );
+
+  const exportarPDF = () => {
+    const contenedor = document.getElementById("contenedor-tablas");
+
+    if (!contenedor) return;
+
+    html2canvas(contenedor, { scale: 2 }).then((canvas) => {
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("landscape", "pt", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      if (imgHeight < pageHeight) {
+        pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      } else {
+        let heightLeft = imgHeight;
+        let y = 0;
+
+        while (heightLeft > 0) {
+          pdf.addImage(imgData, "PNG", 0, y, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+          if (heightLeft > 0) {
+            pdf.addPage();
+            y -= pageHeight;
+          }
+        }
+      }
+
+      pdf.save("guardias_completo.pdf");
+    });
+  };
 
   useEffect(() => {
     if (!dependencia?.id) return;
@@ -47,6 +85,7 @@ const GuardiasPanel = () => {
       setFuncionarios(filtrados);
 
       fetchData("guardias", (todasGuardias) => {
+        console.log("guardias", todasGuardias);
         const guardiasFiltradas = todasGuardias.filter((g) =>
           filtrados.some((f) => f.id === g.usuario_id)
         );
@@ -64,7 +103,27 @@ const GuardiasPanel = () => {
       });
     });
 
-    fetchData(`turnos?dependencia_id=${dependencia.id}`, setTurnos);
+    fetchData(`turnos?dependencia_id=${dependencia.id}`, (turnosData) => {
+      const ordenDeseado = [
+        "primer turno",
+        "brou",
+        "segundo turno",
+        "tercer turno",
+        "destacados",
+      ];
+    
+      const turnosOrdenados = [...turnosData].sort((a, b) => {
+        const nombreA = a.nombre.trim().toLowerCase();
+        const nombreB = b.nombre.trim().toLowerCase();
+        const ia = ordenDeseado.indexOf(nombreA);
+        const ib = ordenDeseado.indexOf(nombreB);
+    
+        return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+      });
+    
+      setTurnos(turnosOrdenados);
+    });
+    
   }, [dependencia]);
 
   const getCelda = (usuario, dia) => {
@@ -81,7 +140,8 @@ const GuardiasPanel = () => {
 
     if (registro) {
       if (registro.tipo === "licencia") return "L";
-      return "T";
+      if (registro.tipo === "guardia") return "T";
+      return registro.tipo;
     }
 
     return "D";
@@ -97,12 +157,29 @@ const GuardiasPanel = () => {
       return fechaStr >= inicio && fechaStr <= fin;
     });
 
-    if (nuevoTipo === "T") {
-      if (existente?.tipo === "licencia" || existente?.tipo === "guardia") {
+    if (existente) {
+      const url =
+        existente.tipo === "licencia"
+          ? `${apiUrl}/licencias/${existente.id}`
+          : `${apiUrl}/guardias/${existente.id}`;
+
+      const resp = await fetch(url, { method: "DELETE" });
+
+      if (resp.ok) {
+        setGuardias((prev) => prev.filter((g) => g.id !== existente.id));
+      } else {
+        const error = await resp.json();
+        console.error("Error al borrar existente:", error);
         return;
       }
+    }
 
-      const bloqueDisponible = Array.from({ length: 5 }).every((_, i) => {
+    if (nuevoTipo === "D") return;
+    const tipoAGuardar = nuevoTipo === "T" ? "guardia" : nuevoTipo;
+
+    const esBloqueT =
+      nuevoTipo === "T" &&
+      Array.from({ length: 5 }).every((_, i) => {
         const fecha = dia.add(i, "day").format("YYYY-MM-DD");
 
         const ocupado = guardias.find((g) => {
@@ -115,33 +192,13 @@ const GuardiasPanel = () => {
         return !ocupado;
       });
 
-      if (bloqueDisponible) {
-        for (let i = 0; i < 5; i++) {
-          const fecha = dia.add(i, "day");
-          const nueva = {
-            usuario_id: usuario.id,
-            fecha_inicio: fecha.format("YYYY-MM-DD"),
-            fecha_fin: fecha.format("YYYY-MM-DD"),
-            tipo: "guardia",
-            comentario: "Agregada manualmente",
-          };
-
-          const resp = await fetch(`${apiUrl}/guardias`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(nueva),
-          });
-
-          if (resp.ok) {
-            const creada = await resp.json();
-            setGuardias((prev) => [...prev, creada]);
-          }
-        }
-      } else {
+    if (nuevoTipo === "T" && esBloqueT) {
+      for (let i = 0; i < 5; i++) {
+        const fecha = dia.add(i, "day");
         const nueva = {
           usuario_id: usuario.id,
-          fecha_inicio: fechaStr,
-          fecha_fin: fechaStr,
+          fecha_inicio: fecha.format("YYYY-MM-DD"),
+          fecha_fin: fecha.format("YYYY-MM-DD"),
           tipo: "guardia",
           comentario: "Agregada manualmente",
         };
@@ -157,21 +214,24 @@ const GuardiasPanel = () => {
           setGuardias((prev) => [...prev, creada]);
         }
       }
-    }
+    } else {
+      const nueva = {
+        usuario_id: usuario.id,
+        fecha_inicio: fechaStr,
+        fecha_fin: fechaStr,
+        tipo: tipoAGuardar,
+        comentario: "Agregada manualmente",
+      };
 
-    if (nuevoTipo === "D" && existente) {
-      const url =
-        existente.tipo === "guardia"
-          ? `${apiUrl}/guardias/${existente.id}`
-          : `${apiUrl}/licencias/${existente.id}`;
-
-      const resp = await fetch(url, { method: "DELETE" });
+      const resp = await fetch(`${apiUrl}/guardias`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nueva),
+      });
 
       if (resp.ok) {
-        setGuardias((prev) => prev.filter((g) => g.id !== existente.id));
-      } else {
-        const error = await resp.json();
-        console.error("Error al borrar:", error);
+        const creada = await resp.json();
+        setGuardias((prev) => [...prev, creada]);
       }
     }
   };
@@ -269,9 +329,9 @@ const GuardiasPanel = () => {
       .sort((a, b) => (b.grado || 0) - (a.grado || 0));
 
   return (
-    <div className="p-6 space-y-12 bg-gray-50 min-h-screen">
+    <div className="p-6 space-y-2 bg-gray-50 min-h-screen">
       <h1 className="text-2xl font-bold text-blue-900 mb-6">
-        Guardias por Turno (Calendario)
+        Escalafón de Servicio
       </h1>
 
       {/* Controles de visualización */}
@@ -298,124 +358,170 @@ const GuardiasPanel = () => {
             className="border rounded px-2 py-1"
           />
         </div>
+        <button
+            onClick={exportarPDF}
+            className="mb-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow"
+          >
+            📄 Exportar todas las guardias a PDF
+          </button>
       </div>
 
-      {turnos.map((turno) => {
-        const lista = funcionariosPorTurno(turno.id);
+      {/* Contenedor Principal */}
+      <div id="contenedor-tablas" className="mb-6">
+        {turnos.map((turno) => {
+          const lista = funcionariosPorTurno(turno.id);
 
-        return (
-          <div key={turno.id} className="bg-white rounded shadow p-4">
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="text-lg font-semibold text-blue-800">
-                {turno.nombre}
-              </h2>
-              <button
-                onClick={() => setModalEliminar({ turno })}
-                className="flex items-center gap-2 text-sm text-red-700 hover:text-red-900 border border-red-300 px-3 py-1 rounded hover:bg-red-50 transition"
-              >
-                🗑
-              </button>
-            </div>
+          return (
+            <div key={turno.id} className="bg-white rounded shadow p-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-semibold text-blue-800">
+                  {turno.nombre}
+                </h2>
+                <button
+                  onClick={() => setModalEliminar({ turno })}
+                  className="flex items-center gap-2 text-sm text-red-700 hover:text-red-900 border border-red-300 px-3 py-1 rounded hover:bg-red-50 transition"
+                >
+                  🗑
+                </button>
+              </div>
 
-            <div className="overflow-x-auto">
-              <table className="min-w-full border border-gray-300 text-sm text-center">
-                <thead>
-                  <tr className="bg-gray-200">
-                    <th className="border px-2 py-1">Funcionario</th>
-                    {dias.map((d) => (
-                      <th
-                        key={d.format("YYYY-MM-DD")}
-                        className="border px-2 py-1"
-                      >
-                        {d.format("ddd")} <br /> {d.format("D")}
-                      </th>
+              <div className="overflow-x-auto">
+                <table className="min-w-full border border-gray-300 text-sm text-center">
+                  <thead>
+                    <tr className="bg-gray-200">
+                      <th className="border px-2 py-1">Funcionario</th>
+                      {dias.map((d) => (
+                        <th
+                          key={d.format("YYYY-MM-DD")}
+                          className="border px-2 py-1"
+                        >
+                          {d.format("ddd")} <br /> {d.format("D")}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lista.map((f) => (
+                      <tr key={f.id}>
+                        <td className="border px-2 text-left whitespace-nowrap">
+                          G{f.grado} {f.nombre}
+                        </td>
+                        {dias.map((d) => {
+                          const valor = getCelda(f, d);
+                          const esFinDeSemana = [6, 0].includes(d.day());
+
+                          let bgBase = "";
+                          let textColor = "text-black";
+                          let fontWeight = "font-normal";
+
+                          switch (valor) {
+                            case "D":
+                              bgBase = "bg-black";
+                              textColor = "text-white";
+                              fontWeight = "font-bold";
+                              break;
+                            case "T":
+                              bgBase = "bg-white";
+                              textColor = "text-black";
+                              fontWeight = "font-normal";
+                              break;
+                            case "L":
+                              bgBase = "bg-yellow-400";
+                              textColor = "text-black";
+                              fontWeight = "font-normal";
+                              break;
+                            case "1ro":
+                              bgBase = "bg-green-500";
+                              textColor = "text-white";
+                              fontWeight = "font-bold";
+                              break;
+                            case "2do":
+                              bgBase = "bg-green-600";
+                              textColor = "text-white";
+                              fontWeight = "font-bold";
+                              break;
+                            case "3er":
+                              bgBase = "bg-green-400";
+                              textColor = "text-white";
+                              fontWeight = "font-bold";
+                              break;
+                            default:
+                              bgBase = "";
+                              textColor = "text-black";
+                              fontWeight = "font-normal";
+                          }
+
+                          const fondoExtra = esFinDeSemana
+                            ? ""
+                            : "bg-opacity-100";
+
+                          return (
+                            <td
+                              key={d.format("YYYY-MM-DD")}
+                              className={`border px-2 py-1 relative group ${bgBase} ${textColor} ${fontWeight}`}
+                            >
+                              {valor}
+                              {valor === "L" ? (
+                                <>
+                                  <button
+                                    onClick={() =>
+                                      abrirModalEditarLicencia(f, d)
+                                    }
+                                    className="absolute top-0 right-6 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-blue-700 transition"
+                                    title="Editar Licencia"
+                                  >
+                                    ✏️
+                                  </button>
+                                  <button
+                                    onClick={() => eliminarLicencia(f, d)}
+                                    className="absolute top-0 right-0 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-red-700 transition"
+                                    title="Eliminar Licencia"
+                                  >
+                                    ❌
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() =>
+                                      setSelectorTipo({ usuario: f, dia: d })
+                                    }
+                                    className="absolute top-0 right-6 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-blue-700 transition"
+                                    title="Cambiar Guardia"
+                                  >
+                                    ✏️
+                                  </button>
+                                  <button
+                                    onClick={() => abrirModalLicencia(f, d)}
+                                    className="absolute top-0 right-0 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-red-500 transition"
+                                    title="Agregar Licencia"
+                                  >
+                                    📄
+                                  </button>
+                                </>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {lista.map((f) => (
-                    <tr key={f.id}>
-                      <td className="border px-2 py-1 text-left whitespace-nowrap">
-                        G{f.grado} {f.nombre}
-                      </td>
-                      {dias.map((d) => {
-                        const valor = getCelda(f, d);
-                        return (
-                          <td
-                            key={d.format("YYYY-MM-DD")}
-                            className={`border px-2 py-1 relative group ${
-                              valor === "T"
-                                ? "bg-blue-100"
-                                : valor === "D"
-                                ? "bg-yellow-100"
-                                : valor === "L"
-                                ? "bg-red-100"
-                                : ""
-                            }`}
-                          >
-                            {valor}
-                            {valor === "L" ? (
-                              <>
-                                <button
-                                  onClick={() => abrirModalEditarLicencia(f, d)}
-                                  className="absolute top-0 right-6 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-blue-700 transition"
-                                  title="Editar Licencia"
-                                >
-                                  ✏️
-                                </button>
-                                <button
-                                  onClick={() => eliminarLicencia(f, d)}
-                                  className="absolute top-0 right-0 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-red-700 transition"
-                                  title="Eliminar Licencia"
-                                >
-                                  ❌
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() =>
-                                    actualizarCelda(
-                                      f,
-                                      d,
-                                      valor === "T" ? "D" : "T"
-                                    )
-                                  }
-                                  className="absolute top-0 right-6 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-blue-700 transition"
-                                  title="Cambiar Guardia"
-                                >
-                                  ✏️
-                                </button>
-                                <button
-                                  onClick={() => abrirModalLicencia(f, d)}
-                                  className="absolute top-0 right-0 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-red-500 transition"
-                                  title="Agregar Licencia"
-                                >
-                                  📄
-                                </button>
-                              </>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                  {lista.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={dias.length + 1}
-                        className="text-center py-4 text-gray-500"
-                      >
-                        No hay funcionarios asignados a este turno.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    {lista.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={dias.length + 1}
+                          className="text-center py-4 text-gray-500"
+                        >
+                          No hay funcionarios asignados a este turno.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
 
       <button
         onClick={() => navigate("/dependencia/" + dependencia.id)}
@@ -484,6 +590,43 @@ const GuardiasPanel = () => {
           onClose={() => setModalEliminar(null)}
           onConfirm={eliminarGuardiasFiltradas}
         />
+      )}
+      {selectorTipo && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-80 space-y-4">
+            <h3 className="text-lg font-semibold text-blue-800 mb-2">
+              Seleccionar tipo de guardia
+            </h3>
+
+            {["D", "T", "1ro", "2do", "3er"].map((tipo) => (
+              <button
+                key={tipo}
+                onClick={async () => {
+                  await actualizarCelda(
+                    selectorTipo.usuario,
+                    selectorTipo.dia,
+                    tipo
+                  );
+                  setSelectorTipo(null);
+                }}
+                className={`w-full ${
+                  tipo === "D"
+                    ? "bg-gray-100 hover:bg-gray-200 text-gray-800"
+                    : "bg-blue-100 hover:bg-blue-200 text-blue-900"
+                } font-medium py-2 px-4 rounded transition`}
+              >
+                {tipo === "D" ? "Descanso (D)" : tipo}
+              </button>
+            ))}
+
+            <button
+              onClick={() => setSelectorTipo(null)}
+              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded transition"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

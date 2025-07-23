@@ -384,6 +384,13 @@ def actualizar_usuario(id):
     db.session.commit()
     return jsonify(usuario.serialize()), 200
 
+@api.route('/usuarios/<int:id>', methods=['DELETE'])
+def eliminar_usuario(id):
+    usuario = Usuario.query.get(id)
+    db.session.delete(usuario)
+    db.session.commit()
+    return jsonify({'status': 'ok'}), 200   
+
 
 
 # -------------------------------------------------------------------

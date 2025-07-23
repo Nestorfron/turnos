@@ -1,7 +1,7 @@
 import React from "react";
 
 // Podés reemplazar esta lista por una que venga del backend en el futuro
-const estadosDisponibles = ["asignado", "activo", "completado"];
+const estadosDisponibles = [ "activo", "inactivo"];
 
 const AsignarTurnoModal = ({
   funcionarios,
