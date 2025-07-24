@@ -1,107 +1,158 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { Plus } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
-import DonutChart from "../components/DonutChart";
 import { fetchData } from "../utils/api";
+import Table from "../components/Table";
+import { Link } from "react-router-dom";
 
 const EncargadoDependenciaPanel = () => {
   const { usuario } = useAppContext();
   const [dependencia, setDependencia] = useState(null);
-  const [datosTurnos, setDatosTurnos] = useState([]);
+  const [turnos, setTurnos] = useState([]);
+  const [funcionarios, setFuncionarios] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [cantidadFuncionarios, setCantidadFuncionarios] = useState(0);
 
   useEffect(() => {
     if (!usuario?.dependencia_id) return;
 
     fetchData("dependencias", (deps) => {
-        console.log("deps", deps);
-      fetchData("usuarios", (usuarios) => {
-        console.log("usuarios", usuarios);
-        const dep = deps.find((d) => d.id === usuario.dependencia_id);
-        if (!dep) {
-          setDependencia(null);
-          return;
-        }
+      const dep = deps.find((d) => d.id === usuario.dependencia_id);
+      if (!dep) return;
 
-        const usuariosDep = usuarios.filter((u) => u.dependencia_id === dep.id);
-        const jefe = usuariosDep.find((u) => u.rol_jerarquico === "JEFE_DEPENDENCIA");
-        const funcionarios = usuariosDep.filter((u) => u.rol_jerarquico !== "JEFE_DEPENDENCIA");
+      // Separar jefe
+      const jefe = dep.usuarios.find(
+        (u) => u.rol_jerarquico === "JEFE_DEPENDENCIA"
+      );
+      const funcs = dep.usuarios.filter(
+        (u) => u.rol_jerarquico !== "JEFE_DEPENDENCIA"
+      );
 
-        setDependencia({
-          ...dep,
-          jefe_nombre: jefe ? `G${jefe.grado} ${jefe.nombre}` : "Sin jefe",
-          funcionarios_count: funcionarios.length,
-        });
-
-        // Contar funcionarios por turno
-        const turnoCounts = funcionarios.reduce((acc, funcionario) => {
-          const turno = funcionario.turno || "Sin turno";
-          acc[turno] = (acc[turno] || 0) + 1;
-          return acc;
-        }, {});
-
-        const dataDonut = Object.entries(turnoCounts).map(([turno, count]) => ({
-          name: turno,
-          value: count,
-        }));
-
-        setDatosTurnos(dataDonut);
+      setDependencia({
+        id: dep.id,
+        nombre: dep.nombre,
+        descripcion: dep.descripcion,
+        jefe_nombre: jefe ? `G${jefe.grado} ${jefe.nombre}` : "Sin jefe",
       });
+
+      setTurnos(dep.turnos || []);
+      setFuncionarios(funcs);
+      setCantidadFuncionarios(dep.usuarios.length);
     });
   }, [usuario]);
 
-  if (!usuario) {
-    return <p className="p-6">Acceso no autorizado. Por favor inicia sesión.</p>;
-  }
+  if (!usuario) return <p>Acceso no autorizado</p>;
+  if (!dependencia) return <p>Cargando...</p>;
 
-  if (!dependencia) {
-    return <p className="p-6 text-gray-500">No tienes una dependencia asignada o no está cargada.</p>;
-  }
+  const funcionariosFiltrados = funcionarios.filter((f) =>
+    f.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800">
-      <header className="mb-8 bg-white rounded-md shadow p-6">
-        <h1 className="text-3xl font-semibold mb-2">{dependencia.nombre}</h1>
-        <p><strong>Jefe:</strong> {dependencia.jefe_nombre}</p>
-        <p><strong>Funcionarios:</strong> {dependencia.funcionarios_count}</p>
+      <header className="mb-8">
+        <div className="bg-white rounded-md shadow p-6 mb-4">
+          <h2 className="text-2xl font-bold text-blue-900 mb-2">
+            {dependencia.nombre}
+          </h2>
+          <p>
+            <strong>Jefe:</strong> {dependencia.jefe_nombre}
+          </p>
+          <p>
+            <strong>Descripción:</strong> {dependencia.descripcion || "-"}
+          </p>
+          <p>
+            <strong>Total de funcionarios:</strong> {cantidadFuncionarios}
+          </p>
+        </div>
+
+        <Link
+          to={`/guardias`}
+          state={{ sec: dependencia }}
+          className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+        >
+          Ver Escalafón
+        </Link>
       </header>
 
-      <section className="mb-8 bg-white rounded-md shadow p-4">
-        <h3 className="text-lg font-semibold text-blue-700 mb-3">
-          Funcionarios por Turno
-        </h3>
-        <DonutChart data={datosTurnos} />
-      </section>
+      <main className="space-y-10">
+        {/* Turnos actuales */}
+        <Table
+          title="Turnos Actuales"
+          columns={["Nombre", "Hora Inicio", "Hora Fin", "Descripción"]}
+          data={turnos.map((t) => ({
+            nombre: t.descripcion,
+            "hora inicio": t.hora_inicio?.slice(0, 5),
+            "hora fin": t.hora_fin?.slice(0, 5),
+            descripción: t.descripcion || "-",
+          }))}
+        />
 
-      <section className="mb-8 bg-white rounded-md shadow p-4">
-        <table className="min-w-full border-collapse border border-gray-300 text-sm">
-          <thead>
-            <tr className="bg-gray-100 text-gray-700 uppercase text-xs font-medium tracking-wide">
-              <th className="border border-gray-300 py-2 px-4 text-left">Nombre</th>
-              <th className="border border-gray-300 py-2 px-4 text-left">Jefe</th>
-              <th className="border border-gray-300 py-2 px-4 text-left">Funcionarios</th>
-              <th className="border border-gray-300 py-2 px-4 text-left">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="bg-gray-50 hover:bg-blue-50 transition-colors">
-              <td className="border border-gray-300 py-2 px-4">{dependencia.nombre}</td>
-              <td className="border border-gray-300 py-2 px-4">{dependencia.jefe_nombre}</td>
-              <td className="border border-gray-300 py-2 px-4">{dependencia.funcionarios_count}</td>
-              <td className="border border-gray-300 py-2 px-4">
-                <Link
-                  to={`/dependencia-panel/${dependencia.id}`}
-                  state={{ sec: dependencia }}
-                  className="inline-flex items-center gap-1 text-blue-600 hover:underline"
-                >
-                  <Plus size={16} />
-                  Ver más
-                </Link>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
+        {/* Funcionarios por turno */}
+        {turnos.map((turno) => {
+          const funcionariosTurno = funcionarios
+            .filter((f) => f.turno_id === turno.id)
+            .sort((a, b) => (b.grado || 0) - (a.grado || 0));
+
+          return (
+            <Table
+              key={turno.id}
+              title={`Funcionarios del turno ${turno.descripcion}`}
+              columns={["Grado", "Nombre", "Estado"]}
+              data={funcionariosTurno.map((f) => ({
+                grado: f.grado ?? "No especificado",
+                nombre: f.nombre,
+                estado: f.estado || "Sin estado",
+              }))}
+            />
+          );
+        })}
+
+        {/* Funcionarios sin turno */}
+        {funcionarios.filter((f) => !f.turno_id).length > 0 && (
+          <Table
+            title="Funcionarios sin turno asignado"
+            columns={["Grado", "Nombre", "Estado"]}
+            data={funcionarios
+              .filter((f) => !f.turno_id)
+              .sort((a, b) => (b.grado || 0) - (a.grado || 0))
+              .map((f) => ({
+                grado: f.grado ?? "No especificado",
+                nombre: f.nombre,
+                estado: f.estado || "Sin estado",
+              }))}
+          />
+        )}
+
+        {/* Tabla final de todos los funcionarios con buscador */}
+        <section className="bg-white rounded-md shadow p-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+            <h3 className="text-lg font-semibold text-blue-700 mb-2 md:mb-0">
+              Todos los Funcionarios de la Unidad
+            </h3>
+            <input
+              type="text"
+              placeholder="Buscar funcionario por nombre..."
+              className="w-full md:w-64 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <Table
+            title={null}
+            columns={["Grado", "Nombre", "Estado", "Turno Asignado"]}
+            data={funcionariosFiltrados.map((f) => {
+              const turno = turnos.find((t) => t.id === f.turno_id);
+              return {
+                grado: f.grado ?? "No especificado",
+                nombre: f.nombre,
+                estado: f.estado || "Sin estado",
+                "turno asignado": turno ? turno.descripcion : "Sin asignar",
+              };
+            })}
+          />
+        </section>
+      </main>
     </div>
   );
 };
