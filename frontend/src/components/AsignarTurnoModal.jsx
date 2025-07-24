@@ -1,21 +1,41 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
-// Podés reemplazar esta lista por una que venga del backend en el futuro
-const estadosDisponibles = [ "activo", "inactivo"];
+const estadosDisponibles = ["activo", "inactivo"];
 
 const AsignarTurnoModal = ({
   funcionarios,
   turnos,
-  asignacion,
-  setAsignacion,
+  asignacion, // prop de asignación que viene del padre
   onClose,
   onSubmit,
 }) => {
-  if (!asignacion) return null;
+  const [form, setForm] = useState({
+    usuario_id: "",
+    turno_id: "",
+    estado: "",
+  });
+
+  // Cuando cambia la prop `asignacion`, sincronizo el estado local `form`
+  useEffect(() => {
+    if (asignacion) {
+      setForm({
+        usuario_id: asignacion.usuario_id || "",
+        turno_id: asignacion.turno_id || "",
+        estado: asignacion.estado || "",
+      });
+    }
+  }, [asignacion]);
 
   const handleChange = (field, value) => {
-    setAsignacion({ ...asignacion, [field]: value });
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
+
+  const handleSubmit = () => {
+    // Mandamos el form completo al padre
+    onSubmit(form);
+  };
+
+  if (!asignacion) return null;
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
@@ -26,7 +46,7 @@ const AsignarTurnoModal = ({
           Funcionario
           <select
             className="w-full border px-3 py-2 rounded mt-1"
-            value={asignacion.usuario_id || ""}
+            value={form.usuario_id}
             onChange={(e) =>
               handleChange("usuario_id", e.target.value ? parseInt(e.target.value) : "")
             }
@@ -44,7 +64,7 @@ const AsignarTurnoModal = ({
           Turno
           <select
             className="w-full border px-3 py-2 rounded mt-1"
-            value={asignacion.turno_id || ""}
+            value={form.turno_id}
             onChange={(e) =>
               handleChange("turno_id", e.target.value ? parseInt(e.target.value) : "")
             }
@@ -62,8 +82,8 @@ const AsignarTurnoModal = ({
           Estado
           <select
             className="w-full border px-3 py-2 rounded mt-1"
-            value={asignacion.estado ?? ""}
-            onChange={(e) => handleChange("estado", e.target.value || null)}
+            value={form.estado}
+            onChange={(e) => handleChange("estado", e.target.value || "")}
           >
             <option value="">Seleccione un estado</option>
             {estadosDisponibles.map((estado) => (
@@ -82,7 +102,7 @@ const AsignarTurnoModal = ({
             Cancelar
           </button>
           <button
-            onClick={onSubmit}
+            onClick={handleSubmit}
             className="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700"
           >
             Asignar

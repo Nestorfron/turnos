@@ -34,7 +34,7 @@ const JefeZonaDashboard = () => {
 
           return {
             ...dep,
-            funcionarios_count: funcionarios.length,
+            funcionarios_count: usuariosDep.length,
             jefe_nombre: jefe ? `G${jefe.grado} ${jefe.nombre}` : "Sin jefe",
           };
         });
@@ -87,7 +87,6 @@ const JefeZonaDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800">
       <header className="mb-8">
-        <h1 className="text-3xl font-semibold mb-2">Panel Jefe de Zona</h1>
         {jefatura ? (
           <div className="bg-white rounded-md shadow p-6 mb-8">
             <h2 className="text-2xl font-bold text-blue-900 mb-2">
