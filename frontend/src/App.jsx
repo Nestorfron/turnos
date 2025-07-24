@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
+import MiPerfil from "./pages/MiPerfil";
 import AdminPanel from "./pages/AdminPanel";
 import JefeZonaDashboard from "./pages/JefeZonaDashboard";
 import DetalleDependencia from "./pages/DetalleDependencia";
@@ -13,6 +14,7 @@ function App() {
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/mi-perfil" element={<MiPerfil />} />
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/jefe-zona" element={<JefeZonaDashboard />} />
         <Route path="/detalle-dependencia/:id" element={<DetalleDependencia />} />

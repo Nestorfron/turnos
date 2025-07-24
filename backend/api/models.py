@@ -108,6 +108,9 @@ class Usuario(db.Model):
 
     roles_operativos = db.relationship('UsuarioRolOperativo', backref='usuario', lazy=True)
     turnos_asignados = db.relationship('TurnoAsignado', backref='usuario', lazy=True)
+    
+    zona = db.relationship('Zona', backref='usuarios', foreign_keys=[zona_id])
+
     guardias = db.relationship('Guardia', backref='usuario', lazy=True)
     licencias = db.relationship('Licencia', backref='usuario', lazy=True)
 
@@ -132,10 +135,14 @@ class Usuario(db.Model):
             'correo': self.correo,
             'rol_jerarquico': self.rol_jerarquico,
             'dependencia_id': self.dependencia_id,
+            'dependencia_nombre': self.dependencia.nombre if self.dependencia_id and self.dependencia else None,
             'zona_id': self.zona_id,
+            'zona_nombre': self.zona.nombre if self.zona_id and self.zona else None,
             'turno_id': self.turno_id,
+            'turno_nombre': self.turno.nombre if self.turno_id and self.turno else None,
             'estado': self.estado
         }
+
 
     def __repr__(self):
         return f'<Usuario {self.nombre}>'

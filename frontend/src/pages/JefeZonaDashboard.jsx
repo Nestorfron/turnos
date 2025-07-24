@@ -12,61 +12,61 @@ const JefeZonaDashboard = () => {
   const [dependencias, setDependencias] = useState([]);
   const [selectedDep, setSelectedDep] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [isEditing, setIsEditing] = useState(false); 
-  
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     fetchData("jefaturas", (data) => {
       setJefatura(Array.isArray(data) && data.length > 0 ? data[0] : null);
     });
-  
 
     fetchData("dependencias", async (deps) => {
       fetchData("usuarios", (usuarios) => {
         const actualizadas = deps.map((dep) => {
-          const usuariosDep = usuarios.filter((u) => u.dependencia_id === dep.id);
-          const jefe = usuariosDep.find((u) => u.rol_jerarquico === "JEFE_DEPENDENCIA");
-          const funcionarios = usuariosDep.filter((u) => u.rol_jerarquico !== "JEFE_DEPENDENCIA");
-    
+          const usuariosDep = usuarios.filter(
+            (u) => u.dependencia_id === dep.id
+          );
+          const jefe = usuariosDep.find(
+            (u) => u.rol_jerarquico === "JEFE_DEPENDENCIA"
+          );
+          const funcionarios = usuariosDep.filter(
+            (u) => u.rol_jerarquico !== "JEFE_DEPENDENCIA"
+          );
+
           return {
             ...dep,
             funcionarios_count: funcionarios.length,
-            jefe_nombre: jefe ? `G${jefe.grado} ${jefe.nombre}` : "Sin jefe"
-
+            jefe_nombre: jefe ? `G${jefe.grado} ${jefe.nombre}` : "Sin jefe",
           };
         });
         setDependencias(actualizadas);
       });
     });
-    
   }, []);
-  
 
   if (!usuario) {
-    return <p className="p-6">Acceso no autorizado. Por favor inicia sesión.</p>;
+    return (
+      <p className="p-6">Acceso no autorizado. Por favor inicia sesión.</p>
+    );
   }
 
   const dependenciasZona = dependencias
-  .filter((dep) => dep.zona_id === usuario?.zona_id)
-  .sort((a, b) => {
-    const getNombre = (d) => d.nombre?.toLowerCase() ?? "";
-    const extractNumber = (str) => {
-      const match = str.match(/\d+/);
-      return match ? parseInt(match[0], 10) : null;
-    };
+    .filter((dep) => dep.zona_id === usuario?.zona_id)
+    .sort((a, b) => {
+      const getNombre = (d) => d.nombre?.toLowerCase() ?? "";
+      const extractNumber = (str) => {
+        const match = str.match(/\d+/);
+        return match ? parseInt(match[0], 10) : null;
+      };
 
-    const numA = extractNumber(getNombre(a));
-    const numB = extractNumber(getNombre(b));
+      const numA = extractNumber(getNombre(a));
+      const numB = extractNumber(getNombre(b));
 
-    if (numA !== null && numB !== null) {
-      
-      return numA - numB;
-    }
+      if (numA !== null && numB !== null) {
+        return numA - numB;
+      }
 
-    
-    return getNombre(a).localeCompare(getNombre(b));
-  });
-
+      return getNombre(a).localeCompare(getNombre(b));
+    });
 
   const handleModalClose = () => {
     setShowModal(false);
@@ -93,7 +93,9 @@ const JefeZonaDashboard = () => {
             <h2 className="text-2xl font-bold text-blue-900 mb-2">
               Unidad Ejecutora:
             </h2>
-            <p><strong>{jefatura.nombre}</strong></p>
+            <p>
+              <strong>{jefatura.nombre}</strong>
+            </p>
           </div>
         ) : (
           <p className="text-gray-500">No hay jefatura asignada.</p>
@@ -106,25 +108,44 @@ const JefeZonaDashboard = () => {
         </div>
 
         {dependenciasZona.length === 0 ? (
-          <p className="text-gray-500">No hay seccionales asignadas a tu zona.</p>
+          <p className="text-gray-500">
+            No hay seccionales asignadas a tu zona.
+          </p>
         ) : (
           <>
             <section className="mb-8 bg-white rounded-md shadow p-4">
               <table className="min-w-full border-collapse border border-gray-300 text-sm">
                 <thead>
                   <tr className="bg-gray-100 text-gray-700 uppercase text-xs font-medium tracking-wide">
-                    <th className="border border-gray-300 py-2 px-4 text-left">Nombre</th>
-                    <th className="border border-gray-300 py-2 px-4 text-left">Jefe</th>
-                    <th className="border border-gray-300 py-2 px-4 text-left">Funcionarios</th>
-                    <th className="border border-gray-300 py-2 px-4 text-left">Acciones</th>
+                    <th className="border border-gray-300 py-2 px-4 text-left">
+                      Nombre
+                    </th>
+                    <th className="border border-gray-300 py-2 px-4 text-left">
+                      Jefe
+                    </th>
+                    <th className="border border-gray-300 py-2 px-4 text-left">
+                      Funcionarios
+                    </th>
+                    <th className="border border-gray-300 py-2 px-4 text-left">
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {dependenciasZona.map((sec) => (
-                    <tr key={sec.id} className="even:bg-gray-50 hover:bg-blue-50 transition-colors">
-                      <td className="border border-gray-300 py-2 px-4">{sec.nombre}</td>
-                      <td className="border border-gray-300 py-2 px-4">{sec.jefe_nombre || "Sin jefe"}</td>
-                      <td className="border border-gray-300 py-2 px-4">{sec.funcionarios_count || 0}</td>
+                    <tr
+                      key={sec.id}
+                      className="even:bg-gray-50 hover:bg-blue-50 transition-colors"
+                    >
+                      <td className="border border-gray-300 py-2 px-4">
+                        {sec.nombre}
+                      </td>
+                      <td className="border border-gray-300 py-2 px-4">
+                        {sec.jefe_nombre || "Sin jefe"}
+                      </td>
+                      <td className="border border-gray-300 py-2 px-4">
+                        {sec.funcionarios_count || 0}
+                      </td>
                       <td className="border border-gray-300 py-2 px-4 flex items-center gap-2">
                         <Link
                           to={`/detalle-dependencia/${sec.id}`}
@@ -142,8 +163,15 @@ const JefeZonaDashboard = () => {
             </section>
 
             <section className="mb-8 bg-white rounded-md shadow p-4">
-              <h3 className="text-lg font-semibold text-blue-700 mb-3">Funcionarios por Seccional</h3>
-              <DonutChart data={dependenciasZona} />
+              <h3 className="text-lg font-semibold text-blue-700 mb-3">
+                Funcionarios por Seccional
+              </h3>
+              <DonutChart
+                data={dependenciasZona.map((dep) => ({
+                  name: dep.nombre,
+                  value: dep.funcionarios_count || 0,
+                }))}
+              />
             </section>
           </>
         )}

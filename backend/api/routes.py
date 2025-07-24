@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify # type: ignore
-from flask_jwt_extended import create_access_token # type: ignore
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required # type: ignore
 from werkzeug.security import generate_password_hash, check_password_hash # type: ignore
 from api.models import db, Jefatura, Zona, Dependencia, Usuario, RolOperativo, Turno, TurnoAsignado, Guardia, Licencia, SolicitudCambio
 
@@ -336,9 +336,6 @@ def crear_usuario():
     db.session.commit()
     return jsonify(nuevo_usuario.serialize()), 201
 
-
-
-
 @api.route('/usuarios', methods=['GET'])
 def listar_usuarios():
     data = Usuario.query.all()
@@ -383,6 +380,17 @@ def actualizar_usuario(id):
 
     db.session.commit()
     return jsonify(usuario.serialize()), 200
+
+
+@api.route('/usuarios/<int:id>/cambiar-password', methods=['PUT'])
+@jwt_required()
+def cambiar_password(id):
+    current_user_id = get_jwt_identity()
+    if current_user_id != id:
+        return jsonify({"error": "No autorizado"}), 403
+
+    # resto igual...
+
 
 @api.route('/usuarios/<int:id>', methods=['DELETE'])
 def eliminar_usuario(id):
