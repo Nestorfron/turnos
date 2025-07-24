@@ -3,7 +3,9 @@ import { useLocation, useParams, useNavigate } from "react-router-dom";
 import Table from "../components/Table";
 import TurnoModal from "../components/TurnoModal";
 import AsignarTurnoModal from "../components/AsignarTurnoModal";
-import { fetchData, putData, postData, deleteData } from "../utils/api";
+
+const BASE_URL = import.meta.env.VITE_API_URL;
+
 
 const EncargadoDependenciaPanel = () => {
   const location = useLocation();
@@ -74,6 +76,62 @@ const EncargadoDependenciaPanel = () => {
 
   const closeModal = () => setTurnoEdit(null);
   const closeNuevoModal = () => setNuevoTurno(null);
+
+  const fetchData = async (endpoint, setState) => {
+    console.log("fetchData", endpoint);
+    try {
+      const res = await fetch(`${BASE_URL}/${endpoint}`);
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      const data = await res.json();
+      setState(data);
+    } catch (error) {
+      console.error("fetchData error:", error);
+    }
+  };
+  
+  const putData = async (endpoint, body) => {
+    try {
+      const res = await fetch(`${BASE_URL}/${endpoint}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      return await res.json();
+    } catch (error) {
+      console.error("putData error:", error);
+      return null;
+    }
+  };
+  
+  const postData = async (endpoint, body) => {
+    try {
+      const res = await fetch(`${BASE_URL}/${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      return await res.json();
+    } catch (error) {
+      console.error("postData error:", error);
+      return null;
+    }
+  };
+  
+  const deleteData = async (endpoint) => {
+    try {
+      const res = await fetch(`${BASE_URL}/${endpoint}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      return true;
+    } catch (error) {
+      console.error("deleteData error:", error);
+      return false;
+    }
+  };
+  
 
   const handleUpdate = async () => {
     if (!turnoEdit) return;

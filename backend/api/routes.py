@@ -410,19 +410,20 @@ def login():
     correo = body.get("correo")
     password = body.get("password")
 
+    if not correo or not password:
+        return jsonify({"error": "Correo y contraseña son requeridos"}), 400
+
     usuario = Usuario.query.filter_by(correo=correo).first()
-    if usuario and check_password_hash(usuario.password, password):
-        token = create_access_token(identity=usuario.id)
 
-        # Devuelve token + info usuario relevante (id, nombre, correo)
-        return jsonify({
-            "token": token,
-            "id": usuario.id,
-            "nombre": usuario.nombre,
-            "correo": usuario.correo,
-            "rol": usuario.rol_jerarquico,
-            "zona_id": usuario.zona_id,
-            "dependencia_id": usuario.dependencia_id,
-        }), 200
+    if not usuario or not check_password_hash(usuario.password, password):
+        return jsonify({"error": "Usuario o contraseña incorrectos"}), 401
 
-    return jsonify({"error": "Usuario o contraseña incorrectos"}), 401
+    if usuario.estado and usuario.estado != "activo":
+        return jsonify({"error": "Usuario no activo"}), 403
+
+    token = create_access_token(identity=usuario.id)
+
+    return jsonify({
+        "token": token,
+        "usuario": usuario.serialize()
+    }), 200

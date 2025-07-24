@@ -1,24 +1,26 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Users, Edit2, Key } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 
 export default function MiPerfil() {
   const { usuario, login, logout } = useAppContext();
 
-  // Estados para editar correo
   const [editCorreo, setEditCorreo] = useState(false);
   const [tempCorreo, setTempCorreo] = useState(usuario?.correo || "");
   const [loadingCorreo, setLoadingCorreo] = useState(false);
 
-  // Estados para cambio de contraseña
   const [currentPass, setCurrentPass] = useState("");
   const [newPass, setNewPass] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
   const [loadingPass, setLoadingPass] = useState(false);
 
+  // Sincronizar tempCorreo con usuario actualizado
+  useEffect(() => {
+    setTempCorreo(usuario?.correo || "");
+  }, [usuario]);
+
   if (!usuario) return <p>Cargando usuario...</p>;
 
-  // Función para guardar correo
   const handleCorreoSave = async () => {
     if (!tempCorreo.trim()) {
       alert("El correo no puede estar vacío");
@@ -29,13 +31,16 @@ export default function MiPerfil() {
       setLoadingCorreo(true);
       const res = await fetch(`${import.meta.env.VITE_API_URL}/usuarios/${usuario.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${usuario.token}`,
+        },
         body: JSON.stringify({ correo: tempCorreo }),
       });
 
       if (res.ok) {
         const updatedUser = await res.json();
-        login(updatedUser);
+        login({ token: usuario.token, usuario: updatedUser });
         alert("✅ Correo actualizado correctamente");
         setEditCorreo(false);
       } else {
@@ -50,7 +55,6 @@ export default function MiPerfil() {
     }
   };
 
-  // Función para cambiar contraseña
   const handleChangePassword = async () => {
     if (!currentPass || !newPass || !confirmPass) {
       alert("Por favor completa todos los campos de contraseña");
@@ -63,10 +67,16 @@ export default function MiPerfil() {
 
     try {
       setLoadingPass(true);
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/usuarios/${usuario.id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/usuarios/${usuario.id}/cambiar-password`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: newPass }),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${usuario.token}`,
+        },
+        body: JSON.stringify({
+          current_password: currentPass,
+          new_password: newPass,
+        }),
       });
 
       if (res.ok) {
@@ -97,11 +107,21 @@ export default function MiPerfil() {
 
       {/* Datos básicos */}
       <div>
-        <p><strong>Rol jerárquico:</strong> {usuario.rol_jerarquico}</p>
-        <p><strong>Dependencia:</strong> {usuario.dependencia_nombre || "No asignada"}</p>
-        <p><strong>Zona:</strong> {usuario.zona_nombre || "No asignada"}</p>
-        <p><strong>Turno:</strong> {usuario.turno_nombre || "No asignado"}</p>
-        <p><strong>Estado:</strong> {usuario.estado || "No especificado"}</p>
+        <p>
+          <strong>Rol jerárquico:</strong> {usuario.rol_jerarquico}
+        </p>
+        <p>
+          <strong>Dependencia:</strong> {usuario.dependencia_nombre || "No asignada"}
+        </p>
+        <p>
+          <strong>Zona:</strong> {usuario.zona_nombre || "No asignada"}
+        </p>
+        <p>
+          <strong>Turno:</strong> {usuario.turno_nombre || "No asignado"}
+        </p>
+        <p>
+          <strong>Estado:</strong> {usuario.estado || "No especificado"}
+        </p>
       </div>
 
       {/* Correo editable */}
