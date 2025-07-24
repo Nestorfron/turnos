@@ -82,7 +82,9 @@ class Dependencia(db.Model):
             'id': self.id,
             'nombre': self.nombre,
             'descripcion': self.descripcion,
-            'zona_id': self.zona_id
+            'zona_id': self.zona_id,
+            'usuarios': [u.serialize() for u in self.usuarios],
+            'turnos': [t.serialize() for t in self.turnos]
         }
 
     def __repr__(self):

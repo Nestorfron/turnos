@@ -24,22 +24,26 @@ const LoginForm = () => {
       const data = await res.json();
 
       if (res.ok) {
+        // ✅ Guarda todo plano
         login({
-          id: data.id,
-          nombre: data.nombre,
-          correo: data.correo,
           token: data.token,
-          rol_jerarquico: data.rol,
-          dependencia_id: data.dependencia_id,
-          zona_id: data.zona_id,
+          id: data.usuario.id,
+          nombre: data.usuario.nombre,
+          correo: data.usuario.correo,
+          rol_jerarquico: data.usuario.rol_jerarquico,
+          dependencia_id: data.usuario.dependencia_id,
+          dependencia_nombre: data.usuario.dependencia_nombre,
+          zona_id: data.usuario.zona_id,
+          zona_nombre: data.usuario.zona_nombre,
         });
 
-        if (data.rol === "JEFE_ZONA") {
+        // ✅ Redirige según rol
+        if (data.usuario.rol_jerarquico === "JEFE_ZONA") {
           navigate("/jefe-zona");
-        } else if (data.rol === "JEFE_DEPENDENCIA") {
-          navigate(`/dependencia/${data.dependencia_id}`);
+        } else if (data.usuario.rol_jerarquico === "JEFE_DEPENDENCIA") {
+          navigate("dependencia/" + data.usuario.dependencia_id);
         } else {
-          navigate("/"); 
+          navigate("/");
         }
       } else {
         alert(data.error || "Usuario o contraseña incorrectos");

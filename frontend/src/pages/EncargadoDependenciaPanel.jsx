@@ -1,404 +1,107 @@
 import React, { useEffect, useState } from "react";
-import { useLocation, useParams, useNavigate } from "react-router-dom";
-import Table from "../components/Table";
-import TurnoModal from "../components/TurnoModal";
-import AsignarTurnoModal from "../components/AsignarTurnoModal";
-
-const BASE_URL = import.meta.env.VITE_API_URL;
-
+import { Link } from "react-router-dom";
+import { Plus } from "lucide-react";
+import { useAppContext } from "../context/AppContext";
+import DonutChart from "../components/DonutChart";
+import { fetchData } from "../utils/api";
 
 const EncargadoDependenciaPanel = () => {
-  const location = useLocation();
-  const { id } = useParams();
-  const navigate = useNavigate();
-
-  const [dependencia, setDependencia] = useState(location.state?.sec || null);
-  const [turnos, setTurnos] = useState([]);
-  const [funcionarios, setFuncionarios] = useState([]);
-  const [guardias, setGuardias] = useState([]);
-
-  const [asignacionTurno, setAsignacionTurno] = useState(null);
-
-  const [turnoEdit, setTurnoEdit] = useState(null);
-  const [nuevoTurno, setNuevoTurno] = useState(null);
-
-  const [searchTerm, setSearchTerm] = useState("");
+  const { usuario } = useAppContext();
+  const [dependencia, setDependencia] = useState(null);
+  const [datosTurnos, setDatosTurnos] = useState([]);
 
   useEffect(() => {
-    if (!dependencia && id) {
-      fetchData(`dependencias/${id}`, setDependencia);
-    }
-  }, [dependencia, id]);
+    if (!usuario?.dependencia_id) return;
 
-  useEffect(() => {
-    if (!dependencia?.id) return;
-    fetchData(`turnos?dependencia_id=${dependencia.id}`, setTurnos);
-  }, [dependencia]);
+    fetchData("dependencias", (deps) => {
+        console.log("deps", deps);
+      fetchData("usuarios", (usuarios) => {
+        console.log("usuarios", usuarios);
+        const dep = deps.find((d) => d.id === usuario.dependencia_id);
+        if (!dep) {
+          setDependencia(null);
+          return;
+        }
 
-  useEffect(() => {
-    if (!dependencia?.id) return;
+        const usuariosDep = usuarios.filter((u) => u.dependencia_id === dep.id);
+        const jefe = usuariosDep.find((u) => u.rol_jerarquico === "JEFE_DEPENDENCIA");
+        const funcionarios = usuariosDep.filter((u) => u.rol_jerarquico !== "JEFE_DEPENDENCIA");
 
-    fetchData("usuarios", (allUsuarios) => {
-      const usuariosDep = allUsuarios.filter(
-        (u) => u.dependencia_id === dependencia.id
-      );
+        setDependencia({
+          ...dep,
+          jefe_nombre: jefe ? `G${jefe.grado} ${jefe.nombre}` : "Sin jefe",
+          funcionarios_count: funcionarios.length,
+        });
 
-      const jefe = usuariosDep.find(
-        (u) => u.rol_jerarquico === "JEFE_DEPENDENCIA"
-      );
+        // Contar funcionarios por turno
+        const turnoCounts = funcionarios.reduce((acc, funcionario) => {
+          const turno = funcionario.turno || "Sin turno";
+          acc[turno] = (acc[turno] || 0) + 1;
+          return acc;
+        }, {});
 
-      const soloFuncionarios = usuariosDep.filter(
-        (u) => u.rol_jerarquico !== "JEFE_DEPENDENCIA"
-      );
+        const dataDonut = Object.entries(turnoCounts).map(([turno, count]) => ({
+          name: turno,
+          value: count,
+        }));
 
-      setFuncionarios(usuariosDep); 
-
-      setDependencia((prev) => ({
-        ...prev,
-        jefe_nombre: jefe ? `G${jefe.grado} ${jefe.nombre}` : "Sin jefe",
-        funcionarios_count: soloFuncionarios.length, 
-      }));
+        setDatosTurnos(dataDonut);
+      });
     });
-  }, [dependencia?.id]);
+  }, [usuario]);
 
-  useEffect(() => {
-    if (!turnos.length) {
-      setGuardias([]);
-      return;
-    }
-
-    fetchData(`guardias`, (allGuardias) => {
-      const turnoIds = new Set(turnos.map((t) => t.id));
-      const filtradas = allGuardias.filter((g) => turnoIds.has(g.turno_id));
-      setGuardias(filtradas);
-    });
-  }, [turnos]);
-
-  const closeModal = () => setTurnoEdit(null);
-  const closeNuevoModal = () => setNuevoTurno(null);
-
-  const fetchData = async (endpoint, setState) => {
-    console.log("fetchData", endpoint);
-    try {
-      const res = await fetch(`${BASE_URL}/${endpoint}`);
-      if (!res.ok) throw new Error(`Error ${res.status}`);
-      const data = await res.json();
-      setState(data);
-    } catch (error) {
-      console.error("fetchData error:", error);
-    }
-  };
-  
-  const putData = async (endpoint, body) => {
-    try {
-      const res = await fetch(`${BASE_URL}/${endpoint}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error(`Error ${res.status}`);
-      return await res.json();
-    } catch (error) {
-      console.error("putData error:", error);
-      return null;
-    }
-  };
-  
-  const postData = async (endpoint, body) => {
-    try {
-      const res = await fetch(`${BASE_URL}/${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error(`Error ${res.status}`);
-      return await res.json();
-    } catch (error) {
-      console.error("postData error:", error);
-      return null;
-    }
-  };
-  
-  const deleteData = async (endpoint) => {
-    try {
-      const res = await fetch(`${BASE_URL}/${endpoint}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error(`Error ${res.status}`);
-      return true;
-    } catch (error) {
-      console.error("deleteData error:", error);
-      return false;
-    }
-  };
-  
-
-  const handleUpdate = async () => {
-    if (!turnoEdit) return;
-
-    const updatedData = {
-      ...turnoEdit,
-      dependencia_id: dependencia.id,
-    };
-
-    const updated = await putData(`turnos/${turnoEdit.id}`, updatedData);
-
-    if (updated) {
-      alert("Turno actualizado");
-      closeModal();
-      fetchData(`turnos?dependencia_id=${dependencia.id}`, setTurnos);
-    } else {
-      alert("Error al actualizar");
-    }
-  };
-
-  const handleCreate = async () => {
-    if (!nuevoTurno) return;
-
-    const created = await postData(`turnos`, {
-      ...nuevoTurno,
-      dependencia_id: dependencia.id,
-    });
-
-    if (created) {
-      alert("Turno creado");
-      closeNuevoModal();
-      fetchData(`turnos?dependencia_id=${dependencia.id}`, setTurnos);
-    } else {
-      alert("Error al crear");
-    }
-  };
-
-  const handleDelete = async (turno) => {
-    if (!window.confirm(`¿Seguro que deseas eliminar "${turno.nombre}"?`))
-      return;
-
-    const deleted = await deleteData(`turnos/${turno.id}`);
-
-    if (deleted) {
-      alert("Turno eliminado");
-      fetchData(`turnos?dependencia_id=${dependencia.id}`, setTurnos);
-    } else {
-      alert("Error al eliminar");
-    }
-  };
-
-  const handleAsignarTurno = async () => {
-    const { usuario_id, turno_id, estado } = asignacionTurno;
-
-    if (!usuario_id || !turno_id) {
-      alert("Debe seleccionar un funcionario y un turno");
-      return;
-    }
-
-    const result = await putData(`usuarios/${usuario_id}`, {
-      turno_id: parseInt(turno_id),
-      estado,
-    });
-
-    if (result) {
-      alert("Turno asignado correctamente");
-      setAsignacionTurno(null);
-
-      // refrescar lista
-      fetchData(`usuarios`, (allUsuarios) => {
-        const filtrados = allUsuarios.filter(
-          (u) => u.dependencia_id === dependencia.id
-        );
-        setFuncionarios(filtrados);
-      });
-
-      fetchData(`guardias`, (allGuardias) => {
-        const turnoIds = new Set(turnos.map((t) => t.id));
-        const filtradas = allGuardias.filter((g) => turnoIds.has(g.turno_id));
-        setGuardias(filtradas);
-      });
-    } else {
-      alert("Error al asignar turno");
-    }
-  };
+  if (!usuario) {
+    return <p className="p-6">Acceso no autorizado. Por favor inicia sesión.</p>;
+  }
 
   if (!dependencia) {
-    return <p className="text-red-600">Cargando dependencia...</p>;
+    return <p className="p-6 text-gray-500">No tienes una dependencia asignada o no está cargada.</p>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800 relative">
-      <header className="mb-8">
-        <div className="bg-white rounded-md shadow p-6 mb-10">
-          <h2 className="text-2xl font-bold text-blue-900 mb-2">
-            {dependencia.nombre}
-          </h2>
-          <p>
-            <strong>Jefe:</strong> {dependencia.jefe_nombre || "Sin jefe"}
-          </p>
-          <p>
-            <strong>Cantidad de funcionarios:</strong>{" "}
-            {dependencia.funcionarios_count || 0}
-          </p>
-          <p>
-            <strong>Descripción:</strong> {dependencia.descripcion || "-"}
-          </p>
-          <button
-          onClick={() => navigate("/guardias", { state: { sec: dependencia } })}
-          className="bg-blue-600 text-white mt-4 px-4 py-2 rounded hover:bg-blue-700 transition"
-        >
-          Ver Guardias (Calendario)
-        </button>
-
-        </div>
+    <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800">
+      <header className="mb-8 bg-white rounded-md shadow p-6">
+        <h1 className="text-3xl font-semibold mb-2">{dependencia.nombre}</h1>
+        <p><strong>Jefe:</strong> {dependencia.jefe_nombre}</p>
+        <p><strong>Funcionarios:</strong> {dependencia.funcionarios_count}</p>
       </header>
 
-      <main className="space-y-10">
-        <Table
-          title={
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-blue-900">
-                Turnos Actuales
-              </h2>
-              <button
-                onClick={() =>
-                  setNuevoTurno({
-                    nombre: "",
-                    hora_inicio: "",
-                    hora_fin: "",
-                    descripcion: "",
-                  })
-                }
-                className="flex items-center gap-2 ml-4 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
-              >
-                +
-              </button>
-            </div>
-          }
-          columns={["Nombre", "Hora Inicio", "Hora Fin", "Descripcion"]}
-          data={turnos.map((t) => ({
-            nombre: t.nombre,
-            hora_inicio: t.hora_inicio?.slice(0, 5),
-            hora_fin: t.hora_fin?.slice(0, 5),
-            descripcion: t.descripcion,
-            id: t.id,
-          }))}
-          onEdit={(turno) => setTurnoEdit(turno)}
-          onDelete={handleDelete}
-        />
+      <section className="mb-8 bg-white rounded-md shadow p-4">
+        <h3 className="text-lg font-semibold text-blue-700 mb-3">
+          Funcionarios por Turno
+        </h3>
+        <DonutChart data={datosTurnos} />
+      </section>
 
-    
-        {/* Guardias separadas por turno */}
-        {turnos.map((turno) => {
-          const funcionariosDelTurno = funcionarios
-            .filter((f) => f.turno_id === turno.id)
-            .sort((a, b) => (b.grado || 0) - (a.grado || 0));
-
-          return (
-            <Table
-              key={turno.id}
-              title={turno.nombre}
-              columns={["Grado", "Nombre", "Estado", "Acción"]}
-              data={funcionariosDelTurno.map((f) => ({
-                grado: f.grado || "No especificado",
-                nombre: f.nombre,
-                estado: f.estado || "Sin estado",
-                acción: (
-                  <button
-                    onClick={() =>
-                      setAsignacionTurno({
-                        usuario_id: f.id,
-                        turno_id: f.turno_id || "",
-                        estado: f.estado || "asignado",
-                      })
-                    }
-                    className="px-2 py-1 text-sm bg-yellow-400 rounded hover:bg-yellow-500"
-                  >
-                    ✎
-                  </button>
-                ),
-              }))}
-            />
-          );
-        })}
-
-        {/* Funcionarios con turno y estado */}
-        <section className="bg-white rounded-md shadow p-4">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-            <h3 className="text-lg font-semibold text-blue-700 mb-2 md:mb-0">
-              Funcionarios de la Unidad
-            </h3>
-            <input
-              type="text"
-              placeholder="Buscar funcionario por nombre..."
-              className="w-full md:w-64 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <Table
-            title={null}
-            columns={["Grado", "Nombre", "Estado", "Turno Asignado", "Acción"]}
-            data={funcionarios
-              .filter((f) =>
-                f.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
-              )
-              .sort((a, b) => (b.grado || 0) - (a.grado || 0))
-              .map((f) => {
-                const turnoAsignado = turnos.find((t) => t.id === f.turno_id);
-                return {
-                  grado: f.grado ?? "No especificado",
-                  nombre: f.nombre,
-                  estado: f.estado || "Sin estado",
-                  "turno asignado": turnoAsignado
-                    ? turnoAsignado.nombre
-                    : "Sin asignar",
-                  acción: (
-                    <button
-                      onClick={() =>
-                        setAsignacionTurno({
-                          usuario_id: f.id,
-                          turno_id: f.turno_id || "",
-                          estado: f.estado || "asignado",
-                        })
-                      }
-                      className="px-2 py-1 text-sm bg-yellow-400 rounded hover:bg-yellow-500"
-                    >
-                      ✎
-                    </button>
-                  ),
-                };
-              })}
-          />
-        </section>
-      </main>
-
-      {turnoEdit && (
-        <TurnoModal
-          isEdit={true}
-          turnoData={turnoEdit}
-          onChange={setTurnoEdit}
-          onClose={closeModal}
-          onSubmit={handleUpdate}
-        />
-      )}
-
-      {nuevoTurno && (
-        <TurnoModal
-          turnoData={nuevoTurno}
-          onChange={setNuevoTurno}
-          onClose={closeNuevoModal}
-          onSubmit={handleCreate}
-        />
-      )}
-
-      {asignacionTurno && (
-        <AsignarTurnoModal
-          funcionarios={funcionarios}
-          turnos={turnos}
-          asignacion={asignacionTurno}
-          setAsignacion={setAsignacionTurno}
-          onClose={() => setAsignacionTurno(null)}
-          onSubmit={handleAsignarTurno}
-        />
-      )}
+      <section className="mb-8 bg-white rounded-md shadow p-4">
+        <table className="min-w-full border-collapse border border-gray-300 text-sm">
+          <thead>
+            <tr className="bg-gray-100 text-gray-700 uppercase text-xs font-medium tracking-wide">
+              <th className="border border-gray-300 py-2 px-4 text-left">Nombre</th>
+              <th className="border border-gray-300 py-2 px-4 text-left">Jefe</th>
+              <th className="border border-gray-300 py-2 px-4 text-left">Funcionarios</th>
+              <th className="border border-gray-300 py-2 px-4 text-left">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="bg-gray-50 hover:bg-blue-50 transition-colors">
+              <td className="border border-gray-300 py-2 px-4">{dependencia.nombre}</td>
+              <td className="border border-gray-300 py-2 px-4">{dependencia.jefe_nombre}</td>
+              <td className="border border-gray-300 py-2 px-4">{dependencia.funcionarios_count}</td>
+              <td className="border border-gray-300 py-2 px-4">
+                <Link
+                  to={`/dependencia-panel/${dependencia.id}`}
+                  state={{ sec: dependencia }}
+                  className="inline-flex items-center gap-1 text-blue-600 hover:underline"
+                >
+                  <Plus size={16} />
+                  Ver más
+                </Link>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
     </div>
   );
 };

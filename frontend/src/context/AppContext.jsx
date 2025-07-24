@@ -3,7 +3,7 @@ import React, { createContext, useState, useEffect, useContext } from "react";
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
-  const [usuario, setUsuario] = useState(null); // { token, id, nombre, correo, rol_jerarquico, ... }
+  const [usuario, setUsuario] = useState(null); // Estructura: { token, id, nombre, correo, rol_jerarquico, dependencia_id, ... }
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,9 +15,9 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   const login = (userData) => {
-    const userWithToken = { token: userData.token, ...userData.usuario };
-    setUsuario(userWithToken);
-    localStorage.setItem("usuario", JSON.stringify(userWithToken));
+    // ✅ Guarda exactamente lo que recibe, que ya está plano
+    setUsuario(userData);
+    localStorage.setItem("usuario", JSON.stringify(userData));
   };
 
   const logout = () => {
