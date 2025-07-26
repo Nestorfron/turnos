@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify # type: ignore
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required # type: ignore
 from werkzeug.security import generate_password_hash, check_password_hash # type: ignore
-from api.models import db, Jefatura, Zona, Dependencia, Usuario, RolOperativo, Turno, TurnoAsignado, Guardia, Licencia, SolicitudCambio
+from api.models import db, Jefatura, Zona, Dependencia, Usuario, RolOperativo, Turno, TurnoAsignado, Guardia, Licencia, SolicitudCambio, LicenciaMedica
 
 api = Blueprint("api", __name__)
 
@@ -244,6 +244,52 @@ def eliminar_licencia(id):
 @api.route('/licencias', methods=['GET'])
 def listar_licencias():
     data = Licencia.query.all()
+    return jsonify([x.serialize() for x in data]), 200
+
+
+# -------------------------------------------------------------------
+# LICENCIAS MEDICAS
+# -------------------------------------------------------------------
+@api.route('/licencias-medicas', methods=['POST'])
+def crear_licencia_medica():
+    body = request.json
+    usuario_id = body.get("usuario_id")
+    fecha_inicio = body.get("fecha_inicio")
+    fecha_fin = body.get("fecha_fin")
+    motivo = body.get("motivo")
+    estado = body.get("estado")
+
+    nueva = LicenciaMedica(usuario_id=usuario_id, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, motivo=motivo, estado=estado)
+    db.session.add(nueva)
+    db.session.commit()
+    return jsonify(nueva.serialize()), 201
+
+@api.route('/licencias-medicas/<int:id>', methods=['PUT'])
+def actualizar_licencia_medica(id):
+    body = request.json
+    licencia = LicenciaMedica.query.get(id)
+    if not licencia:
+        return jsonify({"error": "Licencia no encontrada"}), 404
+
+    licencia.usuario_id = body.get("usuario_id")
+    licencia.fecha_inicio = body.get("fecha_inicio")
+    licencia.fecha_fin = body.get("fecha_fin")
+    licencia.motivo = body.get("motivo")
+    licencia.estado = body.get("estado")
+
+    db.session.commit()
+    return jsonify(licencia.serialize()), 200
+
+@api.route('/licencias-medicas/<int:id>', methods=['DELETE'])
+def eliminar_licencia_medica(id):
+    licencia = LicenciaMedica.query.get(id)
+    db.session.delete(licencia)
+    db.session.commit()
+    return jsonify({'status': 'ok'}), 200
+
+@api.route('/licencias-medicas', methods=['GET'])
+def listar_licencias_medicas():
+    data = LicenciaMedica.query.all()
     return jsonify([x.serialize() for x in data]), 200
 
 # -------------------------------------------------------------------

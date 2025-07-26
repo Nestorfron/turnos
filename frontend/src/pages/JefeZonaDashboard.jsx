@@ -5,6 +5,7 @@ import { useAppContext } from "../context/AppContext";
 import DonutChart from "../components/DonutChart";
 import DependenciaModal from "../components/DependenciaModal.jsx";
 import { fetchData, deleteData } from "../utils/api";
+import Loading from "../components/Loading";
 
 const JefeZonaDashboard = () => {
   const { usuario } = useAppContext();
@@ -13,14 +14,25 @@ const JefeZonaDashboard = () => {
   const [selectedDep, setSelectedDep] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchData("jefaturas", (data) => {
-      setJefatura(Array.isArray(data) && data.length > 0 ? data[0] : null);
-    });
+    const cargarDatos = async () => {
+      setIsLoading(true); // 👉 Mostrar loading
 
-    fetchData("dependencias", async (deps) => {
-      fetchData("usuarios", (usuarios) => {
+      try {
+        const jefaturas = await new Promise((resolve) =>
+          fetchData("jefaturas", resolve)
+        );
+        setJefatura(Array.isArray(jefaturas) && jefaturas.length > 0 ? jefaturas[0] : null);
+
+        const deps = await new Promise((resolve) =>
+          fetchData("dependencias", resolve)
+        );
+        const usuarios = await new Promise((resolve) =>
+          fetchData("usuarios", resolve)
+        );
+
         const actualizadas = deps.map((dep) => {
           const usuariosDep = usuarios.filter(
             (u) => u.dependencia_id === dep.id
@@ -28,19 +40,22 @@ const JefeZonaDashboard = () => {
           const jefe = usuariosDep.find(
             (u) => u.rol_jerarquico === "JEFE_DEPENDENCIA"
           );
-          const funcionarios = usuariosDep.filter(
-            (u) => u.rol_jerarquico !== "JEFE_DEPENDENCIA"
-          );
-
           return {
             ...dep,
-            funcionarios_count: usuariosDep.length,
+            funcionarios_count: usuariosDep.length || 0,
             jefe_nombre: jefe ? `G${jefe.grado} ${jefe.nombre}` : "Sin jefe",
           };
         });
+
         setDependencias(actualizadas);
-      });
-    });
+      } catch (err) {
+        console.error("Error al cargar datos:", err);
+      } finally {
+        setIsLoading(false); // 👉 Ocultar loading
+      }
+    };
+
+    cargarDatos();
   }, []);
 
   if (!usuario) {
@@ -86,6 +101,7 @@ const JefeZonaDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800">
+      {isLoading && <Loading />}
       <header className="mb-8">
         {jefatura ? (
           <div className="bg-white rounded-md shadow p-6 mb-8">

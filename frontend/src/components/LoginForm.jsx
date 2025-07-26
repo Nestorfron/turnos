@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useAppContext } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
+import { Grab } from "lucide-react";
 
 const LoginForm = () => {
   const { login } = useAppContext();
@@ -30,17 +31,20 @@ const LoginForm = () => {
           id: data.usuario.id,
           nombre: data.usuario.nombre,
           correo: data.usuario.correo,
+          Grado: data.usuario.grado,
           rol_jerarquico: data.usuario.rol_jerarquico,
           dependencia_id: data.usuario.dependencia_id,
           dependencia_nombre: data.usuario.dependencia_nombre,
           zona_id: data.usuario.zona_id,
           zona_nombre: data.usuario.zona_nombre,
+          turno_id: data.usuario.turno_id,
+          estado: data.usuario.estado,
         });
 
         // ✅ Redirige según rol
         if (data.usuario.rol_jerarquico === "JEFE_ZONA") {
           navigate("/jefe-zona");
-        } else if (data.usuario.rol_jerarquico === "JEFE_DEPENDENCIA") {
+        } else if (data.usuario.rol_jerarquico === "JEFE_DEPENDENCIA" || data.usuario.rol_jerarquico === "FUNCIONARIO") {
           navigate("dependencia/" + data.usuario.dependencia_id);
         } else {
           navigate("/");

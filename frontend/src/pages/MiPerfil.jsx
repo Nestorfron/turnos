@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Users, Edit2, Key } from "lucide-react";
+import { Users, Edit2, Key, Home } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
+import { useNavigate } from "react-router-dom";
 
 export default function MiPerfil() {
   const { usuario, login, logout } = useAppContext();
+  const navigate = useNavigate();
 
   const [editCorreo, setEditCorreo] = useState(false);
   const [tempCorreo, setTempCorreo] = useState(usuario?.correo || "");
@@ -96,6 +98,16 @@ export default function MiPerfil() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/");
+    } catch (error) {
+      console.error(error);
+      alert("❌ Error inesperado");
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto bg-white shadow-lg rounded-xl p-6 space-y-6">
       {/* Icono y nombre */}
@@ -107,17 +119,14 @@ export default function MiPerfil() {
 
       {/* Datos básicos */}
       <div>
+      <p>
+          <strong>Grado:</strong> {usuario.Grado}
+        </p>
         <p>
           <strong>Rol jerárquico:</strong> {usuario.rol_jerarquico}
         </p>
         <p>
           <strong>Dependencia:</strong> {usuario.dependencia_nombre || "No asignada"}
-        </p>
-        <p>
-          <strong>Zona:</strong> {usuario.zona_nombre || "No asignada"}
-        </p>
-        <p>
-          <strong>Turno:</strong> {usuario.turno_nombre || "No asignado"}
         </p>
         <p>
           <strong>Estado:</strong> {usuario.estado || "No especificado"}
@@ -212,11 +221,18 @@ export default function MiPerfil() {
 
       {/* Botón cerrar sesión */}
       <button
-        onClick={logout}
+        onClick={handleLogout}
         className="bg-gray-600 text-white w-full py-2 rounded hover:bg-gray-800"
       >
         Cerrar sesión
       </button>
+      <button
+        onClick={() => usuario.rol_jerarquico === "JEFE_ZONA" ? navigate("/jefe-zona") : navigate("/dependencia/" + usuario.dependencia_id)}
+        className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"
+      >
+        ← Inicio
+      </button>
+
     </div>
   );
 }

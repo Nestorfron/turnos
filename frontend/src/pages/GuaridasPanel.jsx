@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useAppContext } from "../context/AppContext.jsx";
 import { useLocation, useNavigate } from "react-router-dom";
 import { fetchData } from "../utils/api.js";
 import dayjs from "dayjs";
@@ -6,11 +7,12 @@ import utc from "dayjs/plugin/utc";
 import "dayjs/locale/es";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
-dayjs.extend(isSameOrAfter);
-dayjs.extend(isSameOrBefore);
 import LicenciaModal from "../components/LicenciaModal.jsx";
 import EliminarGuardiasModal from "../components/EliminarGuardiasModal.jsx";
+import Loading from "../components/Loading";
 
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 dayjs.extend(utc);
 dayjs.locale("es");
 
@@ -20,11 +22,13 @@ import html2canvas from "html2canvas";
 const apiUrl = import.meta.env.VITE_API_URL;
 
 const GuardiasPanel = () => {
+  const { usuario } = useAppContext();
+
   const location = useLocation();
   const navigate = useNavigate();
   const dependencia = location.state?.sec;
 
-  const [selectorTipo, setSelectorTipo] = useState(null); // { usuario, dia }
+  const [selectorTipo, setSelectorTipo] = useState(null);
 
   const [funcionarios, setFuncionarios] = useState([]);
   const [guardias, setGuardias] = useState([]);
@@ -72,58 +76,75 @@ const GuardiasPanel = () => {
       pdf.save("guardias_completo.pdf");
     });
   };
-
   useEffect(() => {
     if (!dependencia?.id) return;
 
-    fetchData("usuarios", (usuarios) => {
-      const filtrados = usuarios.filter(
-        (u) =>
-          u.dependencia_id === dependencia.id &&
-          u.rol_jerarquico !== "JEFE_DEPENDENCIA"
-      );
-      setFuncionarios(filtrados);
+    const fetchDataPromise = (endpoint) =>
+      new Promise((resolve, reject) => {
+        fetchData(endpoint, (data) => {
+          if (data) resolve(data);
+          else reject(new Error(`Error al obtener datos de ${endpoint}`));
+        });
+      });
 
-      fetchData("guardias", (todasGuardias) => {
-        console.log("guardias", todasGuardias);
+    const cargarDatos = async () => {
+      try {
+        // Cargo usuarios y filtro
+        const usuarios = await fetchDataPromise("usuarios");
+        const filtrados = usuarios.filter(
+          (u) =>
+            u.dependencia_id === dependencia.id &&
+            u.rol_jerarquico !== "JEFE_DEPENDENCIA"
+        );
+        setFuncionarios(filtrados);
+
+        // Cargo guardias y filtro
+        const todasGuardias = await fetchDataPromise("guardias");
         const guardiasFiltradas = todasGuardias.filter((g) =>
           filtrados.some((f) => f.id === g.usuario_id)
         );
 
-        fetchData("licencias", (todasLicencias) => {
-          const licenciasFiltradas = todasLicencias
-            .filter((l) => filtrados.some((f) => f.id === l.usuario_id))
-            .map((l) => ({
-              ...l,
-              tipo: "licencia",
-            }));
+        // Cargo licencias y filtro
+        const todasLicencias = await fetchDataPromise("licencias");
+        const licenciasFiltradas = todasLicencias
+          .filter((l) => filtrados.some((f) => f.id === l.usuario_id))
+          .map((l) => ({ ...l, tipo: "licencia" }));
 
-          setGuardias([...guardiasFiltradas, ...licenciasFiltradas]);
+        setGuardias([...guardiasFiltradas, ...licenciasFiltradas]);
+
+        // Cargo turnos y ordeno
+        const turnosData = await fetchDataPromise(
+          `turnos?dependencia_id=${dependencia.id}`
+        );
+        const ordenDeseado = [
+          "primer turno",
+          "brou",
+          "segundo turno",
+          "tercer turno",
+          "destacados",
+        ];
+        const turnosOrdenados = [...turnosData].sort((a, b) => {
+          const nombreA = a.nombre.trim().toLowerCase();
+          const nombreB = b.nombre.trim().toLowerCase();
+          const ia = ordenDeseado.indexOf(nombreA);
+          const ib = ordenDeseado.indexOf(nombreB);
+          return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
         });
-      });
-    });
 
-    fetchData(`turnos?dependencia_id=${dependencia.id}`, (turnosData) => {
-      const ordenDeseado = [
-        "primer turno",
-        "brou",
-        "segundo turno",
-        "tercer turno",
-        "destacados",
-      ];
+        setTurnos(turnosOrdenados);
+      } catch (error) {
+        console.error("Error cargando datos:", error);
+      }
+    };
 
-      const turnosOrdenados = [...turnosData].sort((a, b) => {
-        const nombreA = a.nombre.trim().toLowerCase();
-        const nombreB = b.nombre.trim().toLowerCase();
-        const ia = ordenDeseado.indexOf(nombreA);
-        const ib = ordenDeseado.indexOf(nombreB);
-
-        return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
-      });
-
-      setTurnos(turnosOrdenados);
-    });
+    cargarDatos();
   }, [dependencia]);
+
+  useEffect(() => {
+    if (usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA") {
+      setDaysToShow(14);
+    }
+  }, [usuario]);
 
   const getCelda = (usuario, dia) => {
     const fecha = dia.format("YYYY-MM-DD");
@@ -134,7 +155,9 @@ const GuardiasPanel = () => {
       const inicio = dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD");
       const fin = dayjs(g.fecha_fin).utc().format("YYYY-MM-DD");
 
-      return fecha >= inicio && fecha <= fin;
+      const coincide = fecha >= inicio && fecha <= fin;
+
+      return coincide;
     });
 
     if (registro) {
@@ -174,10 +197,9 @@ const GuardiasPanel = () => {
     }
 
     if (nuevoTipo === "D") return;
-    const tipoAGuardar = nuevoTipo === "T" ? "guardia" : nuevoTipo;
 
-    const esBloqueT =
-      nuevoTipo === "T" &&
+    const esBloque =
+      (nuevoTipo === "T" || nuevoTipo.toLowerCase() === "brou") &&
       Array.from({ length: 5 }).every((_, i) => {
         const fecha = dia.add(i, "day").format("YYYY-MM-DD");
 
@@ -191,14 +213,14 @@ const GuardiasPanel = () => {
         return !ocupado;
       });
 
-    if (nuevoTipo === "T" && esBloqueT) {
+    if (esBloque) {
       for (let i = 0; i < 5; i++) {
         const fecha = dia.add(i, "day");
         const nueva = {
           usuario_id: usuario.id,
           fecha_inicio: fecha.format("YYYY-MM-DD"),
           fecha_fin: fecha.format("YYYY-MM-DD"),
-          tipo: "guardia",
+          tipo: nuevoTipo,
           comentario: "Agregada manualmente",
         };
 
@@ -218,7 +240,7 @@ const GuardiasPanel = () => {
         usuario_id: usuario.id,
         fecha_inicio: fechaStr,
         fecha_fin: fechaStr,
-        tipo: tipoAGuardar,
+        tipo: nuevoTipo === "T" ? "guardia" : nuevoTipo,
         comentario: "Agregada manualmente",
       };
 
@@ -287,6 +309,80 @@ const GuardiasPanel = () => {
     });
   };
 
+  const handleLicenciaSubmit = async ({ fechaFin, motivo }) => {
+    try {
+      const usuarioId = modalData.usuario.id;
+      const fechaInicio = dayjs(modalData.fechaInicio);
+      const fechaFinDayjs = dayjs(fechaFin);
+
+      // Primero buscar guardias que se superpongan con la licencia
+      const diasLicencia = [];
+      for (
+        let fecha = fechaInicio;
+        fecha.isBefore(fechaFinDayjs) || fecha.isSame(fechaFinDayjs);
+        fecha = fecha.add(1, "day")
+      ) {
+        diasLicencia.push(fecha.format("YYYY-MM-DD"));
+      }
+
+      // Filtrar guardias existentes que coincidan en esas fechas para este usuario
+      const guardiasAEliminar = guardias.filter((g) => {
+        if (g.usuario_id !== usuarioId || g.tipo !== "guardia") return false;
+
+        const inicio = dayjs.utc(g.fecha_inicio);
+        const fin = dayjs.utc(g.fecha_fin);
+
+        return (
+          inicio.isSameOrBefore(fechaFinDayjs, "day") &&
+          fin.isSameOrAfter(fechaInicio, "day")
+        );
+      });
+
+      // Borrar las guardias encontradas (await en secuencia o en paralelo)
+      await Promise.all(
+        guardiasAEliminar.map(async (g) => {
+          const resp = await fetch(`${apiUrl}/guardias/${g.id}`, {
+            method: "DELETE",
+          });
+          if (resp.ok) {
+            setGuardias((prev) => prev.filter((x) => x.id !== g.id));
+          } else {
+            console.error("Error al eliminar guardia", g.id);
+          }
+        })
+      );
+
+      // Ahora creo la licencia normalmente
+      const nueva = {
+        usuario_id: usuarioId,
+        fecha_inicio: fechaInicio.utc().format("YYYY-MM-DD"),
+        fecha_fin: fechaFinDayjs.utc().format("YYYY-MM-DD"),
+        motivo,
+        estado: "activo",
+      };
+
+      const resp = await fetch(`${apiUrl}/licencias`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nueva),
+      });
+
+      if (resp.ok) {
+        if (resp.ok) {
+          const creada = await resp.json();
+          const conTipo = { ...creada, tipo: "licencia" }; // 👈 fuerza el tipo
+          setGuardias((prev) => [...prev, conTipo]);
+          setModalData(null);
+        }
+      } else {
+        const errorData = await resp.json();
+        console.error("Error al guardar licencia:", errorData);
+      }
+    } catch (error) {
+      console.error("Error en handleLicenciaSubmit:", error);
+    }
+  };
+
   const eliminarGuardiasFiltradas = async ({ desde, hasta, usuario_ids }) => {
     const desdeD = dayjs.utc(desde).startOf("day");
     const hastaD = dayjs.utc(hasta).endOf("day");
@@ -341,6 +437,7 @@ const GuardiasPanel = () => {
             value={daysToShow}
             onChange={(e) => setDaysToShow(parseInt(e.target.value))}
             className="border rounded px-2 py-1"
+            disabled={usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA"}
           >
             <option value={7}>1 Semana</option>
             <option value={14}>2 Semanas</option>
@@ -355,6 +452,7 @@ const GuardiasPanel = () => {
             value={startDate.format("YYYY-MM-DD")}
             onChange={(e) => setStartDate(dayjs(e.target.value))}
             className="border rounded px-2 py-1"
+            disabled={usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA"}
           />
         </div>
 
@@ -369,13 +467,12 @@ const GuardiasPanel = () => {
       </div>
 
       {/* Contenedor Principal */}
-      <div id="contenedor-tablas" className="mb-6">
+      {turnos.length === 0 || funcionarios.length === 0 || guardias.length === 0 ? <Loading /> : <div id="contenedor-tablas" className="mb-6">
         {turnos.map((turno) => {
           const lista = funcionariosPorTurno(turno.id);
 
           return (
             <div key={turno.id} className="bg-white rounded shadow p-4">
-              
               <div className="overflow-x-auto">
                 <table className="min-w-full border border-gray-300 text-sm text-center">
                   <thead>
@@ -476,6 +573,7 @@ const GuardiasPanel = () => {
                             >
                               {valor}
                               {valor === "L" ? (
+                                usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
                                 <>
                                   <button
                                     onClick={() =>
@@ -494,7 +592,9 @@ const GuardiasPanel = () => {
                                     ❌
                                   </button>
                                 </>
+                                )
                               ) : (
+                                usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
                                 <>
                                   <button
                                     onClick={() =>
@@ -513,6 +613,7 @@ const GuardiasPanel = () => {
                                     📄
                                   </button>
                                 </>
+                                )
                               )}
                             </td>
                           );
@@ -535,7 +636,7 @@ const GuardiasPanel = () => {
             </div>
           );
         })}
-      </div>
+      </div>}
 
       <button
         onClick={() => navigate("/dependencia/" + dependencia.id)}
@@ -549,54 +650,10 @@ const GuardiasPanel = () => {
           usuario={modalData.usuario}
           fechaInicio={modalData.fechaInicio}
           onClose={() => setModalData(null)}
-          onSubmit={async ({ fechaFin, motivo }) => {
-            const licencia = {
-              usuario_id: modalData.usuario.id,
-              fecha_inicio: dayjs(modalData.fechaInicio).format("YYYY-MM-DD"),
-              fecha_fin: dayjs(fechaFin).format("YYYY-MM-DD"),
-              motivo,
-              estado: "aprobada",
-            };
-
-            let nuevaLicencia = null;
-
-            if (modalData.id) {
-              const resp = await fetch(`${apiUrl}/licencias/${modalData.id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(licencia),
-              });
-
-              if (resp.ok) {
-                nuevaLicencia = await resp.json();
-                setGuardias((prev) =>
-                  prev.map((g) =>
-                    g.id === nuevaLicencia.id
-                      ? { ...nuevaLicencia, tipo: "licencia" }
-                      : g
-                  )
-                );
-              }
-            } else {
-              const resp = await fetch(`${apiUrl}/licencias`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(licencia),
-              });
-
-              if (resp.ok) {
-                nuevaLicencia = await resp.json();
-                setGuardias((prev) => [
-                  ...prev,
-                  { ...nuevaLicencia, tipo: "licencia" },
-                ]);
-              }
-            }
-
-            setModalData(null);
-          }}
+          onSubmit={handleLicenciaSubmit}
         />
       )}
+
       {modalEliminar && (
         <EliminarGuardiasModal
           turno={modalEliminar.turno}
@@ -605,7 +662,7 @@ const GuardiasPanel = () => {
           onConfirm={eliminarGuardiasFiltradas}
         />
       )}
-      {selectorTipo && (
+      {selectorTipo && usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 w-80 space-y-4">
             <h3 className="text-lg font-semibold text-blue-800 mb-2">

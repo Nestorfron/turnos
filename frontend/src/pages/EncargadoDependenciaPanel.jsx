@@ -7,6 +7,7 @@ import FuncionarioModal from "../components/FuncionarioModal";
 import AsignarTurnoModal from "../components/AsignarTurnoModal";
 import { Link } from "react-router-dom";
 import { Plus, Pencil, Trash2, UserCog } from "lucide-react";
+import Loading from "../components/Loading";
 
 const EncargadoDependenciaPanel = () => {
   const { usuario } = useAppContext();
@@ -54,7 +55,7 @@ const EncargadoDependenciaPanel = () => {
   }, [usuario]);
 
   if (!usuario) return <p>Acceso no autorizado</p>;
-  if (!dependencia) return <p>Cargando...</p>;
+  if (!dependencia) return <Loading />;
 
   const funcionariosFiltrados = funcionarios.filter((f) =>
     f.nombre.toLowerCase().includes(searchTerm.toLowerCase())
@@ -194,12 +195,15 @@ const EncargadoDependenciaPanel = () => {
             Turnos Actuales
           </h3>
 
-          <button
-            onClick={abrirModalNuevoTurno}
-            className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 transition"
-          >
-            <Plus size={18} /> Agregar
-          </button>
+          {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
+            <button
+              onClick={abrirModalNuevoTurno}
+              className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 transition"
+              disabled={usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA"}
+            >
+              <Plus size={18} /> Agregar
+            </button>
+          )}
         </div>
 
         {/* Tabla turnos */}
@@ -219,18 +223,25 @@ const EncargadoDependenciaPanel = () => {
             descripción: t.descripcion || "-",
             acciones: (
               <div className="flex gap-2">
-                <button
-                  onClick={() => abrirModalEditarTurno(t)}
-                  className="p-1 hover:bg-yellow-200 rounded"
-                >
-                  <Pencil size={16} className="text-yellow-600" />
-                </button>
-                <button
-                  onClick={() => handleBorrarTurno(t.id)}
-                  className="p-1 hover:bg-red-200 rounded"
-                >
-                  <Trash2 size={16} className="text-red-600" />
-                </button>
+                {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
+                  <button
+                    onClick={() => abrirModalEditarTurno(t)}
+                    className="p-1 hover:bg-yellow-200 rounded"
+                  >
+                    <Pencil size={16} className="text-yellow-600" />
+                  </button>
+                )}
+                {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
+                  <button
+                    onClick={() => handleBorrarTurno(t.id)}
+                    className="p-1 hover:bg-red-200 rounded"
+                  >
+                    <Trash2 size={16} className="text-red-600" />
+                  </button>
+                )}
+                {usuario.rol_jerarquico !== "JEFE_DEPENDENCIA" && (
+                  <span className="text-gray-500">Sin acciones.</span>
+                )}
               </div>
             ),
           }))}
@@ -252,12 +263,19 @@ const EncargadoDependenciaPanel = () => {
                 nombre: f.nombre,
                 estado: f.estado || "Sin estado",
                 acciones: (
-                  <button
-                    onClick={() => abrirModalEditarAsignacion(f)}
-                    className="text-yellow-600 hover:text-yellow-700 p-1 rounded"
-                  >
-                    <Pencil size={18} />
-                  </button>
+                  <div className="flex gap-2">
+                    {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
+                      <button
+                        onClick={() => abrirModalEditarAsignacion(f)}
+                        className="text-yellow-600 hover:text-yellow-700 p-1 rounded"
+                      >
+                        <Pencil size={18} />
+                      </button>
+                    )}
+                    {usuario.rol_jerarquico !== "JEFE_DEPENDENCIA" && (
+                      <span className="text-gray-500">Sin acciones.</span>
+                    )}
+                  </div>
                 ),
               }))}
             />
@@ -311,12 +329,19 @@ const EncargadoDependenciaPanel = () => {
                 estado: f.estado || "Sin estado",
                 "turno asignado": turno ? turno.nombre : "Sin asignar",
                 acciones: (
-                  <button
-                    onClick={() => abrirModalNuevaAsignacion(f)}
-                    className="p-1 text-yellow-600 rounded"
-                  >
-                    <Pencil size={18} />
-                  </button>
+                  <div className="flex gap-2">
+                    {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
+                      <button
+                        onClick={() => abrirModalNuevaAsignacion(f)}
+                        className="p-1 text-yellow-600 rounded"
+                      >
+                        <Pencil size={18} />
+                      </button>
+                    )}
+                    {usuario.rol_jerarquico !== "JEFE_DEPENDENCIA" && (
+                      <span className="text-gray-500">Sin acciones.</span>
+                    )}
+                  </div>
                 ),
               };
             })}
