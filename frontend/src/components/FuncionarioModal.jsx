@@ -28,10 +28,11 @@ const FuncionarioModal = ({ onClose, onSubmitted, funcionario, zonas = [], depen
 
   useEffect(() => {
     if (funcionario) {
+      console.log("Funcionario:", funcionario);
       setForm({
         nombre: funcionario.nombre || "",
         correo: funcionario.correo || "",
-        password: "", // por seguridad, no se muestra
+        password: "",
         grado: funcionario.grado || "",
         rol_jerarquico: reverseRolMap[funcionario.rol_jerarquico] || "usuario",
         dependencia_id: funcionario.dependencia_id || "",
