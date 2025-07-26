@@ -9,6 +9,7 @@ const Home = () => {
 
   useEffect(() => {
     if (usuario?.token) {
+      console.log("Usuario iniciado sesión:", usuario);
       if (usuario.rol_jerarquico === "JEFE_ZONA") {
         navigate("/jefe-zona");
       } else if (
