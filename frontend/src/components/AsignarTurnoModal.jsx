@@ -5,7 +5,7 @@ const estadosDisponibles = ["activo", "inactivo"];
 const AsignarTurnoModal = ({
   funcionarios,
   turnos,
-  asignacion, // prop de asignación que viene del padre
+  asignacion,
   onClose,
   onSubmit,
 }) => {
@@ -15,7 +15,6 @@ const AsignarTurnoModal = ({
     estado: "",
   });
 
-  // Cuando cambia la prop `asignacion`, sincronizo el estado local `form`
   useEffect(() => {
     if (asignacion) {
       setForm({
@@ -31,7 +30,6 @@ const AsignarTurnoModal = ({
   };
 
   const handleSubmit = () => {
-    // Mandamos el form completo al padre
     onSubmit(form);
   };
 
@@ -42,23 +40,31 @@ const AsignarTurnoModal = ({
       <div className="bg-white rounded p-6 w-full max-w-md">
         <h2 className="text-xl font-bold mb-4">Asignar Turno a Funcionario</h2>
 
-        <label className="block mb-3">
-          Funcionario
-          <select
-            className="w-full border px-3 py-2 rounded mt-1"
-            value={form.usuario_id}
-            onChange={(e) =>
-              handleChange("usuario_id", e.target.value ? parseInt(e.target.value) : "")
-            }
-          >
-            <option value="">Seleccione un funcionario</option>
-            {funcionarios.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.nombre} ({f.grado || "Sin grado"})
-              </option>
-            ))}
-          </select>
-        </label>
+        {asignacion.usuario_id ? (
+          <p className="mb-3">
+            <strong>Funcionario:</strong>{" "}
+            {funcionarios.find((f) => f.id === form.usuario_id)?.nombre || "Desconocido"}{" "}
+            ({funcionarios.find((f) => f.id === form.usuario_id)?.grado || "Sin grado"})
+          </p>
+        ) : (
+          <label className="block mb-3">
+            Funcionario
+            <select
+              className="w-full border px-3 py-2 rounded mt-1"
+              value={form.usuario_id}
+              onChange={(e) =>
+                handleChange("usuario_id", e.target.value ? parseInt(e.target.value) : "")
+              }
+            >
+              <option value="">Seleccione un funcionario</option>
+              {funcionarios.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.nombre} ({f.grado || "Sin grado"})
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         <label className="block mb-3">
           Turno
@@ -103,7 +109,8 @@ const AsignarTurnoModal = ({
           </button>
           <button
             onClick={handleSubmit}
-            className="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700"
+            disabled={!form.usuario_id}
+            className="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-indigo-400"
           >
             Asignar
           </button>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import { fetchData, postData, putData, deleteData } from "../utils/api";
 import Table from "../components/Table";
@@ -6,17 +7,17 @@ import TurnoModal from "../components/TurnoModal";
 import FuncionarioModal from "../components/FuncionarioModal";
 import AsignarTurnoModal from "../components/AsignarTurnoModal";
 import { Link } from "react-router-dom";
-import { Plus, Pencil, Trash2, UserCog } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import Loading from "../components/Loading";
 
 const EncargadoDependenciaPanel = () => {
   const { usuario } = useAppContext();
+  const navigate = useNavigate();
   const [dependencia, setDependencia] = useState(null);
   const [turnos, setTurnos] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [cantidadFuncionarios, setCantidadFuncionarios] = useState(0);
-  const [asignaciones, setAsignaciones] = useState([]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [turnoSeleccionado, setTurnoSeleccionado] = useState(null);
@@ -26,6 +27,12 @@ const EncargadoDependenciaPanel = () => {
 
   const [asignarModalOpen, setAsignarModalOpen] = useState(false);
   const [asignacionSeleccionada, setAsignacionSeleccionada] = useState(null);
+
+  useEffect(() => {
+    if (!usuario) {
+      navigate("/");
+    }
+  }, [usuario, navigate]);
 
   useEffect(() => {
     if (!usuario?.dependencia_id) return;
@@ -54,11 +61,14 @@ const EncargadoDependenciaPanel = () => {
     });
   }, [usuario]);
 
-  if (!usuario) return <p>Acceso no autorizado</p>;
   if (!dependencia) return <Loading />;
 
+  // Filtrados y ordenados
   const funcionariosFiltrados = funcionarios.filter((f) =>
     f.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  const funcionariosOrdenados = [...funcionariosFiltrados].sort(
+    (a, b) => (b.grado || 0) - (a.grado || 0)
   );
 
   const abrirModalNuevaAsignacion = (funcionario) => {
@@ -70,30 +80,31 @@ const EncargadoDependenciaPanel = () => {
     setAsignarModalOpen(true);
   };
 
-  const abrirModalEditarAsignacion = (asignacion) => {
-    setAsignacionSeleccionada(asignacion);
+  const abrirModalEditarAsignacion = (funcionario) => {
+    setAsignacionSeleccionada({
+      usuario_id: funcionario.id,
+      turno_id: funcionario.turno_id || "",
+      estado: funcionario.estado || "",
+    });
     setAsignarModalOpen(true);
   };
 
   const handleGuardarAsignacion = async (asignacionForm) => {
     try {
-      let resultado;
-      if (asignacionForm.id) {
-        // Editar asignación
-        resultado = await putData(
-          `asignaciones/${asignacionForm.id}`,
-          asignacionForm
+      const resultado = await putData(
+        `usuarios/${asignacionForm.usuario_id}`,
+        {
+          turno_id: asignacionForm.turno_id,
+          estado: asignacionForm.estado,
+        }
+      );
+
+      if (resultado) {
+        setFuncionarios((prev) =>
+          prev.map((f) => (f.id === resultado.id ? resultado : f))
         );
-        // Actualizar asignación en estado local
-        setAsignaciones((prev) =>
-          prev.map((a) => (a.id === resultado.id ? resultado : a))
-        );
-      } else {
-        // Crear nueva asignación
-        resultado = await postData(`asignaciones`, asignacionForm);
-        // Agregar nueva asignación al estado local
-        setAsignaciones((prev) => [...prev, resultado]);
       }
+
       setAsignarModalOpen(false);
     } catch (error) {
       console.error("Error guardando asignación:", error);
@@ -105,7 +116,6 @@ const EncargadoDependenciaPanel = () => {
     setFuncionarioModalOpen(true);
   };
 
-  // 👇 Guardar cambios funcionario
   const handleGuardarFuncionario = async (funcionarioForm) => {
     const resultado = await putData(
       `usuarios/${funcionarioSeleccionado.id}`,
@@ -119,7 +129,6 @@ const EncargadoDependenciaPanel = () => {
     setFuncionarioModalOpen(false);
   };
 
-  // ---- Funciones CRUD ----
   const abrirModalNuevoTurno = () => {
     setTurnoSeleccionado(null);
     setModalOpen(true);
@@ -129,6 +138,7 @@ const EncargadoDependenciaPanel = () => {
     setTurnoSeleccionado(turno);
     setModalOpen(true);
   };
+
   const handleGuardarTurno = async (turnoForm) => {
     let resultado = null;
 
@@ -159,6 +169,16 @@ const EncargadoDependenciaPanel = () => {
         setTurnos((prev) => prev.filter((t) => t.id !== id));
       }
     }
+  };
+
+  // Función para colorear estado
+  const EstadoConColor = ({ estado }) => {
+    const estadoLower = (estado || "").toLowerCase();
+    const colorClass =
+      estadoLower === "activo"
+        ? "text-green-600 font-semibold"
+        : "text-red-600 font-semibold";
+    return <span className={colorClass}>{estado || "Sin estado"}</span>;
   };
 
   return (
@@ -208,7 +228,7 @@ const EncargadoDependenciaPanel = () => {
 
         {/* Tabla turnos */}
         <Table
-          title={null} // El título lo manejas arriba en el h3
+          title={null}
           columns={[
             "Nombre",
             "Hora Inicio",
@@ -217,27 +237,27 @@ const EncargadoDependenciaPanel = () => {
             "Acciones",
           ]}
           data={turnos.map((t) => ({
-            nombre: t.descripcion,
+            nombre: t.nombre,
             "hora inicio": t.hora_inicio?.slice(0, 5),
             "hora fin": t.hora_fin?.slice(0, 5),
             descripción: t.descripcion || "-",
             acciones: (
               <div className="flex gap-2">
                 {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
-                  <button
-                    onClick={() => abrirModalEditarTurno(t)}
-                    className="p-1 hover:bg-yellow-200 rounded"
-                  >
-                    <Pencil size={16} className="text-yellow-600" />
-                  </button>
-                )}
-                {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
-                  <button
-                    onClick={() => handleBorrarTurno(t.id)}
-                    className="p-1 hover:bg-red-200 rounded"
-                  >
-                    <Trash2 size={16} className="text-red-600" />
-                  </button>
+                  <>
+                    <button
+                      onClick={() => abrirModalEditarTurno(t)}
+                      className="p-1 hover:bg-yellow-200 rounded"
+                    >
+                      <Pencil size={16} className="text-yellow-600" />
+                    </button>
+                    <button
+                      onClick={() => handleBorrarTurno(t.id)}
+                      className="p-1 hover:bg-red-200 rounded"
+                    >
+                      <Trash2 size={16} className="text-red-600" />
+                    </button>
+                  </>
                 )}
                 {usuario.rol_jerarquico !== "JEFE_DEPENDENCIA" && (
                   <span className="text-gray-500">Sin acciones.</span>
@@ -261,18 +281,17 @@ const EncargadoDependenciaPanel = () => {
               data={funcionariosTurno.map((f) => ({
                 grado: f.grado ?? "No especificado",
                 nombre: f.nombre,
-                estado: f.estado || "Sin estado",
+                estado: <EstadoConColor estado={f.estado} />,
                 acciones: (
                   <div className="flex gap-2">
-                    {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
+                    {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ? (
                       <button
                         onClick={() => abrirModalEditarAsignacion(f)}
                         className="text-yellow-600 hover:text-yellow-700 p-1 rounded"
                       >
                         <Pencil size={18} />
                       </button>
-                    )}
-                    {usuario.rol_jerarquico !== "JEFE_DEPENDENCIA" && (
+                    ) : (
                       <span className="text-gray-500">Sin acciones.</span>
                     )}
                   </div>
@@ -293,7 +312,7 @@ const EncargadoDependenciaPanel = () => {
               .map((f) => ({
                 grado: f.grado ?? "No especificado",
                 nombre: f.nombre,
-                estado: f.estado || "Sin estado",
+                estado: <EstadoConColor estado={f.estado} />,
               }))}
           />
         )}
@@ -321,24 +340,23 @@ const EncargadoDependenciaPanel = () => {
               "Turno Asignado",
               "Acciones",
             ]}
-            data={funcionariosFiltrados.map((f) => {
+            data={funcionariosOrdenados.map((f) => {
               const turno = turnos.find((t) => t.id === f.turno_id);
               return {
                 grado: f.grado ?? "No especificado",
                 nombre: f.nombre,
-                estado: f.estado || "Sin estado",
+                estado: <EstadoConColor estado={f.estado} />,
                 "turno asignado": turno ? turno.nombre : "Sin asignar",
                 acciones: (
                   <div className="flex gap-2">
-                    {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
+                    {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ? (
                       <button
                         onClick={() => abrirModalNuevaAsignacion(f)}
                         className="p-1 text-yellow-600 rounded"
                       >
                         <Pencil size={18} />
                       </button>
-                    )}
-                    {usuario.rol_jerarquico !== "JEFE_DEPENDENCIA" && (
+                    ) : (
                       <span className="text-gray-500">Sin acciones.</span>
                     )}
                   </div>
@@ -354,9 +372,9 @@ const EncargadoDependenciaPanel = () => {
           funcionarios={funcionarios}
           turnos={turnos}
           asignacion={asignacionSeleccionada}
-          setAsignacion={setAsignacionSeleccionada}
+          isEdit={true}
           onClose={() => setAsignarModalOpen(false)}
-          onSubmit={() => handleGuardarAsignacion(asignacionSeleccionada)}
+          onSubmit={handleGuardarAsignacion}
         />
       )}
 

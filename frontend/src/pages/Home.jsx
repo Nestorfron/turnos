@@ -12,11 +12,13 @@ const Home = () => {
       if (usuario.rol_jerarquico === "JEFE_ZONA") {
         navigate("/jefe-zona");
       } else if (
-        usuario.rol_jerarquico === "JEFE_DEPENDENCIA" ||
-        usuario.rol_jerarquico === "FUNCIONARIO"
+        usuario.rol_jerarquico === "JEFE_DEPENDENCIA" 
       ) {
         navigate(`/dependencia/${usuario.dependencia_id}`);
-      } else {
+      } else if (usuario.rol_jerarquico === "FUNCIONARIO") {
+        navigate("/funcionario/" + usuario.id);
+      }
+      else {
         navigate("/");
       }
     }
