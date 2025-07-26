@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import Table from "../components/Table";
 import { fetchData } from "../utils/api";
+import Loading from "../components/Loading";
 
 const DetalleDependencia = () => {
   const { id } = useParams();
@@ -12,28 +13,53 @@ const DetalleDependencia = () => {
   const [turnos, setTurnos] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState(true); 
 
   useEffect(() => {
-    if (!dependencia && id) {
-      fetchData(`dependencias/${id}`, setDependencia);
-    }
+    const cargarDatos = async () => {
+      setIsLoading(true);
+
+      try {
+        if (!dependencia && id) {
+          await new Promise((resolve) =>
+            fetchData(`dependencias/${id}`, (data) => {
+              setDependencia(data);
+              resolve();
+            })
+          );
+        }
+
+        if (dependencia?.id) {
+          await Promise.all([
+            new Promise((resolve) =>
+              fetchData(`turnos?dependencia_id=${dependencia.id}`, (data) => {
+                setTurnos(data);
+                resolve();
+              })
+            ),
+            new Promise((resolve) =>
+              fetchData("usuarios", (usuarios) => {
+                const filtrados = usuarios.filter(
+                  (u) => u.dependencia_id === dependencia.id
+                );
+                setFuncionarios(filtrados);
+                resolve();
+              })
+            ),
+          ]);
+        }
+      } catch (err) {
+        console.error("Error al cargar datos:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    cargarDatos();
   }, [dependencia, id]);
 
-  useEffect(() => {
-    if (!dependencia?.id) return;
-
-    fetchData(`turnos?dependencia_id=${dependencia.id}`, setTurnos);
-
-    fetchData("usuarios", (usuarios) => {
-      const filtrados = usuarios.filter(
-        (u) => u.dependencia_id === dependencia.id
-      );
-      setFuncionarios(filtrados);
-    });
-  }, [dependencia]);
-
-  if (!dependencia) {
-    return <p className="text-red-600">Cargando dependencia...</p>;
+  if (isLoading) {
+    return <Loading />
   }
 
   const funcionariosFiltrados = funcionarios
