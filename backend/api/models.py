@@ -106,7 +106,7 @@ class Usuario(db.Model):
     turno_id = db.Column(db.Integer, db.ForeignKey('turnos.id'), nullable=True)
     turno = db.relationship('Turno', backref='usuarios_asignados_directamente', foreign_keys=[turno_id])
 
-    estado = db.Column(db.String(50), nullable=True)  # 👈 Estado opcional (puede ser NULL)
+    estado = db.Column(db.String(50), nullable=True)
 
     roles_operativos = db.relationship('UsuarioRolOperativo', backref='usuario', lazy=True)
     turnos_asignados = db.relationship('TurnoAsignado', backref='usuario', lazy=True)
@@ -115,6 +115,7 @@ class Usuario(db.Model):
 
     guardias = db.relationship('Guardia', backref='usuario', lazy=True)
     licencias = db.relationship('Licencia', backref='usuario', lazy=True)
+    licencias_medicas = db.relationship('LicenciaMedica', backref='usuario', lazy=True)
 
     solicitudes_cambio = db.relationship(
         'SolicitudCambio',
@@ -309,3 +310,25 @@ class Licencia(db.Model):
 
     def __repr__(self):
         return f'<Licencia {self.id}>'
+
+class LicenciaMedica(db.Model):
+    __tablename__ = 'licencias_medicas'
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    fecha_inicio = db.Column(db.Date, nullable=False)
+    fecha_fin = db.Column(db.Date, nullable=False)
+    motivo = db.Column(db.String(50), nullable=False)
+    estado = db.Column(db.String(50), nullable=False)
+
+    def serialize(self):
+        return {
+            'id': self.id,
+            'usuario_id': self.usuario_id,
+            'fecha_inicio': self.fecha_inicio,
+            'fecha_fin': self.fecha_fin,
+            'motivo': self.motivo,
+            'estado': self.estado
+        }
+
+    def __repr__(self):
+        return f'<Licencia_medica {self.id}>'
