@@ -175,7 +175,7 @@ const AdminPanel = () => {
           </p>
         ) : (
           <>
-            <section className="mb-8 bg-white rounded-md shadow p-4">
+            <section className="overflow-x-auto mb-8 bg-white rounded-md shadow p-4">
               <table className="min-w-full border-collapse border border-gray-300 text-sm">
                 <thead>
                   <tr className="bg-gray-100 text-gray-700 uppercase text-xs font-medium tracking-wide">
