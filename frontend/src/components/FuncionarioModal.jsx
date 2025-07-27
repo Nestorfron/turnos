@@ -129,7 +129,6 @@ const FuncionarioModal = ({ onClose, onSubmitted, funcionario, zonas = [], depen
             <option value="usuario">Funcionario</option>
             <option value="encargado_dependencia">Encargado de Seccional</option>
             <option value="jefe_zona">Jefe de Zona</option>
-            <option value="administrador">Administrador</option>
           </select>
           {!isEditing && (
             <input

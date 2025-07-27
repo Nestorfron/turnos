@@ -29,7 +29,7 @@ const EncargadoDependenciaPanel = () => {
   const [asignacionSeleccionada, setAsignacionSeleccionada] = useState(null);
 
   useEffect(() => {
-    if (!usuario) {
+    if (usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA") {
       navigate("/");
     }
   }, [usuario, navigate]);

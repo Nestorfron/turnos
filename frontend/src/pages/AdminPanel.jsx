@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Plus, Edit3, Trash2, Search } from "lucide-react";
 import { useAppContext } from "../context/AppContext.jsx";
 import DonutChart from "../components/DonutChart.jsx";
@@ -9,6 +9,7 @@ import { fetchData, deleteData } from "../utils/api.js";
 
 const AdminPanel = () => {
   const { usuario } = useAppContext();
+  const navigate = useNavigate();
   const [jefatura, setJefatura] = useState(null);
   const [dependencias, setDependencias] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
@@ -21,6 +22,10 @@ const AdminPanel = () => {
   const [selectedFuncionario, setSelectedFuncionario] = useState(null);
 
   useEffect(() => {
+    if (usuario?.rol_jerarquico !== "ADMINISTRADOR") {
+      navigate("/");
+    }
+
     fetchData("jefaturas", (data) => {
       setJefatura(Array.isArray(data) && data.length > 0 ? data[0] : null);
     });
@@ -38,9 +43,7 @@ const AdminPanel = () => {
     );
   }
 
-  const dependenciasZona = dependencias
-  .filter((dep) => dep.zona_id === usuario?.zona_id)
-  .sort((a, b) => {
+  const dependenciasOrdenadas = dependencias.sort((a, b) => {
     const getNombre = (d) => d.nombre?.toLowerCase() ?? "";
     const extractNumber = (str) => {
       const match = str.match(/\d+/);
@@ -51,12 +54,18 @@ const AdminPanel = () => {
     const numB = extractNumber(getNombre(b));
 
     if (numA !== null && numB !== null) {
-      // Ordenar por número descendente si ambos tienen número
       return numA - numB;
     }
 
-    // Ordenar alfabéticamente si no tienen número o solo uno lo tiene
     return getNombre(a).localeCompare(getNombre(b));
+  });
+
+  const dataChart = dependenciasOrdenadas.map((d) => {
+    const cantidad = usuarios.filter((u) => u.dependencia_id === d.id).length;
+    return {
+      name: d.nombre,
+      value: cantidad,
+    };
   });
 
   const handleEdit = (dep) => {
@@ -121,15 +130,6 @@ const AdminPanel = () => {
       }
     }
   };
-  
-
-  const dataChart = dependenciasZona.map((d) => {
-    const cantidad = usuarios.filter((u) => u.dependencia_id === d.id).length;
-    return {
-      name: d.nombre,
-      value: cantidad,
-    };
-  });
 
   const filteredFuncionarios = usuarios.filter((f) => {
     const query = search.toLowerCase();
@@ -169,7 +169,7 @@ const AdminPanel = () => {
           </button>
         </div>
 
-        {dependenciasZona.length === 0 ? (
+        {dependenciasOrdenadas.length === 0 ? (
           <p className="text-gray-500">
             No hay seccionales asignadas a tu zona.
           </p>
@@ -194,7 +194,7 @@ const AdminPanel = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {dependenciasZona.map((sec) => (
+                  {dependenciasOrdenadas.map((sec) => (
                     <tr
                       key={sec.id}
                       className="even:bg-gray-50 hover:bg-blue-50 transition-colors"
