@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import { fetchData, postData, putData, deleteData } from "../utils/api";
 import Table from "../components/Table";
@@ -11,13 +11,16 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import Loading from "../components/Loading";
 
 const EncargadoDependenciaPanel = () => {
+  const { id } = useParams();
+  const location = useLocation();
   const { usuario } = useAppContext();
   const navigate = useNavigate();
-  const [dependencia, setDependencia] = useState(null);
+  const [dependencia, setDependencia] = useState(location.state?.sec || null);
   const [turnos, setTurnos] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [cantidadFuncionarios, setCantidadFuncionarios] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [turnoSeleccionado, setTurnoSeleccionado] = useState(null);
@@ -29,37 +32,66 @@ const EncargadoDependenciaPanel = () => {
   const [asignacionSeleccionada, setAsignacionSeleccionada] = useState(null);
 
   useEffect(() => {
-    if (usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA") {
+    if (usuario?.rol_jerarquico === "FUNCIONARIO" || usuario?.rol_jerarquico === "JEFE_ZONA") {
       navigate("/");
     }
   }, [usuario, navigate]);
 
   useEffect(() => {
-    if (!usuario?.dependencia_id) return;
-
-    fetchData("dependencias", (deps) => {
-      const dep = deps.find((d) => d.id === usuario.dependencia_id);
-      if (!dep) return;
-
-      const jefe = dep.usuarios.find(
-        (u) => u.rol_jerarquico === "JEFE_DEPENDENCIA"
-      );
-      const funcs = dep.usuarios.filter(
-        (u) => u.rol_jerarquico !== "JEFE_DEPENDENCIA"
-      );
-
+    if (!usuario?.dependencia_id && !id) return;
+  
+    // Si tienes la dependencia ya en state desde el link, úsala directamente
+    if (location.state?.sec) {
+      const dep = location.state.sec;
+      const jefe = dep.usuarios?.find(u => u.rol_jerarquico === "JEFE_DEPENDENCIA");
+      const funcs = dep.usuarios?.filter(u => u.rol_jerarquico !== "JEFE_DEPENDENCIA") || [];
+  
       setDependencia({
         id: dep.id,
         nombre: dep.nombre,
         descripcion: dep.descripcion,
         jefe_nombre: jefe ? `G${jefe.grado} ${jefe.nombre}` : "Sin jefe",
       });
-
+  
       setTurnos(dep.turnos || []);
       setFuncionarios(funcs);
-      setCantidadFuncionarios(dep.usuarios.length);
-    });
-  }, [usuario]);
+      setCantidadFuncionarios(dep.usuarios?.length || 0);
+      setIsLoading(false);
+    } else {
+      // Si no, haz fetch por id o dependencia_id
+      fetchData("dependencias", (deps) => {
+        let dep;
+  
+        if (usuario?.dependencia_id) {
+          dep = deps.find(d => d.id === usuario.dependencia_id);
+        } else {
+          dep = deps.find(d => d.id === parseInt(id, 10));
+        }
+  
+        if (!dep) return;
+  
+        const jefe = dep.usuarios?.find(
+          (u) => u.rol_jerarquico === "JEFE_DEPENDENCIA"
+        );
+        const funcs = dep.usuarios?.filter(
+          (u) => u.rol_jerarquico !== "JEFE_DEPENDENCIA"
+        ) || [];
+  
+        setDependencia({
+          id: dep.id,
+          nombre: dep.nombre,
+          descripcion: dep.descripcion,
+          jefe_nombre: jefe ? `G${jefe.grado} ${jefe.nombre}` : "Sin jefe",
+        });
+  
+        setTurnos(dep.turnos || []);
+        setFuncionarios(funcs);
+        setCantidadFuncionarios(dep.usuarios?.length || 0);
+        setIsLoading(false);
+      });
+    }
+  }, [usuario, id, location.state]);
+  
 
   if (!dependencia) return <Loading />;
 

@@ -30,7 +30,6 @@ const FuncionarioModal = ({ onClose, onSubmitted, funcionario, zonas = [], depen
 
   useEffect(() => {
     if (funcionario) {
-      console.log("Funcionario:", funcionario);
       setForm({
         nombre: funcionario.nombre || "",
         correo: funcionario.correo || "",

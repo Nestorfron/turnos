@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Plus, Edit3, Trash2 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import DonutChart from "../components/DonutChart";
@@ -9,6 +9,7 @@ import Loading from "../components/Loading";
 
 const JefeZonaDashboard = () => {
   const { usuario } = useAppContext();
+  const navigate = useNavigate();
   const [jefatura, setJefatura] = useState(null);
   const [dependencias, setDependencias] = useState([]);
   const [selectedDep, setSelectedDep] = useState(null);
@@ -17,8 +18,11 @@ const JefeZonaDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (usuario?.rol_jerarquico !== "JEFE_ZONA") {
+      navigate("/");
+    }
     const cargarDatos = async () => {
-      setIsLoading(true); // 👉 Mostrar loading
+      setIsLoading(true);
 
       try {
         const jefaturas = await new Promise((resolve) =>

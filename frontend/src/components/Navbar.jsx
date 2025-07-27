@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useAppContext } from "../context/AppContext";
 import { Link, useNavigate } from "react-router-dom";
+import LogoSGP from "./LogoSGP";
 
 const Navbar = () => {
   const { usuario, logout } = useAppContext();
   const [open, setOpen] = useState(false);
   const menuRef = useRef();
-  const navigate = useNavigate();  // <-- agregar hook
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -19,14 +20,18 @@ const Navbar = () => {
   }, []);
 
   if (!usuario) {
-    return null; // No mostrar navbar si no hay usuario logueado
+    return null;
   }
 
   const inicial = usuario.nombre?.charAt(0).toUpperCase() || "?";
 
   return (
     <nav className="bg-blue-700 text-white px-6 py-3 flex justify-between items-center relative">
-      <div className="text-xl font-bold">Gestión de Servicio</div>
+      <div className="flex items-center">
+        <Link to="/" className="text-xl font-semibold">
+          <LogoSGP />
+        </Link>
+      </div>
 
       <div className="relative" ref={menuRef}>
         <button
@@ -54,7 +59,7 @@ const Navbar = () => {
               onClick={() => {
                 logout();
                 setOpen(false);
-                navigate("/");  // <-- redirigir a home después de logout
+                navigate("/");
               }}
               className="w-full text-left px-4 py-2 hover:bg-gray-100"
             >
