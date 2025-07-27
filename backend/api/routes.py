@@ -349,8 +349,15 @@ def crear_usuario():
     estado = body.get("estado")
     turno_id = body.get("turno_id")  # ✅ nuevo campo
 
+    ROLES_VALIDOS = ['JEFE_ZONA', 'ADMINISTRADOR', 'FUNCIONARIO', 'JEFE_DEPENDENCIA']
+
     if not grado or not nombre or not correo or not password or not rol_jerarquico:
         return jsonify({"error": "Faltan campos obligatorios"}), 400
+
+    if rol_jerarquico not in ROLES_VALIDOS:
+        return jsonify({
+            "error": f"Rol jerárquico inválido. Debe ser uno de: {', '.join(ROLES_VALIDOS)}"
+        }), 400
 
     if Usuario.query.filter_by(correo=correo).first():
         return jsonify({"error": "El correo ya está en uso"}), 400
@@ -359,9 +366,20 @@ def crear_usuario():
         if not zona_id:
             return jsonify({"error": "Un jefe de zona debe tener zona_id"}), 400
         dependencia_id = None
-    else:
+
+    elif rol_jerarquico == 'ADMINISTRADOR':
+        if dependencia_id or zona_id:
+            return jsonify({
+                "error": "Un administrador no debe tener dependencia_id ni zona_id"
+            }), 400
+        dependencia_id = None
+        zona_id = None
+
+    else:  # FUNCIONARIO o JEFE_DEPENDENCIA
         if not dependencia_id:
-            return jsonify({"error": "Este usuario debe tener dependencia_id"}), 400
+            return jsonify({
+                "error": f"Un usuario con rol {rol_jerarquico} debe tener dependencia_id"
+            }), 400
         zona_id = None
 
     password_hash = generate_password_hash(password)
@@ -375,12 +393,14 @@ def crear_usuario():
         dependencia_id=dependencia_id,
         zona_id=zona_id,
         estado=estado,
-        turno_id=turno_id 
+        turno_id=turno_id
     )
 
     db.session.add(nuevo_usuario)
     db.session.commit()
+
     return jsonify(nuevo_usuario.serialize()), 201
+
 
 @api.route('/usuarios', methods=['GET'])
 def listar_usuarios():
