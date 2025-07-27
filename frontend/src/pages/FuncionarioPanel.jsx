@@ -17,7 +17,9 @@ const FuncionarioPanel = () => {
   const [cantidadFuncionarios, setCantidadFuncionarios] = useState(0);
 
   useEffect(() => {
-    if (!usuario) navigate("/");
+    if (usuario?.rol_jerarquico !== "FUNCIONARIO") {
+      navigate("/");
+    }
 
     if (usuario?.dependencia_id) {
       fetchData("dependencias", (deps) => {

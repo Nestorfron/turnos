@@ -44,8 +44,13 @@ const LoginForm = () => {
         // ✅ Redirige según rol
         if (data.usuario.rol_jerarquico === "JEFE_ZONA") {
           navigate("/jefe-zona");
-        } else if (data.usuario.rol_jerarquico === "JEFE_DEPENDENCIA" || data.usuario.rol_jerarquico === "FUNCIONARIO") {
+        } else if (
+          data.usuario.rol_jerarquico === "JEFE_DEPENDENCIA" ||
+          data.usuario.rol_jerarquico === "FUNCIONARIO"
+        ) {
           navigate("dependencia/" + data.usuario.dependencia_id);
+        } else if (usuario.rol_jerarquico === "ADMINISTRADOR") {
+          navigate("/admin");
         } else {
           navigate("/");
         }

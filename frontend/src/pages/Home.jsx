@@ -17,7 +17,9 @@ const Home = () => {
         navigate(`/dependencia/${usuario.dependencia_id}`);
       } else if (usuario.rol_jerarquico === "FUNCIONARIO") {
         navigate("/funcionario/" + usuario.id);
-      }
+      }else if (usuario.rol_jerarquico === "ADMINISTRADOR") {
+        navigate("/admin");
+      }      
       else {
         navigate("/");
       }
