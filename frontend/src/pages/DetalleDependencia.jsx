@@ -54,7 +54,6 @@ const DetalleDependencia = () => {
         setIsLoading(false);
       }
     };
-
     cargarDatos();
   }, [dependencia, id]);
 

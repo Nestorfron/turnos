@@ -366,7 +366,7 @@ const AdminPanel = () => {
           }}
           zonaId={usuario?.zona_id}
           zonas={zonas}
-          dependencias={dependenciasZona}
+          dependencias={dependenciasOrdenadas}
         />
       )}
     </div>
