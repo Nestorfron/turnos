@@ -36,46 +36,46 @@ const EncargadoDependenciaPanel = () => {
       navigate("/");
     }
   }, [usuario, navigate]);
-
+  
   useEffect(() => {
     if (!usuario?.dependencia_id && !id) return;
   
-    // Si tienes la dependencia ya en state desde el link, úsala directamente
-    if (location.state?.sec) {
-      const dep = location.state.sec;
-      const jefe = dep.usuarios?.find(u => u.rol_jerarquico === "JEFE_DEPENDENCIA");
-      const funcs = dep.usuarios?.filter(u => u.rol_jerarquico !== "JEFE_DEPENDENCIA") || [];
+    const cargarDependencia = async () => {
+      try {
+        // Si tienes la dependencia en location.state, úsala directamente
+        if (location.state?.sec) {
+          const dep = location.state.sec;
+          const jefe = dep.usuarios?.find(u => u.rol_jerarquico === "JEFE_DEPENDENCIA");
+          const funcs = dep.usuarios?.filter(u => u.rol_jerarquico !== "JEFE_DEPENDENCIA") || [];
   
-      setDependencia({
-        id: dep.id,
-        nombre: dep.nombre,
-        descripcion: dep.descripcion,
-        jefe_nombre: jefe ? `G${jefe.grado} ${jefe.nombre}` : "Sin jefe",
-      });
+          setDependencia({
+            id: dep.id,
+            nombre: dep.nombre,
+            descripcion: dep.descripcion,
+            jefe_nombre: jefe ? `G${jefe.grado} ${jefe.nombre}` : "Sin jefe",
+          });
   
-      setTurnos(dep.turnos || []);
-      setFuncionarios(funcs);
-      setCantidadFuncionarios(dep.usuarios?.length || 0);
-      setIsLoading(false);
-    } else {
-      // Si no, haz fetch por id o dependencia_id
-      fetchData("dependencias", (deps) => {
+          setTurnos(dep.turnos || []);
+          setFuncionarios(funcs);
+          setCantidadFuncionarios(dep.usuarios?.length || 0);
+          setIsLoading(false);
+          return;
+        }
+  
+        // Si no, fetch para obtener dependencias
+        const deps = await fetchData("dependencias");
+        if (!deps) return;
+  
         let dep;
-  
         if (usuario?.dependencia_id) {
           dep = deps.find(d => d.id === usuario.dependencia_id);
         } else {
           dep = deps.find(d => d.id === parseInt(id, 10));
         }
-  
         if (!dep) return;
   
-        const jefe = dep.usuarios?.find(
-          (u) => u.rol_jerarquico === "JEFE_DEPENDENCIA"
-        );
-        const funcs = dep.usuarios?.filter(
-          (u) => u.rol_jerarquico !== "JEFE_DEPENDENCIA"
-        ) || [];
+        const jefe = dep.usuarios?.find(u => u.rol_jerarquico === "JEFE_DEPENDENCIA");
+        const funcs = dep.usuarios?.filter(u => u.rol_jerarquico !== "JEFE_DEPENDENCIA") || [];
   
         setDependencia({
           id: dep.id,
@@ -88,21 +88,25 @@ const EncargadoDependenciaPanel = () => {
         setFuncionarios(funcs);
         setCantidadFuncionarios(dep.usuarios?.length || 0);
         setIsLoading(false);
-      });
-    }
+      } catch (error) {
+        console.error("Error cargando dependencia:", error);
+        setIsLoading(false);
+      }
+    };
+  
+    cargarDependencia();
   }, [usuario, id, location.state]);
   
-
   if (!dependencia) return <Loading />;
-
+  
   // Filtrados y ordenados
-  const funcionariosFiltrados = funcionarios.filter((f) =>
+  const funcionariosFiltrados = funcionarios.filter(f =>
     f.nombre.toLowerCase().includes(searchTerm.toLowerCase())
   );
   const funcionariosOrdenados = [...funcionariosFiltrados].sort(
     (a, b) => (b.grado || 0) - (a.grado || 0)
   );
-
+  
   const abrirModalNuevaAsignacion = (funcionario) => {
     setAsignacionSeleccionada({
       usuario_id: funcionario.id,
@@ -111,7 +115,7 @@ const EncargadoDependenciaPanel = () => {
     });
     setAsignarModalOpen(true);
   };
-
+  
   const abrirModalEditarAsignacion = (funcionario) => {
     setAsignacionSeleccionada({
       usuario_id: funcionario.id,
@@ -120,7 +124,7 @@ const EncargadoDependenciaPanel = () => {
     });
     setAsignarModalOpen(true);
   };
-
+  
   const handleGuardarAsignacion = async (asignacionForm) => {
     try {
       const resultado = await putData(
@@ -130,79 +134,90 @@ const EncargadoDependenciaPanel = () => {
           estado: asignacionForm.estado,
         }
       );
-
+  
       if (resultado) {
-        setFuncionarios((prev) =>
-          prev.map((f) => (f.id === resultado.id ? resultado : f))
+        setFuncionarios(prev =>
+          prev.map(f => (f.id === resultado.id ? resultado : f))
         );
       }
-
+  
       setAsignarModalOpen(false);
     } catch (error) {
       console.error("Error guardando asignación:", error);
     }
   };
-
+  
   const abrirModalEditarFuncionario = (funcionario) => {
     setFuncionarioSeleccionado(funcionario);
     setFuncionarioModalOpen(true);
   };
-
+  
   const handleGuardarFuncionario = async (funcionarioForm) => {
-    const resultado = await putData(
-      `usuarios/${funcionarioSeleccionado.id}`,
-      funcionarioForm
-    );
-    if (resultado) {
-      setFuncionarios((prev) =>
-        prev.map((f) => (f.id === resultado.id ? resultado : f))
+    try {
+      const resultado = await putData(
+        `usuarios/${funcionarioSeleccionado.id}`,
+        funcionarioForm
       );
+      if (resultado) {
+        setFuncionarios(prev =>
+          prev.map(f => (f.id === resultado.id ? resultado : f))
+        );
+      }
+    } catch (error) {
+      console.error("Error guardando funcionario:", error);
     }
     setFuncionarioModalOpen(false);
   };
-
+  
   const abrirModalNuevoTurno = () => {
     setTurnoSeleccionado(null);
     setModalOpen(true);
   };
-
+  
   const abrirModalEditarTurno = (turno) => {
     setTurnoSeleccionado(turno);
     setModalOpen(true);
   };
-
+  
   const handleGuardarTurno = async (turnoForm) => {
-    let resultado = null;
-
-    if (turnoSeleccionado) {
-      resultado = await putData(`turnos/${turnoSeleccionado.id}`, turnoForm);
-      if (resultado) {
-        setTurnos((prev) =>
-          prev.map((t) => (t.id === resultado.id ? resultado : t))
-        );
+    try {
+      let resultado = null;
+  
+      if (turnoSeleccionado) {
+        resultado = await putData(`turnos/${turnoSeleccionado.id}`, turnoForm);
+        if (resultado) {
+          setTurnos(prev =>
+            prev.map(t => (t.id === resultado.id ? resultado : t))
+          );
+        }
+      } else {
+        resultado = await postData(`turnos`, {
+          ...turnoForm,
+          dependencia_id: dependencia.id,
+        });
+        if (resultado) {
+          setTurnos(prev => [...prev, resultado]);
+        }
       }
-    } else {
-      resultado = await postData(`turnos`, {
-        ...turnoForm,
-        dependencia_id: dependencia.id,
-      });
-      if (resultado) {
-        setTurnos((prev) => [...prev, resultado]);
-      }
+    } catch (error) {
+      console.error("Error guardando turno:", error);
     }
-
     setModalOpen(false);
   };
-
+  
   const handleBorrarTurno = async (id) => {
     if (window.confirm("¿Estás seguro de borrar este turno?")) {
-      const ok = await deleteData(`turnos/${id}`);
-      if (ok) {
-        setTurnos((prev) => prev.filter((t) => t.id !== id));
+      try {
+        const ok = await deleteData(`turnos/${id}`);
+        if (ok) {
+          setTurnos(prev => prev.filter(t => t.id !== id));
+        }
+      } catch (error) {
+        console.error("Error borrando turno:", error);
       }
     }
   };
-
+  
   // Función para colorear estado
   const EstadoConColor = ({ estado }) => {
     const estadoLower = (estado || "").toLowerCase();
@@ -212,7 +227,7 @@ const EncargadoDependenciaPanel = () => {
         : "text-red-600 font-semibold";
     return <span className={colorClass}>{estado || "Sin estado"}</span>;
   };
-
+  
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800">
       <header className="mb-8">
