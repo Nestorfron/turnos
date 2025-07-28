@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useLocation, useNavigate } from "react-router-dom";
-import { fetchData } from "../utils/api.js";
+import { fetchData, putData, deleteData, postData } from "../utils/api.js";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import "dayjs/locale/es";
@@ -18,8 +18,6 @@ dayjs.locale("es");
 
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-
-const apiUrl = import.meta.env.VITE_API_URL;
 
 const GuardiasPanel = () => {
   const { usuario } = useAppContext();
@@ -76,45 +74,39 @@ const GuardiasPanel = () => {
       pdf.save("guardias_completo.pdf");
     });
   };
+
   useEffect(() => {
     if (!dependencia?.id) return;
-
-    const fetchDataPromise = (endpoint) =>
-      new Promise((resolve, reject) => {
-        fetchData(endpoint, (data) => {
-          if (data) resolve(data);
-          else reject(new Error(`Error al obtener datos de ${endpoint}`));
-        });
-      });
-
+  
     const cargarDatos = async () => {
       try {
         // Cargo usuarios y filtro
-        const usuarios = await fetchDataPromise("usuarios");
+        const usuarios = await fetchData("usuarios", usuario.token);
         const filtrados = usuarios.filter(
           (u) =>
             u.dependencia_id === dependencia.id &&
             u.rol_jerarquico !== "JEFE_DEPENDENCIA"
         );
         setFuncionarios(filtrados);
-
+  
         // Cargo guardias y filtro
-        const todasGuardias = await fetchDataPromise("guardias");
+        const todasGuardias = await fetchData("guardias", usuario.token);
         const guardiasFiltradas = todasGuardias.filter((g) =>
           filtrados.some((f) => f.id === g.usuario_id)
         );
-
+  
         // Cargo licencias y filtro
-        const todasLicencias = await fetchDataPromise("licencias");
+        const todasLicencias = await fetchData("licencias", usuario.token);
         const licenciasFiltradas = todasLicencias
           .filter((l) => filtrados.some((f) => f.id === l.usuario_id))
           .map((l) => ({ ...l, tipo: "licencia" }));
-
+  
         setGuardias([...guardiasFiltradas, ...licenciasFiltradas]);
-
+  
         // Cargo turnos y ordeno
-        const turnosData = await fetchDataPromise(
-          `turnos?dependencia_id=${dependencia.id}`
+        const turnosData = await fetchData(
+          `turnos?dependencia_id=${dependencia.id}`,
+          usuario.token
         );
         const ordenDeseado = [
           "primer turno",
@@ -130,92 +122,111 @@ const GuardiasPanel = () => {
           const ib = ordenDeseado.indexOf(nombreB);
           return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
         });
-
+  
         setTurnos(turnosOrdenados);
       } catch (error) {
         console.error("Error cargando datos:", error);
       }
     };
-
+  
     cargarDatos();
-  }, [dependencia]);
-
+  }, [dependencia, usuario.token]);
+  
+  
   useEffect(() => {
     if (usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA") {
       setDaysToShow(14);
     }
   }, [usuario]);
-
+  
   const getCelda = (usuario, dia) => {
     const fecha = dia.format("YYYY-MM-DD");
-
+  
     const registro = guardias.find((g) => {
       if (g.usuario_id !== usuario.id) return false;
-
+  
       const inicio = dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD");
       const fin = dayjs(g.fecha_fin).utc().format("YYYY-MM-DD");
-
-      const coincide = fecha >= inicio && fecha <= fin;
-
-      return coincide;
+  
+      return fecha >= inicio && fecha <= fin;
     });
-
+  
     if (registro) {
       if (registro.tipo === "licencia") return "L";
       if (registro.tipo === "guardia") return "T";
       return registro.tipo;
     }
-
+  
     return "D";
   };
-
-  const actualizarCelda = async (usuario, dia, nuevoTipo) => {
+  
+  const actualizarCelda = async (usuario, dia, nuevoTipo, token) => {
+    if (!token) {
+      console.error("[actualizarCelda] ERROR: No hay token para autenticar");
+      return;
+    }
+  
     const fechaStr = dia.format("YYYY-MM-DD");
-
+  
     const existente = guardias.find((g) => {
       if (g.usuario_id !== usuario.id) return false;
       const inicio = dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD");
       const fin = dayjs(g.fecha_fin).utc().format("YYYY-MM-DD");
       return fechaStr >= inicio && fechaStr <= fin;
     });
-
+  
     if (existente) {
-      const url =
+      const endpoint =
         existente.tipo === "licencia"
-          ? `${apiUrl}/licencias/${existente.id}`
-          : `${apiUrl}/guardias/${existente.id}`;
+          ? `licencias/${existente.id}`
+          : `guardias/${existente.id}`;
+  
+      console.log("[actualizarCelda] Intentando borrar registro existente:");
+      console.log("Tipo:", existente.tipo);
+      console.log("ID:", existente.id);
+      console.log("Endpoint:", endpoint);
+      console.log("Token presente:", !!token);
+      console.log("[actualizarCelda] Token para DELETE:", token, typeof token);
+if (typeof token !== "string" || token.trim() === "") {
+  console.error("[actualizarCelda] Token inválido para DELETE");
+  return;
+}
 
-      const resp = await fetch(url, { method: "DELETE" });
-
-      if (resp.ok) {
+  
+      const ok = await deleteData(endpoint, token);
+  
+      if (ok) {
+        console.log("[actualizarCelda] Registro borrado correctamente");
         setGuardias((prev) => prev.filter((g) => g.id !== existente.id));
       } else {
-        const error = await resp.json();
-        console.error("Error al borrar existente:", error);
+        console.error("[actualizarCelda] Error al borrar registro existente");
         return;
       }
     }
-
+  
     if (nuevoTipo === "D") return;
-
-    const esBloque =
+  
+    // Revisa si quieres resetear 'dia' para no acumular días en cada loop
+    let esBloque =
       (nuevoTipo === "T" || nuevoTipo.toLowerCase() === "brou") &&
       Array.from({ length: 5 }).every((_, i) => {
         const fecha = dia.add(i, "day").format("YYYY-MM-DD");
-
+  
         const ocupado = guardias.find((g) => {
           if (g.usuario_id !== usuario.id) return false;
           const inicio = dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD");
           const fin = dayjs(g.fecha_fin).utc().format("YYYY-MM-DD");
           return fecha >= inicio && fecha <= fin;
         });
-
+  
         return !ocupado;
       });
-
+  
     if (esBloque) {
       for (let i = 0; i < 5; i++) {
-        const fecha = dia.add(i, "day");
+        // Importante: clonar 'dia' para no modificar el original en cada iteración
+        const fecha = dia.add(i, "day").clone();
+  
         const nueva = {
           usuario_id: usuario.id,
           fecha_inicio: fecha.format("YYYY-MM-DD"),
@@ -223,17 +234,13 @@ const GuardiasPanel = () => {
           tipo: nuevoTipo,
           comentario: "Agregada manualmente",
         };
-
-        const resp = await fetch(`${apiUrl}/guardias`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(nueva),
+  
+        const creada = await postData("guardias", nueva, token, {
+          "Content-Type": "application/json",
         });
-
-        if (resp.ok) {
-          const creada = await resp.json();
-          setGuardias((prev) => [...prev, creada]);
-        }
+  
+        if (creada) setGuardias((prev) => [...prev, creada]);
+        else console.error("[actualizarCelda] Error al crear nueva guardia");
       }
     } else {
       const nueva = {
@@ -243,63 +250,52 @@ const GuardiasPanel = () => {
         tipo: nuevoTipo === "T" ? "guardia" : nuevoTipo,
         comentario: "Agregada manualmente",
       };
-
-      const resp = await fetch(`${apiUrl}/guardias`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(nueva),
+  
+      const creada = await postData("guardias", nueva, token, {
+        "Content-Type": "application/json",
       });
-
-      if (resp.ok) {
-        const creada = await resp.json();
-        setGuardias((prev) => [...prev, creada]);
-      }
+  
+      if (creada) setGuardias((prev) => [...prev, creada]);
+      else console.error("[actualizarCelda] Error al crear nueva guardia");
     }
   };
-
-  const abrirModalLicencia = (usuario, dia) => {
-    setModalData({
-      usuario,
-      fechaInicio: dia.format("YYYY-MM-DD"),
-    });
-  };
-
+  
+    
+  
+  
   const eliminarLicencia = async (usuario, dia) => {
     const fechaStr = dia.format("YYYY-MM-DD");
-
+  
     const existente = guardias.find((g) => {
       if (g.usuario_id !== usuario.id || g.tipo !== "licencia") return false;
       const inicio = dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD");
       const fin = dayjs(g.fecha_fin).utc().format("YYYY-MM-DD");
       return fechaStr >= inicio && fechaStr <= fin;
     });
-
+  
     if (!existente) return;
-
-    const resp = await fetch(`${apiUrl}/licencias/${existente.id}`, {
-      method: "DELETE",
-    });
-
-    if (resp.ok) {
+  
+    const ok = await deleteData(`licencias/${existente.id}`, usuario.token);
+  
+    if (ok) {
       setGuardias((prev) => prev.filter((g) => g.id !== existente.id));
     } else {
-      const error = await resp.json();
-      console.error("Error al borrar licencia:", error);
+      console.error("Error al borrar licencia");
     }
   };
-
+  
   const abrirModalEditarLicencia = (usuario, dia) => {
     const fechaStr = dia.format("YYYY-MM-DD");
-
+  
     const existente = guardias.find((g) => {
       if (g.usuario_id !== usuario.id || g.tipo !== "licencia") return false;
       const inicio = dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD");
       const fin = dayjs(g.fecha_fin).utc().format("YYYY-MM-DD");
       return fechaStr >= inicio && fechaStr <= fin;
     });
-
+  
     if (!existente) return;
-
+  
     setModalData({
       usuario,
       id: existente.id,
@@ -308,51 +304,39 @@ const GuardiasPanel = () => {
       motivo: existente.motivo,
     });
   };
-
+  
   const handleLicenciaSubmit = async ({ fechaFin, motivo }) => {
     try {
       const usuarioId = modalData.usuario.id;
       const fechaInicio = dayjs(modalData.fechaInicio);
       const fechaFinDayjs = dayjs(fechaFin);
-
-      // Primero buscar guardias que se superpongan con la licencia
-      const diasLicencia = [];
-      for (
-        let fecha = fechaInicio;
-        fecha.isBefore(fechaFinDayjs) || fecha.isSame(fechaFinDayjs);
-        fecha = fecha.add(1, "day")
-      ) {
-        diasLicencia.push(fecha.format("YYYY-MM-DD"));
-      }
-
-      // Filtrar guardias existentes que coincidan en esas fechas para este usuario
+  
+      // Buscar guardias que se superpongan con la licencia
       const guardiasAEliminar = guardias.filter((g) => {
         if (g.usuario_id !== usuarioId || g.tipo !== "guardia") return false;
-
+  
         const inicio = dayjs.utc(g.fecha_inicio);
         const fin = dayjs.utc(g.fecha_fin);
-
+  
         return (
           inicio.isSameOrBefore(fechaFinDayjs, "day") &&
           fin.isSameOrAfter(fechaInicio, "day")
         );
       });
-
-      // Borrar las guardias encontradas (await en secuencia o en paralelo)
+  
+      // Borrar las guardias encontradas en paralelo
       await Promise.all(
         guardiasAEliminar.map(async (g) => {
-          const resp = await fetch(`${apiUrl}/guardias/${g.id}`, {
-            method: "DELETE",
-          });
-          if (resp.ok) {
+          const ok = await deleteData(`guardias/${g.id}`, usuario.token);
+          if (ok) {
             setGuardias((prev) => prev.filter((x) => x.id !== g.id));
           } else {
             console.error("Error al eliminar guardia", g.id);
           }
         })
       );
-
-      // Ahora creo la licencia normalmente
+  
+      // Crear licencia
       const nueva = {
         usuario_id: usuarioId,
         fecha_inicio: fechaInicio.utc().format("YYYY-MM-DD"),
@@ -360,68 +344,60 @@ const GuardiasPanel = () => {
         motivo,
         estado: "activo",
       };
-
-      const resp = await fetch(`${apiUrl}/licencias`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(nueva),
+  
+      const creada = await postData("licencias", nueva, usuario.token, {
+        "Content-Type": "application/json",
       });
-
-      if (resp.ok) {
-        if (resp.ok) {
-          const creada = await resp.json();
-          const conTipo = { ...creada, tipo: "licencia" }; // 👈 fuerza el tipo
-          setGuardias((prev) => [...prev, conTipo]);
-          setModalData(null);
-        }
+  
+      if (creada) {
+        setGuardias((prev) => [...prev, { ...creada, tipo: "licencia" }]);
+        setModalData(null);
       } else {
-        const errorData = await resp.json();
-        console.error("Error al guardar licencia:", errorData);
+        console.error("Error al guardar licencia");
       }
     } catch (error) {
       console.error("Error en handleLicenciaSubmit:", error);
     }
   };
-
+  
   const eliminarGuardiasFiltradas = async ({ desde, hasta, usuario_ids }) => {
     const desdeD = dayjs.utc(desde).startOf("day");
     const hastaD = dayjs.utc(hasta).endOf("day");
-
+  
     const idsObjetivo =
       usuario_ids === "todos"
         ? funcionarios
             .filter((f) => f.turno_id === modalEliminar.turno.id)
             .map((f) => f.id)
         : usuario_ids;
-
+  
     const guardiasFiltradas = guardias.filter((g) => {
       if (g.tipo !== "guardia") return false;
       if (!idsObjetivo.includes(g.usuario_id)) return false;
-
+  
       const inicio = dayjs.utc(g.fecha_inicio).startOf("day");
       if (!inicio.isValid()) return false;
-
+  
       return inicio.isSameOrAfter(desdeD) && inicio.isSameOrBefore(hastaD);
     });
-
+  
     for (const g of guardiasFiltradas) {
-      const resp = await fetch(`${apiUrl}/guardias/${g.id}`, {
-        method: "DELETE",
-      });
-      if (resp.ok) {
+      const ok = await deleteData(`guardias/${g.id}`, usuario.token);
+      if (ok) {
         setGuardias((prev) => prev.filter((x) => x.id !== g.id));
       } else {
         console.error("Error al eliminar guardia", g.id);
       }
     }
-
+  
     setModalEliminar(null);
   };
-
+  
   const funcionariosPorTurno = (turnoId) =>
     funcionarios
       .filter((f) => f.turno_id === turnoId)
       .sort((a, b) => (b.grado || 0) - (a.grado || 0));
+  
 
   return (
     <div className="p-6 space-y-2 bg-gray-50 min-h-screen">
@@ -467,179 +443,194 @@ const GuardiasPanel = () => {
       </div>
 
       {/* Contenedor Principal */}
-      {turnos.length === 0 || funcionarios.length === 0 || guardias.length === 0 ? <Loading /> : <div id="contenedor-tablas" className="mb-6">
-        {turnos.map((turno) => {
-          const lista = funcionariosPorTurno(turno.id);
+      {turnos.length === 0 ||
+      funcionarios.length === 0 ||
+      guardias.length === 0 ? (
+        <Loading />
+      ) : (
+        <div id="contenedor-tablas" className="mb-6">
+          {turnos.map((turno) => {
+            const lista = funcionariosPorTurno(turno.id);
 
-          return (
-            <div key={turno.id} className="bg-white rounded shadow p-4">
-              <div className="overflow-x-auto">
-                <table className="min-w-full border border-gray-300 text-sm text-center">
-                  <thead>
-                    <tr className="bg-gray-200">
-                      <th className="border px-2 py-1 w-48">
-                        <h2 className="text-lg font-semibold text-blue-800">
-                          {turno.nombre}
-                        </h2>
-                      </th>
-                      {dias.map((d) => (
-                        <th
-                          key={d.format("YYYY-MM-DD")}
-                          className="border px-2 py-1"
-                        >
-                          {d.format("ddd")} <br /> {d.format("D")}
+            return (
+              <div key={turno.id} className="bg-white rounded shadow p-4">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border border-gray-300 text-sm text-center">
+                    <thead>
+                      <tr className="bg-gray-200">
+                        <th className="border px-2 py-1 w-48">
+                          <h2 className="text-lg font-semibold text-blue-800">
+                            {turno.nombre}
+                          </h2>
                         </th>
+                        {dias.map((d) => (
+                          <th
+                            key={d.format("YYYY-MM-DD")}
+                            className="border px-2 py-1"
+                          >
+                            {d.format("ddd")} <br /> {d.format("D")}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lista.map((f) => (
+                        <tr key={f.id}>
+                          <td className="border px-2 text-left whitespace-nowrap w-48 min-w-48">
+                            G{f.grado} {f.nombre}
+                          </td>
+                          {dias.map((d) => {
+                            const valor = getCelda(f, d);
+                            const esFinDeSemana = [6, 0].includes(d.day());
+
+                            let bgBase = "";
+                            let textColor = "text-black";
+                            let fontWeight = "font-normal";
+                            let textSize = "text-sm";
+
+                            switch (valor) {
+                              case "D":
+                                bgBase = "bg-black";
+                                textColor = "text-white";
+                                fontWeight = "font-bold";
+                                break;
+                              case "T":
+                                bgBase = "bg-white";
+                                textColor = "text-black";
+                                fontWeight = "font-normal";
+                                break;
+                              case "L":
+                                bgBase = "bg-green-600";
+                                textColor = "text-white";
+                                fontWeight = "font-bold";
+                                break;
+                              case "1ro":
+                                bgBase = "bg-blue-600";
+                                textColor = "text-white";
+                                fontWeight = "font-bold";
+                                break;
+                              case "2do":
+                                bgBase = "bg-blue-600";
+                                textColor = "text-white";
+                                fontWeight = "font-bold";
+                                break;
+                              case "3er":
+                                bgBase = "bg-blue-600";
+                                textColor = "text-white";
+                                fontWeight = "font-bold";
+                                break;
+                              case "CURSO":
+                                bgBase = "bg-green-600";
+                                textColor = "text-white";
+                                fontWeight = "font-bold";
+                                textSize = "text-xs";
+                                break;
+                              case "BROU":
+                                bgBase = "bg-white";
+                                textColor = "text-black";
+                                fontWeight = "font-normal";
+                                textSize = "text-xs";
+                                break;
+                              case "CUSTODIA":
+                                bgBase = "bg-blue-600";
+                                textColor = "text-white";
+                                fontWeight = "font-bold";
+                                textSize = "text-xs";
+                                break;
+                              default:
+                                bgBase = "";
+                                textColor = "text-black";
+                                fontWeight = "font-normal";
+                            }
+
+                            const fondoExtra = esFinDeSemana
+                              ? ""
+                              : "bg-opacity-100";
+
+                            return (
+                              <td
+                                key={d.format("YYYY-MM-DD")}
+                                className={`border py-1 h-5 relative group ${bgBase} ${textColor} ${fontWeight} ${textSize}`}
+                              >
+                                {valor}
+                                {valor === "L"
+                                  ? usuario?.rol_jerarquico ===
+                                      "JEFE_DEPENDENCIA" && (
+                                      <>
+                                        <button
+                                          onClick={() =>
+                                            abrirModalEditarLicencia(f, d)
+                                          }
+                                          className="absolute top-0 right-6 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-blue-700 transition"
+                                          title="Editar Licencia"
+                                        >
+                                          ✏️
+                                        </button>
+                                        <button
+                                          onClick={() => eliminarLicencia(f, d)}
+                                          className="absolute top-0 right-0 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-red-700 transition"
+                                          title="Eliminar Licencia"
+                                        >
+                                          ❌
+                                        </button>
+                                      </>
+                                    )
+                                  : usuario?.rol_jerarquico ===
+                                      "JEFE_DEPENDENCIA" && (
+                                      <>
+                                        <button
+                                          onClick={() =>
+                                            setSelectorTipo({
+                                              usuario: f,
+                                              dia: d,
+                                            })
+                                          }
+                                          className="absolute top-0 right-6 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-blue-700 transition"
+                                          title="Cambiar Guardia"
+                                        >
+                                          ✏️
+                                        </button>
+                                        <button
+                                          onClick={() =>
+                                            abrirModalLicencia(f, d)
+                                          }
+                                          className="absolute top-0 right-0 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-red-500 transition"
+                                          title="Agregar Licencia"
+                                        >
+                                          📄
+                                        </button>
+                                      </>
+                                    )}
+                              </td>
+                            );
+                          })}
+                        </tr>
                       ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lista.map((f) => (
-                      <tr key={f.id}>
-                        <td className="border px-2 text-left whitespace-nowrap w-48 min-w-48">
-                          G{f.grado} {f.nombre}
-                        </td>
-                        {dias.map((d) => {
-                          const valor = getCelda(f, d);
-                          const esFinDeSemana = [6, 0].includes(d.day());
-
-                          let bgBase = "";
-                          let textColor = "text-black";
-                          let fontWeight = "font-normal";
-                          let textSize = "text-sm";
-
-                          switch (valor) {
-                            case "D":
-                              bgBase = "bg-black";
-                              textColor = "text-white";
-                              fontWeight = "font-bold";
-                              break;
-                            case "T":
-                              bgBase = "bg-white";
-                              textColor = "text-black";
-                              fontWeight = "font-normal";
-                              break;
-                            case "L":
-                              bgBase = "bg-green-600";
-                              textColor = "text-white";
-                              fontWeight = "font-bold";
-                              break;
-                            case "1ro":
-                              bgBase = "bg-blue-600";
-                              textColor = "text-white";
-                              fontWeight = "font-bold";
-                              break;
-                            case "2do":
-                              bgBase = "bg-blue-600";
-                              textColor = "text-white";
-                              fontWeight = "font-bold";
-                              break;
-                            case "3er":
-                              bgBase = "bg-blue-600";
-                              textColor = "text-white";
-                              fontWeight = "font-bold";
-                              break;
-                            case "CURSO":
-                              bgBase = "bg-green-600";
-                              textColor = "text-white";
-                              fontWeight = "font-bold";
-                              textSize = "text-xs";
-                              break;
-                            case "BROU":
-                              bgBase = "bg-white";
-                              textColor = "text-black";
-                              fontWeight = "font-normal";
-                              textSize = "text-xs";
-                              break;
-                            case "CUSTODIA":
-                              bgBase = "bg-blue-600";
-                              textColor = "text-white";
-                              fontWeight = "font-bold";
-                              textSize = "text-xs";
-                              break;
-                            default:
-                              bgBase = "";
-                              textColor = "text-black";
-                              fontWeight = "font-normal";
-                          }
-
-                          const fondoExtra = esFinDeSemana
-                            ? ""
-                            : "bg-opacity-100";
-
-                          return (
-                            <td
-                              key={d.format("YYYY-MM-DD")}
-                              className={`border py-1 h-5 relative group ${bgBase} ${textColor} ${fontWeight} ${textSize}`}
-                            >
-                              {valor}
-                              {valor === "L" ? (
-                                usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
-                                <>
-                                  <button
-                                    onClick={() =>
-                                      abrirModalEditarLicencia(f, d)
-                                    }
-                                    className="absolute top-0 right-6 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-blue-700 transition"
-                                    title="Editar Licencia"
-                                  >
-                                    ✏️
-                                  </button>
-                                  <button
-                                    onClick={() => eliminarLicencia(f, d)}
-                                    className="absolute top-0 right-0 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-red-700 transition"
-                                    title="Eliminar Licencia"
-                                  >
-                                    ❌
-                                  </button>
-                                </>
-                                )
-                              ) : (
-                                usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
-                                <>
-                                  <button
-                                    onClick={() =>
-                                      setSelectorTipo({ usuario: f, dia: d })
-                                    }
-                                    className="absolute top-0 right-6 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-blue-700 transition"
-                                    title="Cambiar Guardia"
-                                  >
-                                    ✏️
-                                  </button>
-                                  <button
-                                    onClick={() => abrirModalLicencia(f, d)}
-                                    className="absolute top-0 right-0 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-red-500 transition"
-                                    title="Agregar Licencia"
-                                  >
-                                    📄
-                                  </button>
-                                </>
-                                )
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                    {lista.length === 0 && (
-                      <tr>
-                        <td
-                          colSpan={dias.length + 1}
-                          className="text-center py-4 text-gray-500"
-                        >
-                          No hay funcionarios asignados a este turno.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      {lista.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={dias.length + 1}
+                            className="text-center py-4 text-gray-500"
+                          >
+                            No hay funcionarios asignados a este turno.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>}
+            );
+          })}
+        </div>
+      )}
 
       <button
-        onClick={() => usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ? navigate("/dependencia/" + dependencia.id) : navigate("/funcionario")}  
+        onClick={() =>
+          usuario?.rol_jerarquico === "JEFE_DEPENDENCIA"
+            ? navigate("/dependencia/" + dependencia.id)
+            : navigate("/funcionario/" + usuario.id)
+        }
         className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"
       >
         ← Volver
@@ -677,7 +668,8 @@ const GuardiasPanel = () => {
                     await actualizarCelda(
                       selectorTipo.usuario,
                       selectorTipo.dia,
-                      tipo
+                      tipo,
+                      usuario.token
                     );
                     setSelectorTipo(null);
                   }}

@@ -6,7 +6,6 @@
 const BASE_URL = import.meta.env.VITE_API_URL;
 
 /**
- * Construye una URL segura para evitar barras dobles
  * @param {string} endpoint
  * @returns {string}
  */
@@ -17,21 +16,29 @@ const buildUrl = (endpoint) => {
 /**
  * GET - fetchData
  * @param {string} endpoint - Ej: "dependencias/1"
+ * @param {string} [token] - JWT opcional
  * @param {function} [setter] - Opcional: función para setear datos
- * @param {object} [headers] - Opcional: headers extra
+ * @param {object} [extraHeaders] - Opcional: headers extra
  * @returns {Promise<any|null>}
  */
-export const fetchData = async (endpoint, setter, headers = {}) => {
+export const fetchData = async (endpoint, token, setter, extraHeaders = {}) => {
   const url = buildUrl(endpoint);
+
+  const headers = token
+    ? { Authorization: `Bearer ${token}`, ...extraHeaders }
+    : { ...extraHeaders };
+
   try {
     const res = await fetch(url, { headers });
+
     if (!res.ok) {
       const text = await res.text();
       console.error(`fetchData error: GET ${url} → ${res.status}, respuesta: ${text}`);
       throw new Error(`GET ${url} → ${res.status}`);
     }
+
     const data = await res.json();
-    if (setter) setter(data);
+    if (typeof setter === "function") setter(data);
     return data;
   } catch (err) {
     console.error("fetchData error catch:", err);
@@ -43,19 +50,22 @@ export const fetchData = async (endpoint, setter, headers = {}) => {
  * POST - postData
  * @param {string} endpoint
  * @param {object} payload
- * @param {object} [headers]
+ * @param {string} token
+ * @param {object} [extraHeaders]
  * @returns {Promise<object|null>}
  */
-export const postData = async (endpoint, payload, headers = {}) => {
+export const postData = async (endpoint, payload, token, extraHeaders = {}) => {
   const url = buildUrl(endpoint);
   try {
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...extraHeaders,
+    };
+
     const res = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...headers,
-        "Authorization": `Bearer ${usuario.token}`,
-      },
+      headers,
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
@@ -74,19 +84,22 @@ export const postData = async (endpoint, payload, headers = {}) => {
  * PUT - putData
  * @param {string} endpoint
  * @param {object} payload
- * @param {object} [headers]
+ * @param {string} token
+ * @param {object} [extraHeaders]
  * @returns {Promise<object|null>}
  */
-export const putData = async (endpoint, payload, headers = {}) => {
+export const putData = async (endpoint, payload, token, extraHeaders = {}) => {
   const url = buildUrl(endpoint);
   try {
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...extraHeaders,
+    };
+
     const res = await fetch(url, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        ...headers,
-        "Authorization": `Bearer ${usuario.token}`,
-      },
+      headers,
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
@@ -104,17 +117,24 @@ export const putData = async (endpoint, payload, headers = {}) => {
 /**
  * DELETE - deleteData
  * @param {string} endpoint
- * @param {object} [headers]
+ * @param {string} token
+ * @param {object} [extraHeaders]
  * @returns {Promise<boolean>}
  */
-export const deleteData = async (endpoint, headers = {}) => {
+export const deleteData = async (endpoint, token, extraHeaders = {}) => {
   const url = buildUrl(endpoint);
   try {
+    const headers = {
+      "Content-Type": "application/json", // opcional en DELETE pero está OK
+      Authorization: `Bearer ${token}`,
+      ...extraHeaders,
+    };
+
     const res = await fetch(url, {
       method: "DELETE",
       headers,
-      "Authorization": `Bearer ${usuario.token}`,
     });
+
     if (!res.ok) {
       const text = await res.text();
       console.error(`deleteData error: DELETE ${url} → ${res.status}, respuesta: ${text}`);
