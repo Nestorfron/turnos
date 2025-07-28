@@ -115,21 +115,22 @@ export const putData = async (endpoint, payload, token, extraHeaders = {}) => {
 };
 
 /**
+/**
  * DELETE - deleteData
  * @param {string} endpoint
  * @param {string} token
- * @param {object} [extraHeaders]
  * @returns {Promise<boolean>}
  */
-export const deleteData = async (endpoint, token, extraHeaders = {}) => {
+export const deleteData = async (endpoint, token) => {
   const url = buildUrl(endpoint);
-  try {
-    const headers = {
-      "Content-Type": "application/json", // opcional en DELETE pero está OK
-      Authorization: `Bearer ${token}`,
-      ...extraHeaders,
-    };
+  console.log("deleteData url:", url);
+  console.log("deleteData token:", typeof token);
 
+  const headers = {
+    Authorization: `Bearer ${token}`,
+  };
+
+  try {
     const res = await fetch(url, {
       method: "DELETE",
       headers,
@@ -146,3 +147,4 @@ export const deleteData = async (endpoint, token, extraHeaders = {}) => {
     return false;
   }
 };
+
