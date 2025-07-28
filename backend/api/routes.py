@@ -370,6 +370,7 @@ def listar_turnos_asignados():
 @api.route('/usuarios', methods=['POST'])
 @jwt_required
 def crear_usuario():
+
     body = request.json
     grado = body.get("grado")
     nombre = body.get("nombre")
@@ -379,7 +380,8 @@ def crear_usuario():
     dependencia_id = body.get("dependencia_id")
     zona_id = body.get("zona_id")
     estado = body.get("estado")
-    turno_id = body.get("turno_id")  # ✅ nuevo campo
+    turno_id = body.get("turno_id")
+
 
     ROLES_VALIDOS = ['JEFE_ZONA', 'ADMINISTRADOR', 'FUNCIONARIO', 'JEFE_DEPENDENCIA']
 
@@ -407,7 +409,7 @@ def crear_usuario():
         dependencia_id = None
         zona_id = None
 
-    else:  # FUNCIONARIO o JEFE_DEPENDENCIA
+    else: 
         if not dependencia_id:
             return jsonify({
                 "error": f"Un usuario con rol {rol_jerarquico} debe tener dependencia_id"
@@ -509,7 +511,6 @@ def eliminar_usuario(id):
 # LOGIN
 # -------------------------------------------------------------------
 @api.route('/login', methods=['POST'])
-@jwt_required
 def login():
     body = request.json
     correo = body.get("correo")
