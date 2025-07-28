@@ -498,7 +498,7 @@ def eliminar_usuario(id):
 # -------------------------------------------------------------------
 # LOGIN
 # -------------------------------------------------------------------
-@api.route('/login', methods=['POST', 'OPTIONS'])
+@api.route('/login', methods=['POST'])
 def login():
     body = request.json
     correo = body.get("correo")
