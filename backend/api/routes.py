@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify # type: ignore
-from flask_jwt_extended import create_access_token, get_jwt_identity # type: ignore
-from werkzeug.security import generate_password_hash, check_password_hash, jwt_required # type: ignore
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, get_current_user # type: ignore
+from werkzeug.security import generate_password_hash, check_password_hash # type: ignore
 from api.models import db, Jefatura, Zona, Dependencia, Usuario, RolOperativo, Turno, TurnoAsignado, Guardia, Licencia, SolicitudCambio, LicenciaMedica
 
 api = Blueprint("api", __name__)
