@@ -21,7 +21,6 @@ def crear_jefatura():
     return jsonify(nueva.serialize()), 201
 
 @api.route('/jefaturas', methods=['GET'])
-@jwt_required()
 def listar_jefaturas():
     data = Jefatura.query.all()
     return jsonify([x.serialize() for x in data]), 200
@@ -51,7 +50,6 @@ def crear_zona():
     return jsonify(nueva.serialize()), 201
 
 @api.route('/zonas', methods=['GET'])
-@jwt_required()
 def listar_zonas():
     data = Zona.query.all()
     return jsonify([x.serialize() for x in data]), 200
@@ -80,13 +78,11 @@ def crear_dependencia():
     return jsonify(nueva.serialize()), 201
 
 @api.route('/dependencias', methods=['GET'])
-@jwt_required()
 def listar_dependencias():
     data = Dependencia.query.all()
     return jsonify([x.serialize() for x in data]), 200
 
 @api.route('/dependencias/<int:id>', methods=['GET'])
-@jwt_required()
 def obtener_dependencia(id):
     dependencia = Dependencia.query.get(id)
     return jsonify(dependencia.serialize()), 200
@@ -152,7 +148,6 @@ def actualizar_turno(id):
 
 
 @api.route('/turnos', methods=['GET'])
-@jwt_required()
 def listar_turnos():
     dependencia_id = request.args.get('dependencia_id', type=int)
     if dependencia_id:
@@ -215,7 +210,6 @@ def eliminar_guardia(id):
     return jsonify({'status': 'ok'}), 200
 
 @api.route('/guardias', methods=['GET'])
-@jwt_required()
 def listar_guardias():
     data = Guardia.query.all()
     return jsonify([x.serialize() for x in data]), 200
@@ -264,7 +258,6 @@ def eliminar_licencia(id):
     return jsonify({'status': 'ok'}), 200
 
 @api.route('/licencias', methods=['GET'])
-@jwt_required()
 def listar_licencias():
     data = Licencia.query.all()
     return jsonify([x.serialize() for x in data]), 200
@@ -314,7 +307,6 @@ def eliminar_licencia_medica(id):
     return jsonify({'status': 'ok'}), 200
 
 @api.route('/licencias-medicas', methods=['GET'])
-@jwt_required()
 def listar_licencias_medicas():
     data = LicenciaMedica.query.all()
     return jsonify([x.serialize() for x in data]), 200
@@ -337,7 +329,6 @@ def crear_solicitud():
     return jsonify(nueva.serialize()), 201
 
 @api.route('/solicitudes-cambio', methods=['GET'])
-@jwt_required()
 def listar_solicitudes():
     data = SolicitudCambio.query.all()
     return jsonify([x.serialize() for x in data]), 200
@@ -359,7 +350,6 @@ def crear_turno_asignado():
     return jsonify(nuevo.serialize()), 201
 
 @api.route('/turnos-asignados', methods=['GET'])
-@jwt_required()
 def listar_turnos_asignados():
     data = TurnoAsignado.query.all()
     return jsonify([x.serialize() for x in data]), 200
@@ -437,7 +427,6 @@ def crear_usuario():
 
 
 @api.route('/usuarios', methods=['GET'])
-@jwt_required()
 def listar_usuarios():
     data = Usuario.query.all()
     return jsonify([x.serialize() for x in data]), 200
