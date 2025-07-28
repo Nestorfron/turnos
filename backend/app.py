@@ -16,7 +16,8 @@ app = Flask(__name__)
 app.config.from_object(Config)
 
 # Extensiones
-CORS(app, supports_credentials=True)
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+
 db.init_app(app)
 jwt = JWTManager(app)
 migrate = Migrate(app, db)
