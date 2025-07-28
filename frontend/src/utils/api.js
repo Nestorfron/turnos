@@ -54,6 +54,7 @@ export const postData = async (endpoint, payload, headers = {}) => {
       headers: {
         "Content-Type": "application/json",
         ...headers,
+        "Authorization": `Bearer ${usuario.token}`,
       },
       body: JSON.stringify(payload),
     });
@@ -84,6 +85,7 @@ export const putData = async (endpoint, payload, headers = {}) => {
       headers: {
         "Content-Type": "application/json",
         ...headers,
+        "Authorization": `Bearer ${usuario.token}`,
       },
       body: JSON.stringify(payload),
     });
@@ -111,6 +113,7 @@ export const deleteData = async (endpoint, headers = {}) => {
     const res = await fetch(url, {
       method: "DELETE",
       headers,
+      "Authorization": `Bearer ${usuario.token}`,
     });
     if (!res.ok) {
       const text = await res.text();
