@@ -10,8 +10,8 @@ api = Blueprint("api", __name__)
 # -------------------------------------------------------------------
 # JEFATURA
 # -------------------------------------------------------------------
-@api.route('/jefaturas', methods=['POST'])
-@jwt_required()
+@api.route('/jefaturas', methods=['POST', 'OPTIONS'])
+@jwt_required(optional=True)
 def crear_jefatura():
     body = request.json
     nombre = body.get("nombre")
@@ -27,8 +27,8 @@ def listar_jefaturas():
     data = Jefatura.query.all()
     return jsonify([x.serialize() for x in data]), 200
 
-@api.route('/jefaturas/<int:id>', methods=['DELETE'])
-@jwt_required()
+@api.route('/jefaturas/<int:id>', methods=['DELETE', 'OPTIONS'])
+@jwt_required(optional=True)
 def eliminar_jefatura(id):
     jefatura = Jefatura.query.get(id)
     db.session.delete(jefatura)
@@ -38,8 +38,8 @@ def eliminar_jefatura(id):
 # -------------------------------------------------------------------
 # ZONA
 # -------------------------------------------------------------------
-@api.route('/zonas', methods=['POST'])
-@jwt_required()
+@api.route('/zonas', methods=['POST', 'OPTIONS'])
+@jwt_required(optional=True)
 def crear_zona():
     body = request.json
     nombre = body.get("nombre")
@@ -56,8 +56,8 @@ def listar_zonas():
     data = Zona.query.all()
     return jsonify([x.serialize() for x in data]), 200
 
-@api.route('/zonas/<int:id>', methods=['DELETE'])
-@jwt_required()
+@api.route('/zonas/<int:id>', methods=['DELETE', 'OPTIONS'])
+@jwt_required(optional=True)
 def eliminar_zona(id):
     zona = Zona.query.get(id)
     db.session.delete(zona)
@@ -67,8 +67,8 @@ def eliminar_zona(id):
 # -------------------------------------------------------------------
 # DEPENDENCIA
 # -------------------------------------------------------------------
-@api.route('/dependencias', methods=['POST'])
-@jwt_required()
+@api.route('/dependencias', methods=['POST', 'OPTIONS'])
+@jwt_required(optional=True)
 def crear_dependencia():
     body = request.json
     nombre = body.get("nombre")
@@ -89,8 +89,8 @@ def obtener_dependencia(id):
     dependencia = Dependencia.query.get(id)
     return jsonify(dependencia.serialize()), 200
 
-@api.route('/dependencias/<int:id>', methods=['PUT'])
-@jwt_required()
+@api.route('/dependencias/<int:id>', methods=['PUT', 'OPTIONS'])
+@jwt_required(optional=True)
 def actualizar_dependencia(id):
     body = request.json
     dependencia = Dependencia.query.get(id)
@@ -101,8 +101,8 @@ def actualizar_dependencia(id):
     db.session.commit()
     return jsonify(dependencia.serialize()), 200
 
-@api.route('/dependencias/<int:id>', methods=['DELETE'])
-@jwt_required()
+@api.route('/dependencias/<int:id>', methods=['DELETE', 'OPTIONS'])
+@jwt_required(optional=True)
 def eliminar_dependencia(id):
     dependencia = Dependencia.query.get(id)
     db.session.delete(dependencia)
@@ -112,8 +112,8 @@ def eliminar_dependencia(id):
 # -------------------------------------------------------------------
 # TURNOS
 # -------------------------------------------------------------------
-@api.route('/turnos', methods=['POST'])
-@jwt_required()
+@api.route('/turnos', methods=['POST', 'OPTIONS'])
+@jwt_required(optional=True)
 def crear_turno():
     body = request.json
     nombre = body.get("nombre")
@@ -133,8 +133,8 @@ def crear_turno():
     db.session.commit()
     return jsonify(nuevo.serialize()), 201
 
-@api.route('/turnos/<int:id>', methods=['PUT'])
-@jwt_required()
+@api.route('/turnos/<int:id>', methods=['PUT', 'OPTIONS'])
+@jwt_required(optional=True)
 def actualizar_turno(id):
     body = request.json
     turno = Turno.query.get(id)
@@ -158,8 +158,8 @@ def listar_turnos():
         turnos = Turno.query.all()
     return jsonify([t.serialize() for t in turnos]), 200
 
-@api.route('/turnos/<int:turno_id>', methods=['DELETE'])
-@jwt_required()
+@api.route('/turnos/<int:turno_id>', methods=['DELETE', 'OPTIONS'])
+@jwt_required(optional=True)
 def eliminar_turno(turno_id):
     turno = Turno.query.get(turno_id)
     if not turno:
@@ -171,8 +171,8 @@ def eliminar_turno(turno_id):
 # -------------------------------------------------------------------
 # GUARDIAS
 # -------------------------------------------------------------------
-@api.route('/guardias', methods=['POST'])
-@jwt_required()
+@api.route('/guardias', methods=['POST', 'OPTIONS'])
+@jwt_required(optional=True)
 def crear_guardia():
     body = request.json
     usuario_id = body.get("usuario_id")
@@ -186,8 +186,8 @@ def crear_guardia():
     db.session.commit()
     return jsonify(nueva.serialize()), 201
 
-@api.route('/guardias/<int:id>', methods=['PUT'])
-@jwt_required()
+@api.route('/guardias/<int:id>', methods=['PUT', 'OPTIONS'])
+@jwt_required(optional=True)
 def actualizar_guardia(id):
     body = request.json
     guardia = Guardia.query.get(id)
@@ -203,8 +203,8 @@ def actualizar_guardia(id):
     db.session.commit()
     return jsonify(guardia.serialize()), 200
 
-@api.route('/guardias/<int:id>', methods=['DELETE'])
-@jwt_required()
+@api.route('/guardias/<int:id>', methods=['DELETE', 'OPTIONS'])
+@jwt_required(optional=True)
 def eliminar_guardia(id):
     guardia = Guardia.query.get(id)
     db.session.delete(guardia)
@@ -219,8 +219,8 @@ def listar_guardias():
 # -------------------------------------------------------------------
 # LICENCIAS
 # -------------------------------------------------------------------
-@api.route('/licencias', methods=['POST'])
-@jwt_required()
+@api.route('/licencias', methods=['POST', 'OPTIONS'])
+@jwt_required(optional=True)
 def crear_licencia():
     body = request.json
     usuario_id = body.get("usuario_id")
@@ -234,8 +234,8 @@ def crear_licencia():
     db.session.commit()
     return jsonify(nueva.serialize()), 201
 
-@api.route('/licencias/<int:id>', methods=['PUT'])
-@jwt_required()
+@api.route('/licencias/<int:id>', methods=['PUT', 'OPTIONS'])
+@jwt_required(optional=True)
 def actualizar_licencia(id):
     body = request.json
     licencia = Licencia.query.get(id)
@@ -251,8 +251,8 @@ def actualizar_licencia(id):
     db.session.commit()
     return jsonify(licencia.serialize()), 200
 
-@api.route('/licencias/<int:id>', methods=['DELETE'])
-@jwt_required()
+@api.route('/licencias/<int:id>', methods=['DELETE', 'OPTIONS'])
+@jwt_required(optional=True)
 def eliminar_licencia(id):
     licencia = Licencia.query.get(id)
     db.session.delete(licencia)
@@ -268,8 +268,8 @@ def listar_licencias():
 # -------------------------------------------------------------------
 # LICENCIAS MEDICAS
 # -------------------------------------------------------------------
-@api.route('/licencias-medicas', methods=['POST'])
-@jwt_required()
+@api.route('/licencias-medicas', methods=['POST', 'OPTIONS'])
+@jwt_required(optional=True)
 def crear_licencia_medica():
     body = request.json
     usuario_id = body.get("usuario_id")
@@ -283,8 +283,8 @@ def crear_licencia_medica():
     db.session.commit()
     return jsonify(nueva.serialize()), 201
 
-@api.route('/licencias-medicas/<int:id>', methods=['PUT'])
-@jwt_required()
+@api.route('/licencias-medicas/<int:id>', methods=['PUT', 'OPTIONS'])
+@jwt_required(optional=True)
 def actualizar_licencia_medica(id):
     body = request.json
     licencia = LicenciaMedica.query.get(id)
@@ -300,8 +300,8 @@ def actualizar_licencia_medica(id):
     db.session.commit()
     return jsonify(licencia.serialize()), 200
 
-@api.route('/licencias-medicas/<int:id>', methods=['DELETE'])
-@jwt_required()
+@api.route('/licencias-medicas/<int:id>', methods=['DELETE', 'OPTIONS'])
+@jwt_required(optional=True)
 def eliminar_licencia_medica(id):
     licencia = LicenciaMedica.query.get(id)
     db.session.delete(licencia)
@@ -316,8 +316,8 @@ def listar_licencias_medicas():
 # -------------------------------------------------------------------
 # SOLICITUDES CAMBIO
 # -------------------------------------------------------------------
-@api.route('/solicitudes-cambio', methods=['POST'])
-@jwt_required()
+@api.route('/solicitudes-cambio', methods=['POST', 'OPTIONS'])
+@jwt_required(optional=True)
 def crear_solicitud():
     body = request.json
     usuario_id = body.get("usuario_id")
@@ -338,8 +338,8 @@ def listar_solicitudes():
 # -------------------------------------------------------------------
 # TURNO ASIGNADO
 # -------------------------------------------------------------------
-@api.route('/turnos-asignados', methods=['POST'])
-@jwt_required()
+@api.route('/turnos-asignados', methods=['POST', 'OPTIONS'])
+@jwt_required(optional=True)
 def crear_turno_asignado():
     body = request.json
     usuario_id = body.get("usuario_id")
@@ -359,8 +359,8 @@ def listar_turnos_asignados():
 # -------------------------------------------------------------------
 # USUARIOS
 # -------------------------------------------------------------------
-@api.route('/usuarios', methods=['POST'])
-@jwt_required()
+@api.route('/usuarios', methods=['POST', 'OPTIONS'])
+@jwt_required(optional=True)
 def crear_usuario():
 
     body = request.json
@@ -433,8 +433,8 @@ def listar_usuarios():
     data = Usuario.query.all()
     return jsonify([x.serialize() for x in data]), 200
 
-@api.route('/usuarios/<int:id>', methods=['PUT'])
-@jwt_required()
+@api.route('/usuarios/<int:id>', methods=['PUT', 'OPTIONS'])
+@jwt_required(optional=True)
 def actualizar_usuario(id):
     body = request.json
 
@@ -477,16 +477,16 @@ def actualizar_usuario(id):
     return jsonify(usuario.serialize()), 200
 
 
-@api.route('/usuarios/<int:id>/cambiar-password', methods=['PUT'])
-@jwt_required()
+@api.route('/usuarios/<int:id>/cambiar-password', methods=['PUT', 'OPTIONS'])
+@jwt_required(optional=True)
 def cambiar_password(id):
     current_user_id = get_jwt_identity()
     if current_user_id != id:
         return jsonify({"error": "No autorizado"}), 403
 
 
-@api.route('/usuarios/<int:id>', methods=['DELETE'])
-@jwt_required()
+@api.route('/usuarios/<int:id>', methods=['DELETE', 'OPTIONS'])
+@jwt_required(optional=True)
 def eliminar_usuario(id):
     usuario = Usuario.query.get(id)
     db.session.delete(usuario)
@@ -498,7 +498,7 @@ def eliminar_usuario(id):
 # -------------------------------------------------------------------
 # LOGIN
 # -------------------------------------------------------------------
-@api.route('/login', methods=['POST'])
+@api.route('/login', methods=['POST', 'OPTIONS'])
 def login():
     body = request.json
     correo = body.get("correo")
