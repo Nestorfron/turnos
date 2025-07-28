@@ -1,6 +1,8 @@
 from flask_sqlalchemy import SQLAlchemy  # type: ignore
+from config import Config
 
-db = SQLAlchemy()
+db = SQLAlchemy(engine_options=Config.SQLALCHEMY_ENGINE_OPTIONS)
+
 
 # -------------------------
 # ENTIDADES PRINCIPALES
