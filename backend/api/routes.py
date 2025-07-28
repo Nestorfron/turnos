@@ -434,10 +434,12 @@ def actualizar_usuario(id):
             return jsonify({"error": "Este usuario debe tener dependencia_id"}), 400
         zona_id = None
 
+    password_hash = generate_password_hash(password)
+
     usuario.grado = grado
     usuario.nombre = nombre
     usuario.correo = correo
-    usuario.password = password
+    usuario.password = password_hash
     usuario.rol_jerarquico = rol_jerarquico
     usuario.dependencia_id = dependencia_id
     usuario.zona_id = zona_id
