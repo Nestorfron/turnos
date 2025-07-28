@@ -14,6 +14,8 @@ const LoginForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    console.log("Iniciando login con:", { correo, password: password ? "***" : "" });
+    console.log("URL backend:", `${import.meta.env.VITE_API_URL}/login`);
 
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/login`, {
@@ -21,11 +23,15 @@ const LoginForm = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ correo, password }),
       });
-
+  
+      console.log("Respuesta recibida del backend:", res);
+  
       const data = await res.json();
-
+      console.log("JSON parseado:", data);
+  
       if (res.ok) {
-        // ✅ Guarda todo plano
+        console.log("Login exitoso, datos usuario:", data.usuario);
+  
         login({
           token: data.token,
           id: data.usuario.id,
@@ -40,30 +46,36 @@ const LoginForm = () => {
           turno_id: data.usuario.turno_id,
           estado: data.usuario.estado,
         });
-
-        // ✅ Redirige según rol
+  
         if (data.usuario.rol_jerarquico === "JEFE_ZONA") {
+          console.log("Redirigiendo a /jefe-zona");
           navigate("/jefe-zona");
         } else if (
           data.usuario.rol_jerarquico === "JEFE_DEPENDENCIA" ||
           data.usuario.rol_jerarquico === "FUNCIONARIO"
         ) {
+          console.log(`Redirigiendo a dependencia/${data.usuario.dependencia_id}`);
           navigate("dependencia/" + data.usuario.dependencia_id);
-        } else if (usuario.rol_jerarquico === "ADMINISTRADOR") {
+        } else if (data.usuario.rol_jerarquico === "ADMINISTRADOR") {
+          console.log("Redirigiendo a /admin");
           navigate("/admin");
         } else {
+          console.log("Redirigiendo a / (default)");
           navigate("/");
         }
       } else {
+        console.warn("Error de login:", data.error || "Usuario o contraseña incorrectos");
         alert(data.error || "Usuario o contraseña incorrectos");
       }
     } catch (error) {
+      console.error("Error en la conexión con backend:", error);
       alert("Error en la conexión");
-      console.error(error);
     } finally {
       setLoading(false);
+      console.log("Proceso de login finalizado");
     }
   };
+  
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
