@@ -4,9 +4,9 @@ import MiPerfil from "./pages/MiPerfil";
 import AdminPanel from "./pages/AdminPanel";
 import JefeZonaDashboard from "./pages/JefeZonaDashboard";
 import FuncionarioPanel from "./pages/FuncionarioPanel";
-import EscalafonServicio from "./pages/EscalafónServicio";
 import GuardiasPanel from "./pages/GuaridasPanel";
 import Navbar from "./components/Navbar";
+import EscalafonServicio from "./pages/EscalafonServicio";
 
 function App() {
   return (
