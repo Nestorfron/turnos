@@ -19,20 +19,26 @@ const FuncionarioPanel = () => {
   useEffect(() => {
     if (usuario?.rol_jerarquico !== "FUNCIONARIO") {
       navigate("/");
+      return;
     }
-
-    if (usuario?.dependencia_id) {
-      fetchData("dependencias", (deps) => {
+  
+    const cargarDatos = async () => {
+      if (!usuario?.dependencia_id) return;
+  
+      try {
+        const deps = await fetchData("dependencias");
+        if (!deps) return;
+  
         const dep = deps.find((d) => d.id === usuario.dependencia_id);
         if (!dep) return;
-
+  
         const jefe = dep.usuarios.find(
           (u) => u.rol_jerarquico === "JEFE_DEPENDENCIA"
         );
         const funcs = dep.usuarios.filter(
           (u) => u.rol_jerarquico !== "JEFE_DEPENDENCIA"
         );
-
+  
         setDependencia({
           id: dep.id,
           nombre: dep.nombre,
@@ -41,15 +47,21 @@ const FuncionarioPanel = () => {
           turnos: dep.turnos,
           usuarios: dep.usuarios,
         });
-
+  
         setTurnos(dep.turnos || []);
         setFuncionarios(funcs);
         setCantidadFuncionarios(dep.usuarios.length);
-      });
-
-      fetchData("guardias", setGuardias);
-    }
-  }, [usuario]);
+  
+        const guardiasData = await fetchData("guardias");
+        if (guardiasData) setGuardias(guardiasData);
+      } catch (error) {
+        console.error("Error cargando datos:", error);
+      }
+    };
+  
+    cargarDatos();
+  }, [usuario, navigate]);
+  
 
   if (!dependencia) return <Loading />;
 

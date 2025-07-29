@@ -42,7 +42,6 @@ const EncargadoDependenciaPanel = () => {
   
     const cargarDependencia = async () => {
       try {
-        // Si tienes la dependencia en location.state, úsala directamente
         if (location.state?.sec) {
           const dep = location.state.sec;
           const jefe = dep.usuarios?.find(u => u.rol_jerarquico === "JEFE_DEPENDENCIA");
@@ -62,7 +61,6 @@ const EncargadoDependenciaPanel = () => {
           return;
         }
   
-        // Si no, fetch para obtener dependencias (aquí llamo a fetchData que solo recibe endpoint)
         const deps = await fetchData("dependencias");
         if (!deps) return;
   
@@ -100,7 +98,6 @@ const EncargadoDependenciaPanel = () => {
   
   if (!dependencia) return <Loading />;
   
-  // Filtrados y ordenados
   const funcionariosFiltrados = funcionarios.filter(f =>
     f.nombre.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -128,14 +125,12 @@ const EncargadoDependenciaPanel = () => {
   
   const handleGuardarAsignacion = async (asignacionForm) => {
     try {
-      // Suponiendo que el token está en usuario.token
       const resultado = await putData(
         `usuarios/${asignacionForm.usuario_id}`,
         {
           turno_id: asignacionForm.turno_id,
           estado: asignacionForm.estado,
         },
-        usuario?.token // o null si no hay token
       );
   
       if (resultado) {
@@ -190,7 +185,6 @@ const EncargadoDependenciaPanel = () => {
       let resultado = null;
   
       if (turnoForm?.id) {
-        // Si tiene id, editar
         resultado = await putData(
           `turnos/${turnoForm.id}`,
           turnoForm,
@@ -202,7 +196,6 @@ const EncargadoDependenciaPanel = () => {
           );
         }
       } else {
-        // Crear nuevo turno
         resultado = await postData(
           `turnos`,
           {
@@ -237,7 +230,6 @@ const EncargadoDependenciaPanel = () => {
   };
   
   
-  // Función para colorear estado
   const EstadoConColor = ({ estado }) => {
     const estadoLower = (estado || "").toLowerCase();
     const colorClass =
