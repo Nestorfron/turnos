@@ -76,6 +76,10 @@ const GuardiasPanel = () => {
   };
 
   useEffect(() => {
+    if (!usuario.token) {
+      navigate("/");
+    };
+    
     if (!dependencia?.id) return;
 
     const cargarDatos = async () => {
@@ -636,7 +640,7 @@ const GuardiasPanel = () => {
       <button
         onClick={() =>
           usuario?.rol_jerarquico === "JEFE_DEPENDENCIA"
-            ? navigate("/dependencia/" + dependencia.id)
+            ? navigate("/escalafon-servicio")
             : navigate("/funcionario/" + usuario.id)
         }
         className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"

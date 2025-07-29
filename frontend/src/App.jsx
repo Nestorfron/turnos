@@ -3,9 +3,8 @@ import Home from "./pages/Home";
 import MiPerfil from "./pages/MiPerfil";
 import AdminPanel from "./pages/AdminPanel";
 import JefeZonaDashboard from "./pages/JefeZonaDashboard";
-import DetalleDependencia from "./pages/DetalleDependencia";
 import FuncionarioPanel from "./pages/FuncionarioPanel";
-import EncargadoDependenciaPanel from "./pages/EncargadoDependenciaPanel";
+import EscalafonServicio from "./pages/EscalafónServicio";
 import GuardiasPanel from "./pages/GuaridasPanel";
 import Navbar from "./components/Navbar";
 
@@ -18,9 +17,8 @@ function App() {
         <Route path="/mi-perfil" element={<MiPerfil />} />
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/jefe-zona" element={<JefeZonaDashboard />} />
-        <Route path="/dependencia/:id" element={<EncargadoDependenciaPanel />} />
+        <Route path="/escalafon-servicio" element={<EscalafonServicio />} />
         <Route path="/funcionario/:id" element={<FuncionarioPanel />} />
-        <Route path="/detalle-dependencia/:id" element={<DetalleDependencia />} />
         <Route path="/guardias" element={<GuardiasPanel />} />
       </Routes>
     </BrowserRouter>
