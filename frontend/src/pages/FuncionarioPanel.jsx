@@ -52,8 +52,28 @@ const FuncionarioPanel = () => {
         setFuncionarios(funcs);
         setCantidadFuncionarios(dep.usuarios.length);
   
+        // Cargo guardias
         const guardiasData = await fetchData("guardias");
-        if (guardiasData) setGuardias(guardiasData);
+        // Cargo licencias
+        const licenciasData = await fetchData("licencias");
+  
+        if (guardiasData && licenciasData) {
+          // Filtrar guardias y licencias para los funcionarios de la dependencia
+          const guardiasFiltradas = guardiasData.filter((g) =>
+            funcs.some((f) => f.id === g.usuario_id)
+          );
+  
+          const licenciasFiltradas = licenciasData
+            .filter((l) => funcs.some((f) => f.id === l.usuario_id))
+            .map((l) => ({ ...l, tipo: "licencia" }));
+  
+          // Combinar guardias y licencias
+          setGuardias([...guardiasFiltradas, ...licenciasFiltradas]);
+        } else if (guardiasData) {
+          // Solo guardias
+          setGuardias(guardiasData);
+        }
+  
       } catch (error) {
         console.error("Error cargando datos:", error);
       }
@@ -61,6 +81,7 @@ const FuncionarioPanel = () => {
   
     cargarDatos();
   }, [usuario, navigate]);
+  
   
 
   if (!dependencia) return <Loading />;

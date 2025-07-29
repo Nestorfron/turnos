@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useAppContext } from "../context/AppContext";
 import { Link, useNavigate } from "react-router-dom";
-import LogoSGP from "./LogoSGP";
+
+import img from "../assets/logo.png";
+
 
 const Navbar = () => {
   const { usuario, logout } = useAppContext();
@@ -27,9 +29,9 @@ const Navbar = () => {
 
   return (
     <nav className="bg-blue-700 text-white px-6 py-3 flex justify-between items-center relative">
-      <div className="flex items-center">
-        <Link to="/" className="text-xl font-semibold">
-          <LogoSGP />
+      <div className="flex items-center max-w-xs md:max-w-md lg:max-w-lg">
+        <Link to="/" className="block w-full">
+          <img src={img} alt="Logo" className="w-auto h-12" />          
         </Link>
       </div>
 

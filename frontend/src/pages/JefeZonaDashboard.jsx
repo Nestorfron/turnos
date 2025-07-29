@@ -20,47 +20,42 @@ const JefeZonaDashboard = () => {
   useEffect(() => {
     if (usuario?.rol_jerarquico !== "JEFE_ZONA") {
       navigate("/");
+      return;
     }
+  
     const cargarDatos = async () => {
       setIsLoading(true);
-
+  
       try {
-        const jefaturas = await new Promise((resolve) =>
-          fetchData("jefaturas", resolve)
-        );
+        // Cargo jefaturas
+        const jefaturas = await fetchData("jefaturas", usuario.token);
         setJefatura(Array.isArray(jefaturas) && jefaturas.length > 0 ? jefaturas[0] : null);
-
-        const deps = await new Promise((resolve) =>
-          fetchData("dependencias", resolve)
-        );
-        const usuarios = await new Promise((resolve) =>
-          fetchData("usuarios", resolve)
-        );
-
+  
+        // Cargo dependencias y usuarios
+        const deps = await fetchData("dependencias", usuario.token);
+        const usuarios = await fetchData("usuarios", usuario.token);
+  
         const actualizadas = deps.map((dep) => {
-          const usuariosDep = usuarios.filter(
-            (u) => u.dependencia_id === dep.id
-          );
-          const jefe = usuariosDep.find(
-            (u) => u.rol_jerarquico === "JEFE_DEPENDENCIA"
-          );
+          const usuariosDep = usuarios.filter((u) => u.dependencia_id === dep.id);
+          const jefe = usuariosDep.find((u) => u.rol_jerarquico === "JEFE_DEPENDENCIA");
           return {
             ...dep,
             funcionarios_count: usuariosDep.length || 0,
             jefe_nombre: jefe ? `G${jefe.grado} ${jefe.nombre}` : "Sin jefe",
           };
         });
-
+  
         setDependencias(actualizadas);
       } catch (err) {
         console.error("Error al cargar datos:", err);
       } finally {
-        setIsLoading(false); // 👉 Ocultar loading
+        setIsLoading(false);
       }
     };
-
+  
     cargarDatos();
-  }, []);
+  }, [usuario, navigate]);
+  
 
   if (!usuario) {
     return (

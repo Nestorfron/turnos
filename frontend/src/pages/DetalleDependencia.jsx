@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useAppContext } from "../context/AppContext";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import Table from "../components/Table";
 import { fetchData } from "../utils/api";
@@ -6,6 +7,7 @@ import Loading from "../components/Loading";
 
 const DetalleDependencia = () => {
   const { id } = useParams();
+  const { usuario } = useAppContext();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -18,35 +20,25 @@ const DetalleDependencia = () => {
   useEffect(() => {
     const cargarDatos = async () => {
       setIsLoading(true);
-
+  
       try {
         if (!dependencia && id) {
-          await new Promise((resolve) =>
-            fetchData(`dependencias/${id}`, (data) => {
-              setDependencia(data);
-              resolve();
-            })
-          );
+          const data = await fetchData(`dependencias/${id}`, usuario.token);
+          setDependencia(data);
         }
-
+  
         if (dependencia?.id) {
-          await Promise.all([
-            new Promise((resolve) =>
-              fetchData(`turnos?dependencia_id=${dependencia.id}`, (data) => {
-                setTurnos(data);
-                resolve();
-              })
-            ),
-            new Promise((resolve) =>
-              fetchData("usuarios", (usuarios) => {
-                const filtrados = usuarios.filter(
-                  (u) => u.dependencia_id === dependencia.id
-                );
-                setFuncionarios(filtrados);
-                resolve();
-              })
-            ),
+          const [turnosData, usuariosData] = await Promise.all([
+            fetchData(`turnos?dependencia_id=${dependencia.id}`, usuario.token),
+            fetchData("usuarios", usuario.token),
           ]);
+  
+          setTurnos(turnosData);
+  
+          const filtrados = usuariosData.filter(
+            (u) => u.dependencia_id === dependencia.id
+          );
+          setFuncionarios(filtrados);
         }
       } catch (err) {
         console.error("Error al cargar datos:", err);
@@ -54,8 +46,10 @@ const DetalleDependencia = () => {
         setIsLoading(false);
       }
     };
+  
     cargarDatos();
-  }, [dependencia, id]);
+  }, [dependencia, id, usuario.token]);
+  
 
   if (isLoading) {
     return <Loading />
