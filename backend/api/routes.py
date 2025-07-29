@@ -485,7 +485,8 @@ def cambiar_password(id):
     if not current_password or not new_password or not confirm_password:
         return jsonify({"error": "Todos los campos son requeridos"}), 400
 
-    current_user_id = get_jwt_identity()
+
+    current_user_id = int(get_jwt_identity())
     if current_user_id != id:
         return jsonify({"error": "No autorizado"}), 403
 
@@ -539,8 +540,10 @@ def login():
     if usuario.estado and usuario.estado != "activo":
         return jsonify({"error": "Usuario no activo"}), 403
 
-    token = create_access_token(identity=usuario.id)  
+    token = create_access_token(identity=str(usuario.id))
+
     return jsonify({
         "token": token,
         "usuario": usuario.serialize()
     }), 200
+

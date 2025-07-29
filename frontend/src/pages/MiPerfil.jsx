@@ -66,36 +66,35 @@ export default function MiPerfil() {
       alert("Por favor completa todos los campos de contraseña");
       return;
     }
-
+  
     if (newPass !== confirmPass) {
       alert("La nueva contraseña y su confirmación no coinciden");
       return;
     }
-
+  
     try {
       setLoadingPass(true);
+  
       const payload = {
         current_password: currentPass,
         new_password: newPass,
         confirm_password: confirmPass,
       };
+  
       const res = await cambiarPassword(usuario.id, payload, usuario.token);
-
-      if (res) {
-        alert("✅ Contraseña actualizada correctamente");
-        setCurrentPass("");
-        setNewPass("");
-        setConfirmPass("");
-      } else {
-        alert("❌ No se pudo actualizar la contraseña");
-      }
+  
+      alert("✅ Contraseña actualizada correctamente");
+      setCurrentPass("");
+      setNewPass("");
+      setConfirmPass("");
     } catch (err) {
-      console.error(err);
+      // Aquí mostramos el mensaje del backend capturado
       alert(`❌ Error: ${err.message}`);
     } finally {
       setLoadingPass(false);
     }
   };
+  
 
   const handleLogout = async () => {
     try {

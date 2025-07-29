@@ -15,20 +15,18 @@ export const fetchData = async (endpoint) => {
       throw new Error(`GET ${url} → ${res.status} | Respuesta: ${text}`);
     }
 
-    const data = await res.json();
-    return data;
+    return await res.json();
   } catch (err) {
     console.error("Error en fetchData:", err);
     return null;
   }
 };
 
-
 export const postData = async (endpoint, payload, token, extraHeaders = {}) => {
   const url = buildUrl(endpoint);
   const headers = {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
+    ...(token && { Authorization: `Bearer ${token}` }),
     ...extraHeaders,
   };
 
@@ -41,15 +39,15 @@ export const postData = async (endpoint, payload, token, extraHeaders = {}) => {
       credentials: "include",
     });
 
+    const data = await res.json();
+
     if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`POST ${url} → ${res.status} | Respuesta: ${text}`);
+      throw new Error(data.error || `POST ${url} → ${res.status}`);
     }
 
-    const data = await res.json();
     return data;
   } catch (err) {
-    return null;
+    throw err;
   }
 };
 
@@ -57,7 +55,7 @@ export const putData = async (endpoint, payload, token, extraHeaders = {}) => {
   const url = buildUrl(endpoint);
   const headers = {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
+    ...(token && { Authorization: `Bearer ${token}` }),
     ...extraHeaders,
   };
 
@@ -70,22 +68,22 @@ export const putData = async (endpoint, payload, token, extraHeaders = {}) => {
       credentials: "include",
     });
 
+    const data = await res.json();
+
     if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`PUT ${url} → ${res.status} | Respuesta: ${text}`);
+      throw new Error(data.error || `PUT ${url} → ${res.status}`);
     }
 
-    const data = await res.json();
     return data;
   } catch (err) {
-    return null;
+    throw err;
   }
 };
 
 export const deleteData = async (endpoint, token) => {
   const url = buildUrl(endpoint);
   const headers = {
-    Authorization: `Bearer ${token}`,
+    ...(token && { Authorization: `Bearer ${token}` }),
   };
 
   try {
@@ -103,7 +101,7 @@ export const deleteData = async (endpoint, token) => {
 
     return true;
   } catch (err) {
-    return false;
+    throw err;
   }
 };
 
@@ -123,19 +121,43 @@ export const loginUser = async (correo, password) => {
       credentials: "include",
     });
 
+    const data = await res.json();
+
     if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`POST ${url} → ${res.status} | Respuesta: ${text}`);
+      throw new Error(data.error || `POST ${url} → ${res.status}`);
     }
 
-    const data = await res.json();
     return data;
   } catch (err) {
-    return null;
+    throw err;
   }
 };
 
 export const cambiarPassword = async (usuarioId, payload, token) => {
-  return await putData(`/usuarios/${usuarioId}/cambiar-password`, payload, token);
-};
+  const url = buildUrl(`/usuarios/${usuarioId}/cambiar-password`);
 
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+
+  try {
+    const res = await fetch(url, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify(payload),
+      mode: "cors",
+      credentials: "include",
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || `PUT ${url} → ${res.status}`);
+    }
+
+    return data;
+  } catch (err) {
+    throw err;
+  }
+};
