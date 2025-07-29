@@ -134,3 +134,8 @@ export const loginUser = async (correo, password) => {
     return null;
   }
 };
+
+export const cambiarPassword = async (usuarioId, payload, token) => {
+  return await putData(`/usuarios/${usuarioId}/cambiar-password`, payload, token);
+};
+

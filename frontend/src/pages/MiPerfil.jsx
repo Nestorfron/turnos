@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Users, Edit2, Key, Home } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
+import { cambiarPassword } from "../utils/api";
 
 export default function MiPerfil() {
   const { usuario, login, logout } = useAppContext();
@@ -31,14 +32,17 @@ export default function MiPerfil() {
 
     try {
       setLoadingCorreo(true);
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/usuarios/${usuario.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${usuario.token}`,
-        },
-        body: JSON.stringify({ correo: tempCorreo }),
-      });
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/usuarios/${usuario.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${usuario.token}`,
+          },
+          body: JSON.stringify({ correo: tempCorreo }),
+        }
+      );
 
       if (res.ok) {
         const updatedUser = await res.json();
@@ -62,6 +66,7 @@ export default function MiPerfil() {
       alert("Por favor completa todos los campos de contraseña");
       return;
     }
+
     if (newPass !== confirmPass) {
       alert("La nueva contraseña y su confirmación no coinciden");
       return;
@@ -69,30 +74,24 @@ export default function MiPerfil() {
 
     try {
       setLoadingPass(true);
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/usuarios/${usuario.id}/cambiar-password`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${usuario.token}`,
-        },
-        body: JSON.stringify({
-          current_password: currentPass,
-          new_password: newPass,
-        }),
-      });
+      const payload = {
+        current_password: currentPass,
+        new_password: newPass,
+        confirm_password: confirmPass,
+      };
+      const res = await cambiarPassword(usuario.id, payload, usuario.token);
 
-      if (res.ok) {
+      if (res) {
         alert("✅ Contraseña actualizada correctamente");
         setCurrentPass("");
         setNewPass("");
         setConfirmPass("");
       } else {
-        const data = await res.json();
-        alert(`❌ Error: ${data.error || "No se pudo actualizar la contraseña"}`);
+        alert("❌ No se pudo actualizar la contraseña");
       }
-    } catch (error) {
-      console.error(error);
-      alert("❌ Error inesperado");
+    } catch (err) {
+      console.error(err);
+      alert(`❌ Error: ${err.message}`);
     } finally {
       setLoadingPass(false);
     }
@@ -119,14 +118,15 @@ export default function MiPerfil() {
 
       {/* Datos básicos */}
       <div>
-      <p>
+        <p>
           <strong>Grado:</strong> {usuario.Grado}
         </p>
         <p>
           <strong>Rol jerárquico:</strong> {usuario.rol_jerarquico}
         </p>
         <p>
-          <strong>Dependencia:</strong> {usuario.dependencia_nombre || "No asignada"}
+          <strong>Dependencia:</strong>{" "}
+          {usuario.dependencia_nombre || "No asignada"}
         </p>
         <p>
           <strong>Estado:</strong> {usuario.estado || "No especificado"}
@@ -227,12 +227,15 @@ export default function MiPerfil() {
         Cerrar sesión
       </button>
       <button
-        onClick={() => usuario.rol_jerarquico === "JEFE_ZONA" ? navigate("/jefe-zona") : navigate("/dependencia/" + usuario.dependencia_id)}
+        onClick={() =>
+          usuario.rol_jerarquico === "JEFE_ZONA"
+            ? navigate("/jefe-zona")
+            : navigate("/dependencia/" + usuario.dependencia_id)
+        }
         className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"
       >
         ← Inicio
       </button>
-
     </div>
   );
 }
