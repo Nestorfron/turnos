@@ -42,7 +42,6 @@ const EncargadoDependenciaPanel = () => {
   
     const cargarDependencia = async () => {
       try {
-        // Si tienes la dependencia en location.state, úsala directamente
         if (location.state?.sec) {
           const dep = location.state.sec;
           const jefe = dep.usuarios?.find(u => u.rol_jerarquico === "JEFE_DEPENDENCIA");
@@ -62,7 +61,6 @@ const EncargadoDependenciaPanel = () => {
           return;
         }
   
-        // Si no, fetch para obtener dependencias
         const deps = await fetchData("dependencias");
         if (!deps) return;
   
@@ -97,9 +95,9 @@ const EncargadoDependenciaPanel = () => {
     cargarDependencia();
   }, [usuario, id, location.state]);
   
+  
   if (!dependencia) return <Loading />;
   
-  // Filtrados y ordenados
   const funcionariosFiltrados = funcionarios.filter(f =>
     f.nombre.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -132,7 +130,7 @@ const EncargadoDependenciaPanel = () => {
         {
           turno_id: asignacionForm.turno_id,
           estado: asignacionForm.estado,
-        }
+        },
       );
   
       if (resultado) {
@@ -147,6 +145,7 @@ const EncargadoDependenciaPanel = () => {
     }
   };
   
+  
   const abrirModalEditarFuncionario = (funcionario) => {
     setFuncionarioSeleccionado(funcionario);
     setFuncionarioModalOpen(true);
@@ -156,7 +155,8 @@ const EncargadoDependenciaPanel = () => {
     try {
       const resultado = await putData(
         `usuarios/${funcionarioSeleccionado.id}`,
-        funcionarioForm
+        funcionarioForm,
+        usuario?.token
       );
       if (resultado) {
         setFuncionarios(prev =>
@@ -168,6 +168,7 @@ const EncargadoDependenciaPanel = () => {
     }
     setFuncionarioModalOpen(false);
   };
+  
   
   const abrirModalNuevoTurno = () => {
     setTurnoSeleccionado(null);
@@ -183,18 +184,26 @@ const EncargadoDependenciaPanel = () => {
     try {
       let resultado = null;
   
-      if (turnoSeleccionado) {
-        resultado = await putData(`turnos/${turnoSeleccionado.id}`, turnoForm);
+      if (turnoForm?.id) {
+        resultado = await putData(
+          `turnos/${turnoForm.id}`,
+          turnoForm,
+          usuario?.token
+        );
         if (resultado) {
           setTurnos(prev =>
             prev.map(t => (t.id === resultado.id ? resultado : t))
           );
         }
       } else {
-        resultado = await postData(`turnos`, {
-          ...turnoForm,
-          dependencia_id: dependencia.id,
-        });
+        resultado = await postData(
+          `turnos`,
+          {
+            ...turnoForm,
+            dependencia_id: dependencia.id,
+          },
+          usuario?.token
+        );
         if (resultado) {
           setTurnos(prev => [...prev, resultado]);
         }
@@ -205,10 +214,12 @@ const EncargadoDependenciaPanel = () => {
     setModalOpen(false);
   };
   
+  
+  
   const handleBorrarTurno = async (id) => {
     if (window.confirm("¿Estás seguro de borrar este turno?")) {
       try {
-        const ok = await deleteData(`turnos/${id}`);
+        const ok = await deleteData(`turnos/${id}`, usuario?.token);
         if (ok) {
           setTurnos(prev => prev.filter(t => t.id !== id));
         }
@@ -218,7 +229,7 @@ const EncargadoDependenciaPanel = () => {
     }
   };
   
-  // Función para colorear estado
+  
   const EstadoConColor = ({ estado }) => {
     const estadoLower = (estado || "").toLowerCase();
     const colorClass =
@@ -264,12 +275,14 @@ const EncargadoDependenciaPanel = () => {
 
           {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
             <button
-              onClick={abrirModalNuevoTurno}
-              className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 transition"
-              disabled={usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA"}
-            >
-              <Plus size={18} /> Agregar
-            </button>
+            onClick={abrirModalNuevoTurno}
+            className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA"}
+            aria-disabled={usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA"}
+          >
+            <Plus size={18} /> Agregar
+          </button>
+          
           )}
         </div>
 

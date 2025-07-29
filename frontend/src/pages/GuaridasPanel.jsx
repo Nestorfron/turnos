@@ -77,7 +77,7 @@ const GuardiasPanel = () => {
 
   useEffect(() => {
     if (!dependencia?.id) return;
-  
+
     const cargarDatos = async () => {
       try {
         // Cargo usuarios y filtro
@@ -88,21 +88,21 @@ const GuardiasPanel = () => {
             u.rol_jerarquico !== "JEFE_DEPENDENCIA"
         );
         setFuncionarios(filtrados);
-  
+
         // Cargo guardias y filtro
         const todasGuardias = await fetchData("guardias", usuario.token);
         const guardiasFiltradas = todasGuardias.filter((g) =>
           filtrados.some((f) => f.id === g.usuario_id)
         );
-  
+
         // Cargo licencias y filtro
         const todasLicencias = await fetchData("licencias", usuario.token);
         const licenciasFiltradas = todasLicencias
           .filter((l) => filtrados.some((f) => f.id === l.usuario_id))
           .map((l) => ({ ...l, tipo: "licencia" }));
-  
+
         setGuardias([...guardiasFiltradas, ...licenciasFiltradas]);
-  
+
         // Cargo turnos y ordeno
         const turnosData = await fetchData(
           `turnos?dependencia_id=${dependencia.id}`,
@@ -122,111 +122,99 @@ const GuardiasPanel = () => {
           const ib = ordenDeseado.indexOf(nombreB);
           return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
         });
-  
+
         setTurnos(turnosOrdenados);
       } catch (error) {
         console.error("Error cargando datos:", error);
       }
     };
-  
+
     cargarDatos();
   }, [dependencia, usuario.token]);
-  
-  
+
   useEffect(() => {
     if (usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA") {
       setDaysToShow(14);
     }
   }, [usuario]);
-  
+
   const getCelda = (usuario, dia) => {
     const fecha = dia.format("YYYY-MM-DD");
-  
+
     const registro = guardias.find((g) => {
       if (g.usuario_id !== usuario.id) return false;
-  
+
       const inicio = dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD");
       const fin = dayjs(g.fecha_fin).utc().format("YYYY-MM-DD");
-  
+
       return fecha >= inicio && fecha <= fin;
     });
-  
+
     if (registro) {
       if (registro.tipo === "licencia") return "L";
       if (registro.tipo === "guardia") return "T";
       return registro.tipo;
     }
-  
+
     return "D";
   };
-  
+
   const actualizarCelda = async (usuario, dia, nuevoTipo, token) => {
     if (!token) {
-      console.error("[actualizarCelda] ERROR: No hay token para autenticar");
       return;
     }
-  
+
     const fechaStr = dia.format("YYYY-MM-DD");
-  
+
     const existente = guardias.find((g) => {
       if (g.usuario_id !== usuario.id) return false;
       const inicio = dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD");
       const fin = dayjs(g.fecha_fin).utc().format("YYYY-MM-DD");
       return fechaStr >= inicio && fechaStr <= fin;
     });
-  
+
     if (existente) {
       const endpoint =
         existente.tipo === "licencia"
           ? `licencias/${existente.id}`
           : `guardias/${existente.id}`;
-  
-      console.log("[actualizarCelda] Intentando borrar registro existente:");
-      console.log("Tipo:", existente.tipo);
-      console.log("ID:", existente.id);
-      console.log("Endpoint:", endpoint);
-      console.log("Token presente:", !!token);
-      console.log("[actualizarCelda] Token para DELETE:", token, typeof token);
-if (typeof token !== "string" || token.trim() === "") {
-  console.error("[actualizarCelda] Token inválido para DELETE");
-  return;
-}
 
-  
+      if (typeof token !== "string" || token.trim() === "") {
+        return;
+      }
+
       const ok = await deleteData(endpoint, token);
-  
+
       if (ok) {
-        console.log("[actualizarCelda] Registro borrado correctamente");
         setGuardias((prev) => prev.filter((g) => g.id !== existente.id));
       } else {
-        console.error("[actualizarCelda] Error al borrar registro existente");
         return;
       }
     }
-  
+
     if (nuevoTipo === "D") return;
-  
+
     // Revisa si quieres resetear 'dia' para no acumular días en cada loop
     let esBloque =
       (nuevoTipo === "T" || nuevoTipo.toLowerCase() === "brou") &&
       Array.from({ length: 5 }).every((_, i) => {
         const fecha = dia.add(i, "day").format("YYYY-MM-DD");
-  
+
         const ocupado = guardias.find((g) => {
           if (g.usuario_id !== usuario.id) return false;
           const inicio = dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD");
           const fin = dayjs(g.fecha_fin).utc().format("YYYY-MM-DD");
           return fecha >= inicio && fecha <= fin;
         });
-  
+
         return !ocupado;
       });
-  
+
     if (esBloque) {
       for (let i = 0; i < 5; i++) {
         // Importante: clonar 'dia' para no modificar el original en cada iteración
         const fecha = dia.add(i, "day").clone();
-  
+
         const nueva = {
           usuario_id: usuario.id,
           fecha_inicio: fecha.format("YYYY-MM-DD"),
@@ -234,13 +222,12 @@ if (typeof token !== "string" || token.trim() === "") {
           tipo: nuevoTipo,
           comentario: "Agregada manualmente",
         };
-  
+
         const creada = await postData("guardias", nueva, token, {
           "Content-Type": "application/json",
         });
-  
+
         if (creada) setGuardias((prev) => [...prev, creada]);
-        else console.error("[actualizarCelda] Error al crear nueva guardia");
       }
     } else {
       const nueva = {
@@ -250,52 +237,74 @@ if (typeof token !== "string" || token.trim() === "") {
         tipo: nuevoTipo === "T" ? "guardia" : nuevoTipo,
         comentario: "Agregada manualmente",
       };
-  
+
       const creada = await postData("guardias", nueva, token, {
         "Content-Type": "application/json",
       });
-  
+
       if (creada) setGuardias((prev) => [...prev, creada]);
-      else console.error("[actualizarCelda] Error al crear nueva guardia");
     }
   };
-  
-    
-  
-  
-  const eliminarLicencia = async (usuario, dia) => {
+
+  const abrirModalLicencia = (usuario_licencia, dia) => {
+    setModalData({
+      usuario: usuario_licencia,
+      fechaInicio: dia,
+    });
+  };
+
+  const eliminarLicencia = async (usuario_licencia, dia) => {
+    const token = usuario.token;
+    if (!token) {
+      console.error("Token no proporcionado para eliminar licencia");
+      return false;
+    }
+
     const fechaStr = dia.format("YYYY-MM-DD");
-  
+
+    // Buscar licencia existente para ese día
     const existente = guardias.find((g) => {
-      if (g.usuario_id !== usuario.id || g.tipo !== "licencia") return false;
-      const inicio = dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD");
-      const fin = dayjs(g.fecha_fin).utc().format("YYYY-MM-DD");
+      if (g.usuario_id !== usuario_licencia.id || g.tipo !== "licencia")
+        return false;
+
+      const inicio = dayjs.utc(g.fecha_inicio).format("YYYY-MM-DD");
+      const fin = dayjs.utc(g.fecha_fin).format("YYYY-MM-DD");
+
       return fechaStr >= inicio && fechaStr <= fin;
     });
-  
-    if (!existente) return;
-  
-    const ok = await deleteData(`licencias/${existente.id}`, usuario.token);
-  
-    if (ok) {
-      setGuardias((prev) => prev.filter((g) => g.id !== existente.id));
-    } else {
-      console.error("Error al borrar licencia");
+
+    if (!existente) {
+      console.warn(`No se encontró licencia para el ${fechaStr}`);
+      return false;
+    }
+
+    try {
+      const ok = await deleteData(`licencias/${existente.id}`, token);
+      if (ok) {
+        setGuardias((prev) => prev.filter((g) => g.id !== existente.id));
+        return true;
+      } else {
+        console.error(`❌ Error al borrar licencia ID ${existente.id}`);
+        return false;
+      }
+    } catch (error) {
+      console.error("❌ Error en eliminarLicencia:", error);
+      return false;
     }
   };
-  
+
   const abrirModalEditarLicencia = (usuario, dia) => {
     const fechaStr = dia.format("YYYY-MM-DD");
-  
+
     const existente = guardias.find((g) => {
       if (g.usuario_id !== usuario.id || g.tipo !== "licencia") return false;
       const inicio = dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD");
       const fin = dayjs(g.fecha_fin).utc().format("YYYY-MM-DD");
       return fechaStr >= inicio && fechaStr <= fin;
     });
-  
+
     if (!existente) return;
-  
+
     setModalData({
       usuario,
       id: existente.id,
@@ -304,83 +313,83 @@ if (typeof token !== "string" || token.trim() === "") {
       motivo: existente.motivo,
     });
   };
-  
+
   const handleLicenciaSubmit = async ({ fechaFin, motivo }) => {
     try {
       const usuarioId = modalData.usuario.id;
       const fechaInicio = dayjs(modalData.fechaInicio);
       const fechaFinDayjs = dayjs(fechaFin);
-  
-      // Buscar guardias que se superpongan con la licencia
+
+      // 1️⃣ Buscar guardias que se superpongan con la licencia
       const guardiasAEliminar = guardias.filter((g) => {
         if (g.usuario_id !== usuarioId || g.tipo !== "guardia") return false;
-  
+
         const inicio = dayjs.utc(g.fecha_inicio);
         const fin = dayjs.utc(g.fecha_fin);
-  
+
         return (
           inicio.isSameOrBefore(fechaFinDayjs, "day") &&
           fin.isSameOrAfter(fechaInicio, "day")
         );
       });
-  
-      // Borrar las guardias encontradas en paralelo
+
+      // 2️⃣ Borrar las guardias superpuestas en paralelo
       await Promise.all(
         guardiasAEliminar.map(async (g) => {
           const ok = await deleteData(`guardias/${g.id}`, usuario.token);
           if (ok) {
             setGuardias((prev) => prev.filter((x) => x.id !== g.id));
           } else {
-            console.error("Error al eliminar guardia", g.id);
+            console.error("❌ Error al eliminar guardia", g.id);
           }
         })
       );
-  
-      // Crear licencia
-      const nueva = {
+
+      // 3️⃣ Preparar la licencia
+      const nuevaLicencia = {
         usuario_id: usuarioId,
         fecha_inicio: fechaInicio.utc().format("YYYY-MM-DD"),
         fecha_fin: fechaFinDayjs.utc().format("YYYY-MM-DD"),
         motivo,
         estado: "activo",
       };
-  
-      const creada = await postData("licencias", nueva, usuario.token, {
-        "Content-Type": "application/json",
-      });
-  
+
+      // 4️⃣ Crear licencia en backend
+      const creada = await postData("licencias", nuevaLicencia, usuario.token);
+
       if (creada) {
+        // 5️⃣ Agregar la licencia al estado local como "licencia"
         setGuardias((prev) => [...prev, { ...creada, tipo: "licencia" }]);
         setModalData(null);
       } else {
-        console.error("Error al guardar licencia");
+        console.error("❌ Error al guardar licencia");
       }
     } catch (error) {
-      console.error("Error en handleLicenciaSubmit:", error);
+      console.error("❌ Error en handleLicenciaSubmit:", error);
     }
   };
-  
+
   const eliminarGuardiasFiltradas = async ({ desde, hasta, usuario_ids }) => {
     const desdeD = dayjs.utc(desde).startOf("day");
     const hastaD = dayjs.utc(hasta).endOf("day");
-  
+
     const idsObjetivo =
       usuario_ids === "todos"
         ? funcionarios
             .filter((f) => f.turno_id === modalEliminar.turno.id)
             .map((f) => f.id)
         : usuario_ids;
-  
+
     const guardiasFiltradas = guardias.filter((g) => {
       if (g.tipo !== "guardia") return false;
       if (!idsObjetivo.includes(g.usuario_id)) return false;
-  
+
       const inicio = dayjs.utc(g.fecha_inicio).startOf("day");
       if (!inicio.isValid()) return false;
-  
+
       return inicio.isSameOrAfter(desdeD) && inicio.isSameOrBefore(hastaD);
     });
-  
+
     for (const g of guardiasFiltradas) {
       const ok = await deleteData(`guardias/${g.id}`, usuario.token);
       if (ok) {
@@ -389,15 +398,14 @@ if (typeof token !== "string" || token.trim() === "") {
         console.error("Error al eliminar guardia", g.id);
       }
     }
-  
+
     setModalEliminar(null);
   };
-  
+
   const funcionariosPorTurno = (turnoId) =>
     funcionarios
       .filter((f) => f.turno_id === turnoId)
       .sort((a, b) => (b.grado || 0) - (a.grado || 0));
-  
 
   return (
     <div className="p-6 space-y-2 bg-gray-50 min-h-screen">
