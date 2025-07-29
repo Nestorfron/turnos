@@ -445,7 +445,6 @@ def actualizar_usuario(id):
     grado = body.get("grado", usuario.grado)
     nombre = body.get("nombre", usuario.nombre)
     correo = body.get("correo", usuario.correo)
-    password = body.get("password", usuario.password)
     rol_jerarquico = body.get("rol_jerarquico", usuario.rol_jerarquico)
     dependencia_id = body.get("dependencia_id", usuario.dependencia_id)
     zona_id = body.get("zona_id", usuario.zona_id)
@@ -461,12 +460,10 @@ def actualizar_usuario(id):
             return jsonify({"error": "Este usuario debe tener dependencia_id"}), 400
         zona_id = None
 
-    password_hash = generate_password_hash(password)
 
     usuario.grado = grado
     usuario.nombre = nombre
     usuario.correo = correo
-    usuario.password = password_hash
     usuario.rol_jerarquico = rol_jerarquico
     usuario.dependencia_id = dependencia_id
     usuario.zona_id = zona_id
@@ -476,13 +473,40 @@ def actualizar_usuario(id):
     db.session.commit()
     return jsonify(usuario.serialize()), 200
 
-
 @api.route('/usuarios/<int:id>/cambiar-password', methods=['PUT'])
 @jwt_required()
 def cambiar_password(id):
+    body = request.json
+
+    current_password = body.get("current_password")
+    new_password = body.get("new_password")
+    confirm_password = body.get("confirm_password")
+
+    if not current_password or not new_password or not confirm_password:
+        return jsonify({"error": "Todos los campos son requeridos"}), 400
+
     current_user_id = get_jwt_identity()
     if current_user_id != id:
         return jsonify({"error": "No autorizado"}), 403
+
+    usuario = Usuario.query.get(id)
+    if not usuario:
+        return jsonify({"error": "Usuario no encontrado"}), 404
+
+    if not check_password_hash(usuario.password, current_password):
+        return jsonify({"error": "La contraseña actual es incorrecta"}), 400
+
+    if new_password != confirm_password:
+        return jsonify({"error": "Las nuevas contraseñas no coinciden"}), 400
+
+    if current_password == new_password:
+        return jsonify({"error": "La nueva contraseña no puede ser igual a la actual"}), 400
+
+    usuario.password = generate_password_hash(new_password)
+    db.session.commit()
+
+    return jsonify({"message": "Contraseña actualizada correctamente"}), 200
+
 
 
 @api.route('/usuarios/<int:id>', methods=['DELETE'])
