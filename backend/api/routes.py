@@ -539,8 +539,7 @@ def login():
     if usuario.estado and usuario.estado != "activo":
         return jsonify({"error": "Usuario no activo"}), 403
 
-    token = create_access_token(identity=str(usuario.id))  # <-- aquí
-
+    token = create_access_token(identity=usuario.id)  
     return jsonify({
         "token": token,
         "usuario": usuario.serialize()
