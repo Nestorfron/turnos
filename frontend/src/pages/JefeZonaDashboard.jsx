@@ -162,7 +162,7 @@ const JefeZonaDashboard = () => {
                       </td>
                       <td className="border border-gray-300 py-2 px-4 flex items-center gap-2">
                         <Link
-                          to={`/detalle-dependencia/${sec.id}`}
+                          to={`/escalafon-servicio`}
                           state={{ sec }}
                           className="inline-flex items-center gap-1 text-blue-600 hover:underline"
                         >

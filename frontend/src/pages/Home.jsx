@@ -17,7 +17,7 @@ const Home = () => {
           navigate("/jefe-zona");
           break;
         case "JEFE_DEPENDENCIA":
-          navigate(`/dependencia/${usuario.dependencia_id}`);
+          navigate(`/escalafon-servicio`);
           break;
         case "FUNCIONARIO":
           navigate(`/funcionario/${usuario.id}`);

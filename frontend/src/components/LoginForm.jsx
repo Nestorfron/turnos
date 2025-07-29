@@ -42,10 +42,9 @@ const LoginForm = () => {
 
         if (data.usuario.rol_jerarquico === "JEFE_ZONA") {
           navigate("/jefe-zona");
-        } else if (
-          data.usuario.rol_jerarquico === "JEFE_DEPENDENCIA" ||
-          data.usuario.rol_jerarquico === "FUNCIONARIO"
-        ) {
+        } else if (data.usuario.rol_jerarquico === "JEFE_DEPENDENCIA") {
+          navigate(`/escalafon-servicio`);
+        }else if (data.usuario.rol_jerarquico === "FUNCIONARIO") {
           navigate("dependencia/" + data.usuario.dependencia_id);
         } else if (data.usuario.rol_jerarquico === "ADMINISTRADOR") {
           navigate("/admin");
