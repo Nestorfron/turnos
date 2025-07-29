@@ -2,7 +2,9 @@ import React, { useEffect } from "react";
 import { useAppContext } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
 import LoginForm from "../components/LoginForm";
-import LogoSGP from "../components/LogoSGP";
+
+
+import img from "../assets/logo.png";
 
 const Home = () => {
   const { usuario } = useAppContext();
@@ -36,8 +38,8 @@ const Home = () => {
         role="region"
         aria-label="Formulario de inicio de sesión"
       >
-        <div className="flex justify-center mb-6 p-4 bg-blue-600 rounded-md">
-          <LogoSGP />
+        <div className="flex justify-center mb-6 p-4 rounded-md">
+          <img src={img} alt="Logo" className="w-auto h-20 rounded-lg" />         
         </div>
 
         <h1 className="text-3xl font-extrabold text-center text-gray-800 mb-8">

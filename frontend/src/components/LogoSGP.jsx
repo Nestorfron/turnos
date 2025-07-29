@@ -1,14 +1,12 @@
-import React from "react";
-
 const LogoSGP = () => {
   return (
     <svg
-      width="400"
-      height="50"
       viewBox="100 25 900 80"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
       aria-label="Logo Sistema de Gestión de Personal"
+      style={{ width: "100%", height: "auto", maxWidth: "400px" }} // máximo ancho y que se adapte
+      preserveAspectRatio="xMidYMid meet"
     >
       {/* Letras grandes */}
       <text
@@ -39,5 +37,3 @@ const LogoSGP = () => {
     </svg>
   );
 };
-
-export default LogoSGP;
