@@ -4,18 +4,11 @@ const buildUrl = (endpoint) => {
   return `${BASE_URL.replace(/\/+$/, "")}/${endpoint.replace(/^\/+/, "")}`;
 };
 
-export const fetchData = async (endpoint, token, setter, extraHeaders = {}) => {
+export const fetchData = async (endpoint) => {
   const url = buildUrl(endpoint);
-  const headers = token
-    ? { Authorization: `Bearer ${token}`, ...extraHeaders }
-    : { ...extraHeaders };
 
   try {
-    const res = await fetch(url, {
-      headers,
-      mode: "cors",
-      credentials: "include",
-    });
+    const res = await fetch(url);
 
     if (!res.ok) {
       const text = await res.text();
@@ -23,12 +16,13 @@ export const fetchData = async (endpoint, token, setter, extraHeaders = {}) => {
     }
 
     const data = await res.json();
-    if (typeof setter === "function") setter(data);
     return data;
   } catch (err) {
+    console.error("Error en fetchData:", err);
     return null;
   }
 };
+
 
 export const postData = async (endpoint, payload, token, extraHeaders = {}) => {
   const url = buildUrl(endpoint);
