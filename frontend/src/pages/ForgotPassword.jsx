@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { forgotPassword } from "../utils/api";
 import { useNavigate } from "react-router-dom";
+import { Home } from "lucide-react";
+
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -33,20 +35,14 @@ const ForgotPassword = () => {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label
-                htmlFor="email"
-                className="block mb-2 font-medium text-gray-700"
-              >
-                Correo electrónico
-              </label>
+            
               <input
-                id="email"
                 type="email"
-                className="border border-gray-300 rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                placeholder="tuemail@dominio.com"
+                placeholder="Correo"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="w-full px-3 py-2 border rounded"
               />
             </div>
 
@@ -55,7 +51,7 @@ const ForgotPassword = () => {
               disabled={estado === "LOADING"}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              {estado === "LOADING" ? "Enviando..." : "Enviar instrucciones"}
+              {estado === "LOADING" ? "Enviando..." : "Enviar"}
             </button>
 
             {estado === "ERROR" && (
@@ -68,9 +64,9 @@ const ForgotPassword = () => {
 
         <button
           onClick={() => navigate("/")}
-          className="mt-6 block text-blue-600 underline mx-auto"
+          className="mt-6 block text-blue-600  mx-auto"
         >
-          ← Volver al inicio
+            <Home size={24} className="mx-2 cursor-pointer" />
         </button>
       </div>
     </main>
