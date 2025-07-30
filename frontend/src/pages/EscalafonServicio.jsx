@@ -107,7 +107,21 @@ const EscalafonServicio = () => {
             jefe_nombre: jefe ? `G${jefe.grado} ${jefe.nombre}` : "Sin jefe",
           });
           setFuncionarios(funcs);
-          setTurnos(dep.turnos || []);
+          const ordenDeseado = [
+            "primer turno",
+            "brou",
+            "segundo turno",
+            "tercer turno",
+            "destacados",
+          ];
+          const turnosOrdenados = [...dep.turnos].sort((a, b) => {
+            const nombreA = a.nombre.trim().toLowerCase();
+            const nombreB = b.nombre.trim().toLowerCase();
+            const ia = ordenDeseado.indexOf(nombreA);
+            const ib = ordenDeseado.indexOf(nombreB);
+            return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+          });
+          setTurnos(turnosOrdenados);
           setCantidadFuncionarios(dep.usuarios?.length || 0);
         }
         setIsLoading(false);

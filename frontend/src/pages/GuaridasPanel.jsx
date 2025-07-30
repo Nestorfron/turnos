@@ -666,8 +666,8 @@ const GuardiasPanel = () => {
         />
       )}
       {selectorTipo && usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-80 space-y-4">
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 ">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-80 space-y-4 max-h-[80vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-blue-800 mb-2">
               Seleccionar tipo de guardia
             </h3>
