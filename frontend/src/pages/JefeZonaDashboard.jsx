@@ -1,15 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Edit3, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import DonutChart from "../components/DonutChart";
 import DependenciaModal from "../components/DependenciaModal.jsx";
-import { fetchData, deleteData } from "../utils/api";
+import { fetchData } from "../utils/api";
 import Loading from "../components/Loading";
 
 const JefeZonaDashboard = () => {
   const { usuario } = useAppContext();
   const navigate = useNavigate();
+
   const [jefatura, setJefatura] = useState(null);
   const [dependencias, setDependencias] = useState([]);
   const [selectedDep, setSelectedDep] = useState(null);
@@ -22,19 +23,19 @@ const JefeZonaDashboard = () => {
       navigate("/");
       return;
     }
-  
+
     const cargarDatos = async () => {
       setIsLoading(true);
-  
+
       try {
-        // Cargo jefaturas
-        const jefaturas = await fetchData("jefaturas", usuario.token);
+        const [jefaturas, deps, usuarios] = await Promise.all([
+          fetchData("jefaturas", usuario.token),
+          fetchData("dependencias", usuario.token),
+          fetchData("usuarios", usuario.token),
+        ]);
+
         setJefatura(Array.isArray(jefaturas) && jefaturas.length > 0 ? jefaturas[0] : null);
-  
-        // Cargo dependencias y usuarios
-        const deps = await fetchData("dependencias", usuario.token);
-        const usuarios = await fetchData("usuarios", usuario.token);
-  
+
         const actualizadas = deps.map((dep) => {
           const usuariosDep = usuarios.filter((u) => u.dependencia_id === dep.id);
           const jefe = usuariosDep.find((u) => u.rol_jerarquico === "JEFE_DEPENDENCIA");
@@ -44,7 +45,7 @@ const JefeZonaDashboard = () => {
             jefe_nombre: jefe ? `G${jefe.grado} ${jefe.nombre}` : "Sin jefe",
           };
         });
-  
+
         setDependencias(actualizadas);
       } catch (err) {
         console.error("Error al cargar datos:", err);
@@ -52,20 +53,16 @@ const JefeZonaDashboard = () => {
         setIsLoading(false);
       }
     };
-  
+
     cargarDatos();
   }, [usuario, navigate]);
-  
 
-  if (!usuario) {
-    return (
-      <p className="p-6">Acceso no autorizado. Por favor inicia sesión.</p>
-    );
-  }
+  const dependenciasZona = useMemo(() => {
+    if (!usuario?.zona_id) return [];
 
-  const dependenciasZona = dependencias
-    .filter((dep) => dep.zona_id === usuario?.zona_id)
-    .sort((a, b) => {
+    const filtradas = dependencias.filter((dep) => dep.zona_id === usuario.zona_id);
+
+    return filtradas.sort((a, b) => {
       const getNombre = (d) => d.nombre?.toLowerCase() ?? "";
       const extractNumber = (str) => {
         const match = str.match(/\d+/);
@@ -81,26 +78,40 @@ const JefeZonaDashboard = () => {
 
       return getNombre(a).localeCompare(getNombre(b));
     });
+  }, [dependencias, usuario?.zona_id]);
 
-  const handleModalClose = () => {
+  const donutChartData = useMemo(() => {
+    return dependenciasZona.map((dep) => ({
+      name: dep.nombre,
+      value: dep.funcionarios_count || 0,
+    }));
+  }, [dependenciasZona]);
+
+  const handleModalClose = useCallback(() => {
     setShowModal(false);
     setSelectedDep(null);
-  };
+  }, []);
 
-  const handleModalSubmit = (savedDep) => {
-    if (isEditing) {
+  const handleModalSubmit = useCallback(
+    (savedDep) => {
       setDependencias((prev) =>
-        prev.map((d) => (d.id === savedDep.id ? savedDep : d))
+        isEditing
+          ? prev.map((d) => (d.id === savedDep.id ? savedDep : d))
+          : [...prev, savedDep]
       );
-    } else {
-      setDependencias((prev) => [...prev, savedDep]);
-    }
-    handleModalClose();
-  };
+      handleModalClose();
+    },
+    [isEditing, handleModalClose]
+  );
+
+  if (!usuario) {
+    return <p className="p-6">Acceso no autorizado. Por favor inicia sesión.</p>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800">
       {isLoading && <Loading />}
+
       <header className="mb-8">
         {jefatura ? (
           <div className="bg-white rounded-md shadow p-6 mb-8">
@@ -180,12 +191,7 @@ const JefeZonaDashboard = () => {
               <h3 className="text-lg font-semibold text-blue-700 mb-3">
                 Funcionarios por Seccional
               </h3>
-              <DonutChart
-                data={dependenciasZona.map((dep) => ({
-                  name: dep.nombre,
-                  value: dep.funcionarios_count || 0,
-                }))}
-              />
+              <DonutChart data={donutChartData} />
             </section>
           </>
         )}

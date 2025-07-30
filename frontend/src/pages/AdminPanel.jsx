@@ -6,44 +6,58 @@ import DonutChart from "../components/DonutChart.jsx";
 import DependenciaModal from "../components/DependenciaModal.jsx";
 import FuncionarioModal from "../components/FuncionarioModal.jsx";
 import { fetchData, deleteData } from "../utils/api.js";
+import Loading from "../components/Loading.jsx";
 
 const AdminPanel = () => {
   const { usuario } = useAppContext();
   const navigate = useNavigate();
+
   const [jefatura, setJefatura] = useState(null);
   const [dependencias, setDependencias] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [zonas, setZonas] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [selectedDep, setSelectedDep] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [showFuncionarioModal, setShowFuncionarioModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [search, setSearch] = useState("");
+
+  const [showFuncionarioModal, setShowFuncionarioModal] = useState(false);
   const [selectedFuncionario, setSelectedFuncionario] = useState(null);
 
+  const [search, setSearch] = useState("");
+
   useEffect(() => {
-    if (usuario?.rol_jerarquico !== "ADMINISTRADOR") {
+    if (!usuario?.token || usuario?.rol_jerarquico !== "ADMINISTRADOR") {
       navigate("/");
+      return;
     }
+    setIsLoading(true);
 
-    fetchData("jefaturas", (data) => {
-      setJefatura(Array.isArray(data) && data.length > 0 ? data[0] : null);
-    });
+    const cargarDatos = async () => {
+      try {
+        const [jefaturasData, dependenciasData, usuariosData, zonasData] = await Promise.all([
+          fetchData("jefaturas", null, usuario.token),
+          fetchData("dependencias", null, usuario.token),
+          fetchData("usuarios", null, usuario.token),
+          fetchData("zonas", null, usuario.token),
+        ]);
 
-    fetchData("dependencias", setDependencias);
-    fetchData("usuarios", setUsuarios);
-    fetchData("zonas", setZonas);
-  }, []);
+        setJefatura(Array.isArray(jefaturasData) && jefaturasData.length > 0 ? jefaturasData[0] : null);
+        setDependencias(dependenciasData || []);
+        setUsuarios(usuariosData || []);
+        setZonas(zonasData || []);
+      } catch (error) {
+        console.error("Error al cargar datos:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  if (!usuario) {
-    return (
-      <p className="p-6">
-        Acceso no autorizado. Por favor inicia sesión como Jefe de Zona.
-      </p>
-    );
-  }
+    cargarDatos();
+  }, [usuario, navigate]);
 
-  const dependenciasOrdenadas = dependencias.sort((a, b) => {
+  const dependenciasOrdenadas = [...dependencias].sort((a, b) => {
     const getNombre = (d) => d.nombre?.toLowerCase() ?? "";
     const extractNumber = (str) => {
       const match = str.match(/\d+/);
@@ -56,17 +70,13 @@ const AdminPanel = () => {
     if (numA !== null && numB !== null) {
       return numA - numB;
     }
-
     return getNombre(a).localeCompare(getNombre(b));
   });
 
-  const dataChart = dependenciasOrdenadas.map((d) => {
-    const cantidad = usuarios.filter((u) => u.dependencia_id === d.id).length;
-    return {
-      name: d.nombre,
-      value: cantidad,
-    };
-  });
+  const dataChart = dependenciasOrdenadas.map((d) => ({
+    name: d.nombre,
+    value: usuarios.filter((u) => u.dependencia_id === d.id).length,
+  }));
 
   const handleEdit = (dep) => {
     setSelectedDep(dep);
@@ -77,9 +87,7 @@ const AdminPanel = () => {
   const handleAdd = () => {
     setSelectedDep({
       nombre: "",
-      jefe_nombre: "",
       descripcion: "",
-      funcionarios_count: 0,
       zona_id: usuario.zona_id,
     });
     setIsEditing(false);
@@ -88,9 +96,14 @@ const AdminPanel = () => {
 
   const handleDelete = async (depId) => {
     if (confirm("¿Seguro que deseas eliminar esta seccional?")) {
-      const ok = await deleteData(`dependencias/${depId}`);
-      if (ok) {
-        setDependencias((prev) => prev.filter((d) => d.id !== depId));
+      try {
+        const ok = await deleteData(`dependencias/${depId}`, usuario.token);
+        if (ok) {
+          setDependencias((prev) => prev.filter((d) => d.id !== depId));
+        }
+      } catch (error) {
+        console.error("Error al eliminar dependencia:", error);
+        alert("No se pudo eliminar la seccional. Intenta nuevamente.");
       }
     }
   };
@@ -102,23 +115,17 @@ const AdminPanel = () => {
 
   const handleModalSubmit = (savedDep) => {
     if (isEditing) {
-      setDependencias((prev) =>
-        prev.map((d) => (d.id === savedDep.id ? savedDep : d))
-      );
+      setDependencias((prev) => prev.map((d) => (d.id === savedDep.id ? savedDep : d)));
     } else {
       setDependencias((prev) => [...prev, savedDep]);
     }
     handleModalClose();
   };
 
-  const handleFuncionarioAgregado = (nuevo) => {
-    setUsuarios((prev) => [...prev, nuevo]);
-  };
-
   const handleDeleteFuncionario = async (id) => {
     if (confirm("¿Seguro que deseas eliminar este funcionario?")) {
       try {
-        const ok = await deleteData(`usuarios/${id}`);
+        const ok = await deleteData(`usuarios/${id}`, usuario.token);
         if (ok) {
           setUsuarios((prev) => prev.filter((u) => u.id !== id));
         } else {
@@ -139,6 +146,16 @@ const AdminPanel = () => {
       f.rol_jerarquico?.toLowerCase().includes(query)
     );
   });
+
+  if (!usuario) {
+    return (
+      <p className="p-6">
+        Acceso no autorizado. Por favor inicia sesión como Administrador.
+      </p>
+    );
+  }
+
+  if (isLoading) return <Loading />;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800">
@@ -170,27 +187,16 @@ const AdminPanel = () => {
         </div>
 
         {dependenciasOrdenadas.length === 0 ? (
-          <p className="text-gray-500">
-            No hay seccionales asignadas a tu zona.
-          </p>
+          <p className="text-gray-500">No hay seccionales.</p>
         ) : (
           <>
             <section className="overflow-x-auto mb-8 bg-white rounded-md shadow p-4">
               <table className="min-w-full border-collapse border border-gray-300 text-sm">
                 <thead>
                   <tr className="bg-gray-100 text-gray-700 uppercase text-xs font-medium tracking-wide">
-                    <th className="border border-gray-300 py-2 px-4 text-left">
-                      Nombre
-                    </th>
-                    <th className="border border-gray-300 py-2 px-4 text-left">
-                      Jefe
-                    </th>
-                    <th className="border border-gray-300 py-2 px-4 text-left">
-                      Funcionarios
-                    </th>
-                    <th className="border border-gray-300 py-2 px-4 text-left">
-                      Acciones
-                    </th>
+                    <th className="border py-2 px-4 text-left">Nombre</th>
+                    <th className="border py-2 px-4 text-left">Funcionarios</th>
+                    <th className="border py-2 px-4 text-left">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -199,18 +205,13 @@ const AdminPanel = () => {
                       key={sec.id}
                       className="even:bg-gray-50 hover:bg-blue-50 transition-colors"
                     >
-                      <td className="border border-gray-300 py-2 px-4">
-                        {sec.nombre}
+                      <td className="border py-2 px-4">{sec.nombre}</td>
+                      <td className="border py-2 px-4">
+                        {usuarios.filter((u) => u.dependencia_id === sec.id).length}
                       </td>
-                      <td className="border border-gray-300 py-2 px-4">
-                        {sec.jefe_nombre || "Sin jefe"}
-                      </td>
-                      <td className="border border-gray-300 py-2 px-4">
-                        {sec.funcionarios_count || 0}
-                      </td>
-                      <td className="border border-gray-300 py-2 px-4 flex items-center gap-2">
+                      <td className="border py-2 px-4 flex items-center gap-2">
                         <Link
-                          to={`/dependencia/${sec.id}`}
+                          to={`/escalafon-servicio`}
                           state={{ sec }}
                           className="inline-flex items-center gap-1 text-blue-600 hover:underline"
                         >
@@ -244,7 +245,10 @@ const AdminPanel = () => {
                   Todos los Funcionarios
                 </h3>
                 <button
-                  onClick={() => setShowFuncionarioModal(true)}
+                  onClick={() => {
+                    setSelectedFuncionario(null);
+                    setShowFuncionarioModal(true);
+                  }}
                   className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
                 >
                   + Agregar Funcionario
@@ -278,9 +282,7 @@ const AdminPanel = () => {
                         <th className="border py-2 px-4 text-left">Correo</th>
                         <th className="border py-2 px-4 text-left">Grado</th>
                         <th className="border py-2 px-4 text-left">Rol</th>
-                        <th className="border py-2 px-4 text-left">
-                          Dependencia
-                        </th>
+                        <th className="border py-2 px-4 text-left">Dependencia</th>
                         <th className="border py-2 px-4 text-left">Acciones</th>
                       </tr>
                     </thead>
@@ -293,9 +295,7 @@ const AdminPanel = () => {
                           <td className="border py-2 px-4">{f.nombre}</td>
                           <td className="border py-2 px-4">{f.correo}</td>
                           <td className="border py-2 px-4">{f.grado}</td>
-                          <td className="border py-2 px-4">
-                            {f.rol_jerarquico}
-                          </td>
+                          <td className="border py-2 px-4">{f.rol_jerarquico}</td>
                           <td className="border py-2 px-4">
                             {dependencias.find((d) => d.id === f.dependencia_id)
                               ?.nombre || "Sin dependencia"}
@@ -343,6 +343,7 @@ const AdminPanel = () => {
           isEditing={isEditing}
           onClose={handleModalClose}
           onSubmitted={handleModalSubmit}
+          token={usuario.token}
         />
       )}
 
@@ -355,9 +356,7 @@ const AdminPanel = () => {
           }}
           onSubmitted={(nuevo) => {
             if (selectedFuncionario) {
-              setUsuarios((prev) =>
-                prev.map((u) => (u.id === nuevo.id ? nuevo : u))
-              );
+              setUsuarios((prev) => prev.map((u) => (u.id === nuevo.id ? nuevo : u)));
             } else {
               setUsuarios((prev) => [...prev, nuevo]);
             }
@@ -367,6 +366,7 @@ const AdminPanel = () => {
           zonaId={usuario?.zona_id}
           zonas={zonas}
           dependencias={dependenciasOrdenadas}
+          token={usuario.token}
         />
       )}
     </div>

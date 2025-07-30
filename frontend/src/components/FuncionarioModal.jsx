@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { postData, putData } from "../utils/api";
 
 const rolMap = {
   usuario: "FUNCIONARIO",
@@ -14,7 +15,15 @@ const reverseRolMap = {
   ADMINISTRADOR: "administrador",
 };
 
-const FuncionarioModal = ({ onClose, onSubmitted, funcionario, zonas = [], dependencias = [], zonaId }) => {
+const FuncionarioModal = ({
+  onClose,
+  onSubmitted,
+  funcionario,
+  zonas = [],
+  dependencias = [],
+  zonaId,
+  token,
+}) => {
   const [form, setForm] = useState({
     nombre: "",
     correo: "",
@@ -40,7 +49,7 @@ const FuncionarioModal = ({ onClose, onSubmitted, funcionario, zonas = [], depen
         zona_id: funcionario.zona_id || zonaId || "",
       });
     }
-  }, [funcionario]);
+  }, [funcionario, zonaId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -66,35 +75,49 @@ const FuncionarioModal = ({ onClose, onSubmitted, funcionario, zonas = [], depen
       return;
     }
 
+    // Ajuste del payload según rol
     if (payload.rol_jerarquico === "JEFE_ZONA") {
       payload.dependencia_id = null;
+      if (!form.zona_id) {
+        setError("Debe seleccionar una zona para Jefe de Zona");
+        return;
+      }
     } else {
       payload.zona_id = null;
+      if (!form.dependencia_id) {
+        setError("Debe seleccionar una seccional para este rol");
+        return;
+      }
     }
 
-    const method = isEditing ? "PUT" : "POST";
-    const url = isEditing
-      ? `${import.meta.env.VITE_API_URL}/usuarios/${funcionario.id}`
-      : `${import.meta.env.VITE_API_URL}/usuarios`;
+    
+    
 
     try {
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error("Error al guardar");
-      const data = await res.json();
+      let data;
+      if (isEditing) {
+        
+        
+        data = await putData(`usuarios/${funcionario.id}`, payload, token);
+      } else {
+        
+        
+        data = await postData("usuarios", payload, token);
+        
+      }
       onSubmitted(data);
     } catch (err) {
-      setError("No se pudo guardar el funcionario");
+      console.error("Error al guardar funcionario:", err);
+      setError("No se pudo guardar el funcionario. Revisa el token y permisos.");
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
       <div className="bg-white p-6 rounded-md w-full max-w-lg shadow-lg">
-        <h2 className="text-xl font-semibold mb-4">{isEditing ? "Editar Funcionario" : "Nuevo Funcionario"}</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          {isEditing ? "Editar Funcionario" : "Nuevo Funcionario"}
+        </h2>
         {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
@@ -103,6 +126,7 @@ const FuncionarioModal = ({ onClose, onSubmitted, funcionario, zonas = [], depen
             onChange={handleChange}
             placeholder="Nombre"
             className="w-full border px-3 py-2 rounded"
+            required
           />
           <input
             name="correo"
@@ -111,6 +135,7 @@ const FuncionarioModal = ({ onClose, onSubmitted, funcionario, zonas = [], depen
             onChange={handleChange}
             placeholder="Correo"
             className="w-full border px-3 py-2 rounded"
+            required
           />
           <input
             name="grado"
@@ -118,6 +143,7 @@ const FuncionarioModal = ({ onClose, onSubmitted, funcionario, zonas = [], depen
             onChange={handleChange}
             placeholder="Grado"
             className="w-full border px-3 py-2 rounded"
+            required
           />
           <select
             name="rol_jerarquico"
@@ -137,15 +163,18 @@ const FuncionarioModal = ({ onClose, onSubmitted, funcionario, zonas = [], depen
               onChange={handleChange}
               placeholder="Contraseña"
               className="w-full border px-3 py-2 rounded"
+              required={!isEditing}
             />
           )}
 
-          {form.rol_jerarquico === "usuario" || form.rol_jerarquico === "encargado_dependencia" ? (
+          {(form.rol_jerarquico === "usuario" ||
+            form.rol_jerarquico === "encargado_dependencia") ? (
             <select
               name="dependencia_id"
               value={form.dependencia_id}
               onChange={handleChange}
               className="w-full border px-3 py-2 rounded"
+              required
             >
               <option value="">Selecciona una seccional</option>
               {dependencias.map((d) => (
@@ -160,6 +189,7 @@ const FuncionarioModal = ({ onClose, onSubmitted, funcionario, zonas = [], depen
               value={form.zona_id}
               onChange={handleChange}
               className="w-full border px-3 py-2 rounded"
+              required
             >
               <option value="">Selecciona una zona</option>
               {zonas.map((z) => (
