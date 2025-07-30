@@ -226,11 +226,7 @@ export default function MiPerfil() {
         Cerrar sesión
       </button>
       <button
-        onClick={() =>
-          usuario.rol_jerarquico === "JEFE_ZONA"
-            ? navigate("/jefe-zona")
-            : navigate("/dependencia/" + usuario.dependencia_id)
-        }
+        onClick={() => navigate("/")}
         className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"
       >
         ← Inicio
