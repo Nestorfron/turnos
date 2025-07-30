@@ -161,3 +161,13 @@ export const cambiarPassword = async (usuarioId, payload, token) => {
     throw err;
   }
 };
+
+
+export const forgotPassword = async (email) => {
+  return postData("/auth/forgot-password", { email });
+};
+
+export const resetPassword = async (token, newPassword) => {
+  return postData("/auth/reset-password", { token, newPassword });
+};
+

@@ -160,7 +160,6 @@ const AdminPanel = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800">
       <header className="mb-8">
-        <h1 className="text-3xl font-semibold mb-2">Panel Administrador</h1>
         {jefatura ? (
           <div className="bg-white rounded-md shadow p-6 mb-8">
             <h2 className="text-2xl font-bold text-blue-900 mb-2">

@@ -130,57 +130,9 @@ export default function MiPerfil() {
         <p>
           <strong>Estado:</strong> {usuario.estado || "No especificado"}
         </p>
-      </div>
-
-      {/* Correo editable */}
-      <div>
-        <h2 className="text-lg font-semibold mb-1">Correo</h2>
-        {editCorreo ? (
-          <div className="flex space-x-2 items-center">
-            <input
-              type="email"
-              value={tempCorreo}
-              onChange={(e) => setTempCorreo(e.target.value)}
-              className="border border-gray-300 rounded px-3 py-2 flex-grow"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleCorreoSave();
-                if (e.key === "Escape") {
-                  setTempCorreo(usuario.correo);
-                  setEditCorreo(false);
-                }
-              }}
-            />
-            <button
-              onClick={handleCorreoSave}
-              disabled={loadingCorreo}
-              className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
-            >
-              Guardar
-            </button>
-            <button
-              onClick={() => {
-                setTempCorreo(usuario.correo);
-                setEditCorreo(false);
-              }}
-              className="text-gray-600 px-2 hover:text-gray-900"
-            >
-              Cancelar
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center space-x-2">
-            <span>{usuario.correo}</span>
-            <button
-              onClick={() => setEditCorreo(true)}
-              aria-label="Editar correo"
-              className="text-blue-600 hover:text-blue-800"
-              title="Editar correo"
-            >
-              <Edit2 size={18} />
-            </button>
-          </div>
-        )}
+        <p>
+          <strong>Correo:</strong> {usuario.correo || "No asignado"}
+        </p>
       </div>
 
       {/* Cambio de contraseña */}

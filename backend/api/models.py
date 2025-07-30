@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy  # type: ignore
 from config import Config
+from datetime import datetime
 
 db = SQLAlchemy(engine_options=Config.SQLALCHEMY_ENGINE_OPTIONS)
 
@@ -151,6 +152,21 @@ class Usuario(db.Model):
 
     def __repr__(self):
         return f'<Usuario {self.nombre}>'
+    
+
+class PasswordResetToken(db.Model):
+    __tablename__ = 'password_reset_tokens'
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    token = db.Column(db.String(64), unique=True, nullable=False)
+    expiration = db.Column(db.DateTime, nullable=False)
+    usado = db.Column(db.Boolean, default=False)
+
+    usuario = db.relationship('Usuario', backref='reset_tokens')
+
+    def __repr__(self):
+        return f'<PasswordResetToken {self.token} for usuario_id {self.usuario_id}>'
+
 
 
 
