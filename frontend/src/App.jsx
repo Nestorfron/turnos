@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import MiPerfil from "./pages/MiPerfil";
 import AdminPanel from "./pages/AdminPanel";
 import JefeZonaDashboard from "./pages/JefeZonaDashboard";
@@ -14,6 +16,8 @@ function App() {
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/mi-perfil" element={<MiPerfil />} />
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/jefe-zona" element={<JefeZonaDashboard />} />

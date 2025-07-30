@@ -4,6 +4,7 @@ from flask_jwt_extended import JWTManager # type: ignore
 from flask_admin import Admin # type: ignore
 from flask_admin.contrib.sqla import ModelView # type: ignore
 from flask_migrate import Migrate # type: ignore
+from extensions import mail # type: ignore
 
 from config import Config
 from api.models import db, Jefatura, Zona, Dependencia, Usuario, RolOperativo, UsuarioRolOperativo, Turno, TurnoAsignado, SolicitudCambio, Guardia, Licencia, LicenciaMedica
@@ -14,6 +15,7 @@ from api.routes import api
 # Crear la app
 app = Flask(__name__)
 app.config.from_object(Config)
+mail.init_app(app)
 
 # Extensiones
 CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)

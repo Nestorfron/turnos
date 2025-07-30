@@ -4,7 +4,7 @@ import dayjs from "dayjs";
 import Loading from "../components/Loading";
 import { useAppContext } from "../context/AppContext";
 import { fetchData, putData } from "../utils/api";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Home } from "lucide-react";
 import AsignarTurnoModal from "../components/AsignarTurnoModal";
 
 const EscalafonServicio = () => {
@@ -23,18 +23,9 @@ const EscalafonServicio = () => {
   const [cargandoGuardias, setCargandoGuardias] = useState(true);
   const [cargandoLicencias, setCargandoLicencias] = useState(true);
 
-  const [daysToShow] = useState(7);
-  const [startDate] = useState(dayjs());
+  const [startDate, setStartDate] = useState(dayjs());
 
-  const dias = useMemo(() =>
-    Array.from({ length: daysToShow }, (_, i) =>
-      startDate.clone().add(i, "day")
-    ), [daysToShow, startDate]);
-
-  const diaActual = useMemo(() => {
-    const hoy = new Date().toISOString().slice(0, 10);
-    return dias.find((d) => d.format("YYYY-MM-DD") === hoy);
-  }, [dias]);
+  const diaActual = useMemo(() => startDate, [startDate]);
 
   const [asignarModalOpen, setAsignarModalOpen] = useState(false);
   const [asignacionSeleccionada, setAsignacionSeleccionada] = useState(null);
@@ -79,9 +70,10 @@ const EscalafonServicio = () => {
           const jefe = dep.usuarios?.find(
             (u) => u.rol_jerarquico === "JEFE_DEPENDENCIA"
           );
-          const funcs = dep.usuarios?.filter(
-            (u) => u.rol_jerarquico !== "JEFE_DEPENDENCIA"
-          ) || [];
+          const funcs =
+            dep.usuarios?.filter(
+              (u) => u.rol_jerarquico !== "JEFE_DEPENDENCIA"
+            ) || [];
           setDependencia({
             id: dep.id,
             nombre: dep.nombre,
@@ -103,9 +95,10 @@ const EscalafonServicio = () => {
           const jefe = dep.usuarios?.find(
             (u) => u.rol_jerarquico === "JEFE_DEPENDENCIA"
           );
-          const funcs = dep.usuarios?.filter(
-            (u) => u.rol_jerarquico !== "JEFE_DEPENDENCIA"
-          ) || [];
+          const funcs =
+            dep.usuarios?.filter(
+              (u) => u.rol_jerarquico !== "JEFE_DEPENDENCIA"
+            ) || [];
 
           setDependencia({
             id: dep.id,
@@ -142,37 +135,53 @@ const EscalafonServicio = () => {
     cargarLicencias();
   }, [usuario?.token]);
 
-  const getCelda = useCallback((usuario, dia) => {
-    const fecha = dia.format("YYYY-MM-DD");
-    const licencia = licencias.find((lic) =>
-      lic.usuario_id === usuario.id &&
-      fecha >= dayjs(lic.fecha_inicio).utc().format("YYYY-MM-DD") &&
-      fecha <= dayjs(lic.fecha_fin).utc().format("YYYY-MM-DD")
-    );
-    if (licencia) return "Licencia";
+  const getCelda = useCallback(
+    (usuario, dia) => {
+      const fecha = dia.format("YYYY-MM-DD");
+      const licencia = licencias.find(
+        (lic) =>
+          lic.usuario_id === usuario.id &&
+          fecha >= dayjs(lic.fecha_inicio).utc().format("YYYY-MM-DD") &&
+          fecha <= dayjs(lic.fecha_fin).utc().format("YYYY-MM-DD")
+      );
+      if (licencia) return "Licencia";
 
-    const registro = guardias.find((g) =>
-      g.usuario_id === usuario.id &&
-      fecha >= dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD") &&
-      fecha <= dayjs(g.fecha_fin).utc().format("YYYY-MM-DD")
-    );
-    if (registro) {
-      if (registro.tipo === "guardia" || registro.tipo === "T") return "En Servicio";
-      return registro.tipo;
-    }
-    return "Descanso";
-  }, [licencias, guardias]);
+      const registro = guardias.find(
+        (g) =>
+          g.usuario_id === usuario.id &&
+          fecha >= dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD") &&
+          fecha <= dayjs(g.fecha_fin).utc().format("YYYY-MM-DD")
+      );
+      if (registro) {
+        if (registro.tipo === "guardia" || registro.tipo === "T")
+          return "En Servicio";
+        return registro.tipo;
+      }
+      return "Descanso";
+    },
+    [licencias, guardias]
+  );
 
-  const funcionariosOrdenados = useMemo(() =>
-    [...funcionarios].sort((a, b) => (b.grado || 0) - (a.grado || 0)),
-  [funcionarios]);
+  const funcionariosOrdenados = useMemo(
+    () => [...funcionarios].sort((a, b) => (b.grado || 0) - (a.grado || 0)),
+    [funcionarios]
+  );
 
-  const funcionariosPorTurno = useCallback((turnoId) =>
-    funcionarios.filter((f) => f.turno_id === turnoId)
-      .sort((a, b) => (b.grado || 0) - (a.grado || 0)),
-  [funcionarios]);
+  const funcionariosPorTurno = useCallback(
+    (turnoId) =>
+      funcionarios
+        .filter(
+          (f) =>
+            f.turno_id === turnoId &&
+            f.estado?.toLowerCase() === "activo"
+        )
+        .sort((a, b) => (b.grado || 0) - (a.grado || 0)),
+    [funcionarios]
+  );
+  
 
-  if (isLoading || cargandoGuardias || cargandoLicencias || !dependencia) return <Loading />;
+  if (isLoading || cargandoGuardias || cargandoLicencias || !dependencia)
+    return <Loading />;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800">
@@ -181,23 +190,50 @@ const EscalafonServicio = () => {
           <h2 className="text-2xl font-bold text-blue-900 mb-2">
             {dependencia.nombre}
           </h2>
-          <p><strong>Jefe:</strong> {dependencia.jefe_nombre}</p>
-          <p><strong>Descripción:</strong> {dependencia.descripcion || "-"}</p>
-          <p><strong>Total de funcionarios:</strong> {cantidadFuncionarios}</p>
+          <p>
+            <strong>Jefe:</strong> {dependencia.jefe_nombre}
+          </p>
+          <p>
+            <strong>Descripción:</strong> {dependencia.descripcion || "-"}
+          </p>
+          <p>
+            <strong>Total de funcionarios:</strong> {cantidadFuncionarios}
+          </p>
         </div>
         {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
-          <Link to={`/guardias`} state={{ sec: dependencia }}
-            className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+          <Link
+            to={`/guardias`}
+            state={{ sec: dependencia }}
+            className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+          >
             Ver Escalafón
           </Link>
         )}
       </header>
 
       <main className="space-y-10">
+        <div className="flex  items-center mb-8">
+          <label className="mr-2 font-semibold text-blue-900">Fecha:</label>
+          <input
+            type="date"
+            value={startDate.format("YYYY-MM-DD")}
+            onChange={(e) => setStartDate(dayjs(e.target.value))}
+            className="border rounded px-2 py-1"
+          />
+          <Home
+            size={18}
+            className="mx-2 cursor-pointer"
+            onClick={() => setStartDate(dayjs())}
+          />
+        </div>
+
         {turnos.map((turno) => {
           const lista = funcionariosPorTurno(turno.id);
           return (
-            <section key={turno.id} className="bg-white rounded shadow p-4 overflow-x-auto mb-6">
+            <section
+              key={turno.id}
+              className="bg-white rounded shadow p-4 overflow-x-auto mb-6"
+            >
               <h2 className="text-xl font-bold text-blue-900 mb-2">
                 {turno.nombre}
               </h2>
@@ -205,50 +241,97 @@ const EscalafonServicio = () => {
                 <thead>
                   <tr className="bg-gray-200">
                     <th className="border px-2 py-1 w-20">Grado</th>
-                    <th className="border px-2 py-1 w-60 min-w-[15rem]">Nombres</th>
-                    <th className="border px-2 py-1 w-32">Hoy</th>
+                    <th className="border px-2 py-1 w-60 min-w-[15rem]">
+                      Nombres
+                    </th>
+                    <th className="border px-2 py-1 w-32">
+                      {startDate.format("DD/MM/YYYY")}
+                    </th>
                     <th className="border px-2 py-1 w-24">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {lista.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="text-center py-4 text-gray-500">
+                      <td
+                        colSpan={4}
+                        className="text-center py-4 text-gray-500"
+                      >
                         No hay funcionarios asignados a este turno.
                       </td>
                     </tr>
-                  ) : lista.map((f) => {
-                    const valor = getCelda(f, diaActual);
-                    let bg = "", text = "text-black", fw = "font-normal", ts = "text-sm";
-                    if (valor === "Descanso") { bg = "bg-black"; text = "text-white"; fw = "font-bold"; }
-                    else if (valor === "Licencia") { bg = "bg-green-600"; text = "text-white"; fw = "font-bold"; }
-                    else if (valor === "En Servicio") { bg = "bg-white"; }
-                    else if (["1ro","2do","3er"].includes(valor)) { bg = "bg-blue-600"; text = "text-white"; fw = "font-bold"; }
-                    else if (valor === "CURSO") { bg = "bg-green-600"; text = "text-white"; fw = "font-bold"; ts = "text-xs"; }
-                    else if (valor === "BROU") { ts = "text-xs"; }
-                    else if (valor === "CUSTODIA") { bg = "bg-blue-600"; text = "text-white"; fw = "font-bold"; ts = "text-xs"; }
-                    return (
-                      <tr key={f.id}>
-                        <td className="border px-2 text-center w-20">G{f.grado}</td>
-                        <td className="border px-2 text-left whitespace-nowrap w-48">{f.nombre}</td>
-                        <td className={`border py-1 h-5 ${bg} ${text} ${fw} ${ts}`}>{valor}</td>
-                        <td className="border px-2 py-1">
-                          {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ? (
-                            <button onClick={() => abrirModalEditarAsignacion(f)}
-                              className="m-auto p-1 text-yellow-600 rounded">
-                              <Pencil size={18} />
-                            </button>
-                          ) : <span className="text-gray-500">Sin acciones.</span>}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  ) : (
+                    lista.map((f) => {
+                      const valor = getCelda(f, diaActual);
+                      let bg = "",
+                        text = "text-black",
+                        fw = "font-normal",
+                        ts = "text-sm";
+                      if (valor === "Descanso") {
+                        bg = "bg-black";
+                        text = "text-white";
+                        fw = "font-bold";
+                      } else if (valor === "Licencia") {
+                        bg = "bg-green-600";
+                        text = "text-white";
+                        fw = "font-bold";
+                      } else if (valor === "En Servicio") {
+                        bg = "bg-white";
+                      } else if (["1ro", "2do", "3er"].includes(valor)) {
+                        bg = "bg-blue-600";
+                        text = "text-white";
+                        fw = "font-bold";
+                      } else if (valor === "CURSO") {
+                        bg = "bg-green-600";
+                        text = "text-white";
+                        fw = "font-bold";
+                        ts = "text-xs";
+                      } else if (valor === "BROU") {
+                        ts = "text-xs";
+                      } else if (valor === "CUSTODIA") {
+                        bg = "bg-blue-600";
+                        text = "text-white";
+                        fw = "font-bold";
+                        ts = "text-xs";
+                      }
+                      return (
+                        <tr key={f.id}>
+                          <td className="border px-2 text-center w-20">
+                            G{f.grado}
+                          </td>
+                          <td className="border px-2 text-left whitespace-nowrap w-48">
+                            {f.nombre}
+                          </td>
+                          <td
+                            className={`border py-1 h-5 ${bg} ${text} ${fw} ${ts}`}
+                          >
+                            {valor}
+                          </td>
+                          <td className="border px-2 py-1">
+                            {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ? (
+                              <button
+                                onClick={() => abrirModalEditarAsignacion(f)}
+                                className="m-auto p-1 text-yellow-600 rounded"
+                              >
+                                <Pencil size={18} />
+                              </button>
+                            ) : (
+                              <span className="text-gray-500">
+                                Sin acciones.
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </section>
           );
         })}
 
+        {/* Tabla General */}
         <section className="bg-white rounded shadow p-4 mt-6">
           <h3 className="text-xl font-semibold text-blue-900 mb-4">
             Listado General del Personal
@@ -271,30 +354,43 @@ const EscalafonServicio = () => {
                       No hay funcionarios registrados.
                     </td>
                   </tr>
-                ) : funcionariosOrdenados.map((f) => {
-                  const turnoNombre = turnos.find((t) => t.id === f.turno_id)?.nombre || "Sin asignar";
-                  return (
-                    <tr key={f.id} className="even:bg-gray-50">
-                      <td className="border px-3 py-2">G{f.grado}</td>
-                      <td className="border px-3 py-2">{f.nombre}</td>
-                      <td className="border px-3 py-2">
-                        <span className={f.estado?.toLowerCase() === "activo"
-                          ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
-                          {f.estado || "Sin estado"}
-                        </span>
-                      </td>
-                      <td className="border px-3 py-2">{turnoNombre}</td>
-                      <td className="flex border px-3 py-2">
-                        {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ? (
-                          <button onClick={() => abrirModalEditarAsignacion(f)}
-                            className="m-auto p-1 text-yellow-600 rounded">
-                            <Pencil size={18} />
-                          </button>
-                        ) : <span className="text-gray-500">Sin acciones.</span>}
-                      </td>
-                    </tr>
-                  );
-                })}
+                ) : (
+                  funcionariosOrdenados.map((f) => {
+                    const turnoNombre =
+                      turnos.find((t) => t.id === f.turno_id)?.nombre ||
+                      "Sin asignar";
+                    return (
+                      <tr key={f.id} className="even:bg-gray-50">
+                        <td className="border px-3 py-2">G{f.grado}</td>
+                        <td className="border px-3 py-2">{f.nombre}</td>
+                        <td className="border px-3 py-2">
+                          <span
+                            className={
+                              f.estado?.toLowerCase() === "activo"
+                                ? "text-green-600 font-semibold"
+                                : "text-red-600 font-semibold"
+                            }
+                          >
+                            {f.estado || "Sin estado"}
+                          </span>
+                        </td>
+                        <td className="border px-3 py-2">{turnoNombre}</td>
+                        <td className="flex border px-3 py-2">
+                          {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ? (
+                            <button
+                              onClick={() => abrirModalEditarAsignacion(f)}
+                              className="m-auto p-1 text-yellow-600 rounded"
+                            >
+                              <Pencil size={18} />
+                            </button>
+                          ) : (
+                            <span className="text-gray-500">Sin acciones.</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -313,14 +409,18 @@ const EscalafonServicio = () => {
       )}
 
       {usuario?.rol_jerarquico === "JEFE_ZONA" && (
-        <button onClick={() => navigate("/jefe-zona")}
-          className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition">
+        <button
+          onClick={() => navigate("/jefe-zona")}
+          className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"
+        >
           ← Volver
         </button>
       )}
-       {usuario?.rol_jerarquico === "ADMINISTRADOR" && (
-        <button onClick={() => navigate("/admin")}
-          className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition">
+      {usuario?.rol_jerarquico === "ADMINISTRADOR" && (
+        <button
+          onClick={() => navigate("/admin")}
+          className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"
+        >
           ← Volver
         </button>
       )}

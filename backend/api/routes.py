@@ -1,7 +1,10 @@
 from flask import Blueprint, request, jsonify # type: ignore
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, get_current_user # type: ignore
 from werkzeug.security import generate_password_hash, check_password_hash # type: ignore
-from api.models import db, Jefatura, Zona, Dependencia, Usuario, RolOperativo, Turno, TurnoAsignado, Guardia, Licencia, SolicitudCambio, LicenciaMedica
+from api.models import db, Jefatura, Zona, Dependencia, Usuario, RolOperativo, Turno, TurnoAsignado, Guardia, Licencia, SolicitudCambio, LicenciaMedica, PasswordResetToken
+import secrets
+from datetime import datetime, timedelta
+from .utils.email_utils import send_email  
 
 api = Blueprint("api", __name__)
 
@@ -546,4 +549,82 @@ def login():
         "token": token,
         "usuario": usuario.serialize()
     }), 200
+
+# -------------------------------------------------------------------
+# PASSWORD RESET
+# -------------------------------------------------------------------
+
+
+@api.route('/auth/forgot-password', methods=['POST'])
+def forgot_password():
+    data = request.json
+    email = data.get('email')
+
+    if not email:
+        return jsonify({"error": "El correo es requerido"}), 400
+
+    usuario = Usuario.query.filter_by(correo=email).first()
+
+    # Respuesta genérica para no filtrar emails
+    if not usuario:
+        return jsonify({"message": "Si el correo existe, se enviaron instrucciones."}), 200
+
+    # Generar token único y fecha expiración (1 hora)
+    token = secrets.token_hex(32)
+    expiration = datetime.utcnow() + timedelta(hours=1)
+
+    # Guardar token en DB
+    reset_token = PasswordResetToken(
+        usuario_id=usuario.id,
+        token=token,
+        expiration=expiration,
+        usado=False
+    )
+    db.session.add(reset_token)
+    db.session.commit()
+
+   
+    frontend_url = "http://localhost:3000"  
+    reset_link = f"{frontend_url}/reset-password/{token}"
+
+   
+    send_email(
+        to=email,
+        subject="Restablecimiento de contraseña",
+        body=f"Hola {usuario.nombre},\n\nPara restablecer tu contraseña haz click en el siguiente enlace:\n{reset_link}\n\nSi no solicitaste esto, ignora este correo."
+    )
+
+    return jsonify({"message": "Si el correo existe, se enviaron instrucciones."}), 200
+
+
+@api.route('/auth/reset-password', methods=['POST'])
+def reset_password():
+    data = request.json
+    token = data.get('token')
+    new_password = data.get('newPassword')
+
+    if not token or not new_password:
+        return jsonify({"error": "Token y nueva contraseña son requeridos."}), 400
+
+    reset_token = PasswordResetToken.query.filter_by(token=token, usado=False).first()
+
+    if not reset_token or reset_token.expiration < datetime.utcnow():
+        return jsonify({"error": "Token inválido o expirado."}), 400
+
+    usuario = Usuario.query.get(reset_token.usuario_id)
+
+    if not usuario:
+        return jsonify({"error": "Usuario no encontrado."}), 400
+
+
+    usuario.password = generate_password_hash(new_password)
+    db.session.commit()
+
+
+    reset_token.usado = True
+    db.session.commit()
+
+    return jsonify({"message": "Contraseña actualizada correctamente."}), 200
+
+
 
