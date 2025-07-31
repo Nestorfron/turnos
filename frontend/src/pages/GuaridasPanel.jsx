@@ -10,6 +10,7 @@ import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import LicenciaModal from "../components/LicenciaModal.jsx";
 import EliminarGuardiasModal from "../components/EliminarGuardiasModal.jsx";
 import Loading from "../components/Loading";
+import { Camera } from "lucide-react";
 
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
@@ -75,11 +76,49 @@ const GuardiasPanel = () => {
     });
   };
 
+  const exportarImagen = () => {
+    const contenedor = document.getElementById("contenedor-tablas");
+
+    if (!contenedor) return;
+
+    // Forzar estilos para exportación
+    contenedor.querySelectorAll("td").forEach((td) => {
+      td.style.paddingTop = "4px";
+      td.style.paddingBottom = "8px";
+      td.style.lineHeight = "1.4";
+      td.style.verticalAlign = "middle";
+      td.style.webkitFontSmoothing = "antialiased";
+    });
+
+    contenedor.style.backgroundColor = "#fff"; // Fondo blanco
+
+    html2canvas(contenedor, {
+      scale: 2,
+      backgroundColor: "#fff",
+      useCORS: true,
+    }).then((canvas) => {
+      const imgData = canvas.toDataURL("image/png");
+
+      const link = document.createElement("a");
+      link.href = imgData;
+      link.download = "guardias_completo.png";
+      link.click();
+
+      // Opcional: limpiar estilos forzados si es necesario
+      contenedor.querySelectorAll("td").forEach((td) => {
+        td.style.paddingTop = "";
+        td.style.paddingBottom = "";
+        td.style.lineHeight = "";
+        td.style.verticalAlign = "";
+      });
+    });
+  };
+
   useEffect(() => {
     if (!usuario.token) {
       navigate("/");
-    };
-    
+    }
+
     if (!dependencia?.id) return;
 
     const cargarDatos = async () => {
@@ -446,10 +485,11 @@ const GuardiasPanel = () => {
 
         <div className="ml-auto">
           <button
-            onClick={exportarPDF}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow"
+            onClick={exportarImagen}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow flex items-center gap-2"
           >
-            📄 Exportar a PDF
+            <Camera className="w-5 h-5" />
+            Exportar Imagen
           </button>
         </div>
       </div>
@@ -548,6 +588,17 @@ const GuardiasPanel = () => {
                                 textColor = "text-white";
                                 fontWeight = "font-bold";
                                 textSize = "text-xs";
+                                break;
+                              case "CH":
+                                bgBase = "bg-green-600";
+                                textColor = "text-white";
+                                fontWeight = "font-bold";
+                                textSize = "text-xs";
+                                break;
+                              case "L.Ext":
+                                bgBase = "bg-green-600";
+                                textColor = "text-white";
+                                fontWeight = "font-bold";
                                 break;
                               default:
                                 bgBase = "";
