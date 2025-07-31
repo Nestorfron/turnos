@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useLocation, useNavigate } from "react-router-dom";
 import { fetchData, putData, deleteData, postData } from "../utils/api.js";
@@ -78,13 +78,13 @@ const GuardiasPanel = () => {
   useEffect(() => {
     if (!usuario.token) {
       navigate("/");
-    };
-    
+    }
+  
     if (!dependencia?.id) return;
-
+  
     const cargarDatos = async () => {
       try {
-        // Cargo usuarios y filtro
+        // ✅ Filtra usuarios con Set
         const usuarios = await fetchData("usuarios", usuario.token);
         const filtrados = usuarios.filter(
           (u) =>
@@ -92,22 +92,21 @@ const GuardiasPanel = () => {
             u.rol_jerarquico !== "JEFE_DEPENDENCIA"
         );
         setFuncionarios(filtrados);
-
-        // Cargo guardias y filtro
+  
+        const ids = new Set(filtrados.map((f) => f.id));
+  
         const todasGuardias = await fetchData("guardias", usuario.token);
         const guardiasFiltradas = todasGuardias.filter((g) =>
-          filtrados.some((f) => f.id === g.usuario_id)
+          ids.has(g.usuario_id)
         );
-
-        // Cargo licencias y filtro
+  
         const todasLicencias = await fetchData("licencias", usuario.token);
         const licenciasFiltradas = todasLicencias
-          .filter((l) => filtrados.some((f) => f.id === l.usuario_id))
+          .filter((l) => ids.has(l.usuario_id))
           .map((l) => ({ ...l, tipo: "licencia" }));
-
+  
         setGuardias([...guardiasFiltradas, ...licenciasFiltradas]);
-
-        // Cargo turnos y ordeno
+  
         const turnosData = await fetchData(
           `turnos?dependencia_id=${dependencia.id}`,
           usuario.token
@@ -126,99 +125,91 @@ const GuardiasPanel = () => {
           const ib = ordenDeseado.indexOf(nombreB);
           return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
         });
-
+  
         setTurnos(turnosOrdenados);
       } catch (error) {
         console.error("Error cargando datos:", error);
       }
     };
-
+  
     cargarDatos();
   }, [dependencia, usuario.token]);
-
+  
   useEffect(() => {
     if (usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA") {
       setDaysToShow(14);
     }
   }, [usuario]);
-
-  const getCelda = (usuario, dia) => {
-    const fecha = dia.format("YYYY-MM-DD");
-
-    const registro = guardias.find((g) => {
-      if (g.usuario_id !== usuario.id) return false;
-
-      const inicio = dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD");
-      const fin = dayjs(g.fecha_fin).utc().format("YYYY-MM-DD");
-
-      return fecha >= inicio && fecha <= fin;
+  
+  // ✅ Precalcula lookup
+  const guardiasMap = useMemo(() => {
+    const map = new Map();
+    guardias.forEach((g) => {
+      const inicio = dayjs(g.fecha_inicio).utc();
+      const fin = dayjs(g.fecha_fin).utc();
+      for (let d = inicio; d.isSameOrBefore(fin); d = d.add(1, "day")) {
+        const key = `${g.usuario_id}_${d.format("YYYY-MM-DD")}`;
+        map.set(key, g);
+      }
     });
-
-    if (registro) {
-      if (registro.tipo === "licencia") return "L";
-      if (registro.tipo === "guardia") return "T";
-      return registro.tipo;
-    }
-
-    return "D";
-  };
-
+    return map;
+  }, [guardias]);
+  
+  const getCelda = useCallback(
+    (usuario, dia) => {
+      const key = `${usuario.id}_${dia.format("YYYY-MM-DD")}`;
+      const registro = guardiasMap.get(key);
+  
+      if (registro) {
+        if (registro.tipo === "licencia") return "L";
+        if (registro.tipo === "guardia") return "T";
+        if (registro.tipo === "Compensacion") return "CH";
+        if (registro.tipo === "licencia-ext") return "L.Ext";
+        return registro.tipo;
+      }
+  
+      return "D";
+    },
+    [guardiasMap]
+  );
+  
   const actualizarCelda = async (usuario, dia, nuevoTipo, token) => {
-    if (!token) {
-      return;
-    }
-
+    if (!token) return;
+  
     const fechaStr = dia.format("YYYY-MM-DD");
-
-    const existente = guardias.find((g) => {
-      if (g.usuario_id !== usuario.id) return false;
-      const inicio = dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD");
-      const fin = dayjs(g.fecha_fin).utc().format("YYYY-MM-DD");
-      return fechaStr >= inicio && fechaStr <= fin;
-    });
-
+  
+    const key = `${usuario.id}_${fechaStr}`;
+    const existente = guardiasMap.get(key);
+  
     if (existente) {
       const endpoint =
         existente.tipo === "licencia"
           ? `licencias/${existente.id}`
           : `guardias/${existente.id}`;
-
-      if (typeof token !== "string" || token.trim() === "") {
-        return;
-      }
-
+  
+      if (typeof token !== "string" || token.trim() === "") return;
+  
       const ok = await deleteData(endpoint, token);
-
+  
       if (ok) {
         setGuardias((prev) => prev.filter((g) => g.id !== existente.id));
       } else {
         return;
       }
     }
-
+  
     if (nuevoTipo === "D") return;
-
-    // Revisa si quieres resetear 'dia' para no acumular días en cada loop
+  
     let esBloque =
       (nuevoTipo === "T" || nuevoTipo.toLowerCase() === "brou") &&
       Array.from({ length: 5 }).every((_, i) => {
         const fecha = dia.add(i, "day").format("YYYY-MM-DD");
-
-        const ocupado = guardias.find((g) => {
-          if (g.usuario_id !== usuario.id) return false;
-          const inicio = dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD");
-          const fin = dayjs(g.fecha_fin).utc().format("YYYY-MM-DD");
-          return fecha >= inicio && fecha <= fin;
-        });
-
-        return !ocupado;
+        return !guardiasMap.has(`${usuario.id}_${fecha}`);
       });
-
+  
     if (esBloque) {
       for (let i = 0; i < 5; i++) {
-        // Importante: clonar 'dia' para no modificar el original en cada iteración
         const fecha = dia.add(i, "day").clone();
-
         const nueva = {
           usuario_id: usuario.id,
           fecha_inicio: fecha.format("YYYY-MM-DD"),
@@ -226,11 +217,11 @@ const GuardiasPanel = () => {
           tipo: nuevoTipo,
           comentario: "Agregada manualmente",
         };
-
+  
         const creada = await postData("guardias", nueva, token, {
           "Content-Type": "application/json",
         });
-
+  
         if (creada) setGuardias((prev) => [...prev, creada]);
       }
     } else {
@@ -241,47 +232,38 @@ const GuardiasPanel = () => {
         tipo: nuevoTipo === "T" ? "guardia" : nuevoTipo,
         comentario: "Agregada manualmente",
       };
-
+  
       const creada = await postData("guardias", nueva, token, {
         "Content-Type": "application/json",
       });
-
+  
       if (creada) setGuardias((prev) => [...prev, creada]);
     }
   };
-
+  
   const abrirModalLicencia = (usuario_licencia, dia) => {
     setModalData({
       usuario: usuario_licencia,
       fechaInicio: dia,
     });
   };
-
+  
   const eliminarLicencia = async (usuario_licencia, dia) => {
     const token = usuario.token;
     if (!token) {
       console.error("Token no proporcionado para eliminar licencia");
       return false;
     }
-
+  
     const fechaStr = dia.format("YYYY-MM-DD");
-
-    // Buscar licencia existente para ese día
-    const existente = guardias.find((g) => {
-      if (g.usuario_id !== usuario_licencia.id || g.tipo !== "licencia")
-        return false;
-
-      const inicio = dayjs.utc(g.fecha_inicio).format("YYYY-MM-DD");
-      const fin = dayjs.utc(g.fecha_fin).format("YYYY-MM-DD");
-
-      return fechaStr >= inicio && fechaStr <= fin;
-    });
-
-    if (!existente) {
+    const key = `${usuario_licencia.id}_${fechaStr}`;
+    const existente = guardiasMap.get(key);
+  
+    if (!existente || existente.tipo !== "licencia") {
       console.warn(`No se encontró licencia para el ${fechaStr}`);
       return false;
     }
-
+  
     try {
       const ok = await deleteData(`licencias/${existente.id}`, token);
       if (ok) {
@@ -296,19 +278,14 @@ const GuardiasPanel = () => {
       return false;
     }
   };
-
+  
   const abrirModalEditarLicencia = (usuario, dia) => {
     const fechaStr = dia.format("YYYY-MM-DD");
-
-    const existente = guardias.find((g) => {
-      if (g.usuario_id !== usuario.id || g.tipo !== "licencia") return false;
-      const inicio = dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD");
-      const fin = dayjs(g.fecha_fin).utc().format("YYYY-MM-DD");
-      return fechaStr >= inicio && fechaStr <= fin;
-    });
-
-    if (!existente) return;
-
+    const key = `${usuario.id}_${fechaStr}`;
+    const existente = guardiasMap.get(key);
+  
+    if (!existente || existente.tipo !== "licencia") return;
+  
     setModalData({
       usuario,
       id: existente.id,
@@ -317,27 +294,25 @@ const GuardiasPanel = () => {
       motivo: existente.motivo,
     });
   };
-
+  
   const handleLicenciaSubmit = async ({ fechaFin, motivo }) => {
     try {
       const usuarioId = modalData.usuario.id;
       const fechaInicio = dayjs(modalData.fechaInicio);
       const fechaFinDayjs = dayjs(fechaFin);
-
-      // 1️⃣ Buscar guardias que se superpongan con la licencia
+  
       const guardiasAEliminar = guardias.filter((g) => {
         if (g.usuario_id !== usuarioId || g.tipo !== "guardia") return false;
-
+  
         const inicio = dayjs.utc(g.fecha_inicio);
         const fin = dayjs.utc(g.fecha_fin);
-
+  
         return (
           inicio.isSameOrBefore(fechaFinDayjs, "day") &&
           fin.isSameOrAfter(fechaInicio, "day")
         );
       });
-
-      // 2️⃣ Borrar las guardias superpuestas en paralelo
+  
       await Promise.all(
         guardiasAEliminar.map(async (g) => {
           const ok = await deleteData(`guardias/${g.id}`, usuario.token);
@@ -348,8 +323,7 @@ const GuardiasPanel = () => {
           }
         })
       );
-
-      // 3️⃣ Preparar la licencia
+  
       const nuevaLicencia = {
         usuario_id: usuarioId,
         fecha_inicio: fechaInicio.utc().format("YYYY-MM-DD"),
@@ -357,12 +331,10 @@ const GuardiasPanel = () => {
         motivo,
         estado: "activo",
       };
-
-      // 4️⃣ Crear licencia en backend
+  
       const creada = await postData("licencias", nuevaLicencia, usuario.token);
-
+  
       if (creada) {
-        // 5️⃣ Agregar la licencia al estado local como "licencia"
         setGuardias((prev) => [...prev, { ...creada, tipo: "licencia" }]);
         setModalData(null);
       } else {
@@ -372,28 +344,28 @@ const GuardiasPanel = () => {
       console.error("❌ Error en handleLicenciaSubmit:", error);
     }
   };
-
+  
   const eliminarGuardiasFiltradas = async ({ desde, hasta, usuario_ids }) => {
     const desdeD = dayjs.utc(desde).startOf("day");
     const hastaD = dayjs.utc(hasta).endOf("day");
-
+  
     const idsObjetivo =
       usuario_ids === "todos"
         ? funcionarios
             .filter((f) => f.turno_id === modalEliminar.turno.id)
             .map((f) => f.id)
         : usuario_ids;
-
+  
     const guardiasFiltradas = guardias.filter((g) => {
       if (g.tipo !== "guardia") return false;
       if (!idsObjetivo.includes(g.usuario_id)) return false;
-
+  
       const inicio = dayjs.utc(g.fecha_inicio).startOf("day");
       if (!inicio.isValid()) return false;
-
+  
       return inicio.isSameOrAfter(desdeD) && inicio.isSameOrBefore(hastaD);
     });
-
+  
     for (const g of guardiasFiltradas) {
       const ok = await deleteData(`guardias/${g.id}`, usuario.token);
       if (ok) {
@@ -402,14 +374,28 @@ const GuardiasPanel = () => {
         console.error("Error al eliminar guardia", g.id);
       }
     }
-
+  
     setModalEliminar(null);
   };
-
-  const funcionariosPorTurno = (turnoId) =>
-    funcionarios
-      .filter((f) => f.turno_id === turnoId)
-      .sort((a, b) => (b.grado || 0) - (a.grado || 0));
+  
+  // ✅ Precalcula funcionarios por turno
+  const funcionariosPorTurnoMap = useMemo(() => {
+    const map = new Map();
+    for (const f of funcionarios) {
+      if (!map.has(f.turno_id)) map.set(f.turno_id, []);
+      map.get(f.turno_id).push(f);
+    }
+    for (const [, lista] of map) {
+      lista.sort((a, b) => (b.grado || 0) - (a.grado || 0));
+    }
+    return map;
+  }, [funcionarios]);
+  
+  const funcionariosPorTurno = useCallback(
+    (turnoId) => funcionariosPorTurnoMap.get(turnoId) || [],
+    [funcionariosPorTurnoMap]
+  );
+  
 
   return (
     <div className="p-6 space-y-2 bg-gray-50 min-h-screen">
@@ -549,15 +535,23 @@ const GuardiasPanel = () => {
                                 fontWeight = "font-bold";
                                 textSize = "text-xs";
                                 break;
+                              case "CH":
+                                bgBase = "bg-green-600";
+                                textColor = "text-white";
+                                fontWeight = "font-bold";
+                                textSize = "text-xs";
+                                break;
+                              case "L.Ext":
+                                bgBase = "bg-green-600";
+                                textColor = "text-white";
+                                fontWeight = "font-bold";
+                                break;
                               default:
                                 bgBase = "";
                                 textColor = "text-black";
                                 fontWeight = "font-normal";
                             }
 
-                            const fondoExtra = esFinDeSemana
-                              ? ""
-                              : "bg-opacity-100";
 
                             return (
                               <td
@@ -672,7 +666,7 @@ const GuardiasPanel = () => {
               Seleccionar tipo de guardia
             </h3>
 
-            {["D", "T", "1ro", "2do", "3er", "CURSO", "BROU", "CUSTODIA"].map(
+            {["D", "T", "1ro", "2do", "3er", "CURSO", "BROU", "CUSTODIA", "CH", "L.Ext"].map(
               (tipo) => (
                 <button
                   key={tipo}
@@ -692,6 +686,10 @@ const GuardiasPanel = () => {
                       ? "bg-blue-600 hover:bg-blue-700 text-white font-bold"
                       : tipo === "BROU"
                       ? "bg-white hover:bg-gray-100 text-black"
+                      : tipo === "CH"
+                      ? "bg-green-600 hover:bg-green-700 text-white font-bold"
+                      : tipo === "L.Ext"
+                      ? "bg-green-600 hover:bg-green-700 text-white font-bold"
                       : "bg-blue-100 hover:bg-blue-200 text-blue-900"
                   } font-medium py-2 px-4 rounded transition`}
                 >

@@ -15,7 +15,6 @@ const FuncionarioPanel = () => {
   const [funcionarios, setFuncionarios] = useState([]);
   const [guardias, setGuardias] = useState([]);
   const [licencias, setLicencias] = useState([]);
-  const [cantidadFuncionarios, setCantidadFuncionarios] = useState(0);
 
   useEffect(() => {
     if (usuario?.rol_jerarquico !== "FUNCIONARIO") {
@@ -48,14 +47,14 @@ const FuncionarioPanel = () => {
           turnos: dep.turnos,
           usuarios: dep.usuarios,
         });
-        
+
         setTurnos(dep.turnos || []);
         setFuncionarios(funcs);
-        setCantidadFuncionarios(dep.usuarios.length);
 
-        // Guardias y licencias
-        const guardiasData = await fetchData("guardias");
-        const licenciasData = await fetchData("licencias");
+        const [guardiasData, licenciasData] = await Promise.all([
+          fetchData("guardias"),
+          fetchData("licencias"),
+        ]);
 
         if (guardiasData) {
           const guardiasFiltradas = guardiasData.filter((g) =>
@@ -83,39 +82,59 @@ const FuncionarioPanel = () => {
   }, [turnos, usuario]);
 
   const dias = useMemo(() => {
-    return Array.from({ length: 7 }).map((_, i) => dayjs().add(i, "day"));
+    const hoy = dayjs().startOf("day");
+    return Array.from({ length: 7 }).map((_, i) => hoy.add(i, "day"));
   }, []);
 
+  const cantidadFuncionarios = useMemo(
+    () => dependencia?.usuarios?.length || 0,
+    [dependencia]
+  );
 
   const funcionariosPorTurno = useCallback(
     (turnoId) => {
-      return funcionarios.filter((f) => f.turno_id === turnoId).sort((a, b) => (b.grado || 0) - (a.grado || 0));
+      return funcionarios
+        .filter((f) => f.turno_id === turnoId)
+        .sort((a, b) => (b.grado || 0) - (a.grado || 0));
     },
     [funcionarios]
   );
 
+  // OPTIMIZA lookups
+  const licenciasMap = useMemo(() => {
+    const map = new Map();
+    licencias.forEach((l) => {
+      const inicio = dayjs(l.fecha_inicio).utc();
+      const fin = dayjs(l.fecha_fin).utc();
+      for (let d = inicio; d.isSameOrBefore(fin); d = d.add(1, "day")) {
+        const key = `${l.usuario_id}_${d.format("YYYY-MM-DD")}`;
+        map.set(key, l);
+      }
+    });
+    return map;
+  }, [licencias]);
 
-
-  
+  const guardiasMap = useMemo(() => {
+    const map = new Map();
+    guardias.forEach((g) => {
+      const inicio = dayjs(g.fecha_inicio).utc();
+      const fin = dayjs(g.fecha_fin).utc();
+      for (let d = inicio; d.isSameOrBefore(fin); d = d.add(1, "day")) {
+        const key = `${g.usuario_id}_${d.format("YYYY-MM-DD")}`;
+        map.set(key, g);
+      }
+    });
+    return map;
+  }, [guardias]);
 
   const getCelda = useCallback(
     (usuario, dia) => {
       const fecha = dia.format("YYYY-MM-DD");
+      const key = `${usuario.id}_${fecha}`;
 
-      const licencia = licencias.find((l) => {
-        const inicio = dayjs(l.fecha_inicio).utc().format("YYYY-MM-DD");
-        const fin = dayjs(l.fecha_fin).utc().format("YYYY-MM-DD");
-        return l.usuario_id === usuario.id && fecha >= inicio && fecha <= fin;
-      });
+      if (licenciasMap.has(key)) return "L";
 
-      if (licencia) return "L";
-
-      const registro = guardias.find((g) => {
-        const inicio = dayjs(g.fecha_inicio).utc().format("YYYY-MM-DD");
-        const fin = dayjs(g.fecha_fin).utc().format("YYYY-MM-DD");
-        return g.usuario_id === usuario.id && fecha >= inicio && fecha <= fin;
-      });
-
+      const registro = guardiasMap.get(key);
       if (registro) {
         if (registro.tipo === "guardia") return "T";
         return registro.tipo;
@@ -123,7 +142,7 @@ const FuncionarioPanel = () => {
 
       return "D";
     },
-    [guardias, licencias]
+    [licenciasMap, guardiasMap]
   );
 
   if (!dependencia) return <Loading />;
@@ -191,10 +210,7 @@ const FuncionarioPanel = () => {
                     </h2>
                   </th>
                   {dias.map((d) => (
-                    <th
-                      key={d.format("YYYY-MM-DD")}
-                      className="border px-2 py-1"
-                    >
+                    <th key={d.format("YYYY-MM-DD")} className="border px-2 py-1">
                       {d.format("ddd")} <br /> {d.format("D")}
                     </th>
                   ))}
