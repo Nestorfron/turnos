@@ -44,7 +44,7 @@ const LoginForm = () => {
           navigate("/jefe-zona");
         } else if (data.usuario.rol_jerarquico === "JEFE_DEPENDENCIA") {
           navigate(`/escalafon-servicio`);
-        }else if (data.usuario.rol_jerarquico === "FUNCIONARIO") {
+        } else if (data.usuario.rol_jerarquico === "FUNCIONARIO") {
           navigate("dependencia/" + data.usuario.dependencia_id);
         } else if (data.usuario.rol_jerarquico === "ADMINISTRADOR") {
           navigate("/admin");
@@ -91,6 +91,14 @@ const LoginForm = () => {
       >
         {loading ? "Ingresando..." : "Iniciar Sesión"}
       </button>
+      <p className="text-sm mt-4 text-center">
+        <a
+          href="/forgot-password"
+          className="text-blue-600 underline hover:text-blue-800"
+        >
+          ¿Olvidaste tu contraseña?
+        </a>
+      </p>
     </form>
   );
 };

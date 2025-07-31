@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { postData, fetchData, putData } from "../utils/api";
 
-const DependenciaModal = ({ dependencia, onClose, onSubmitted, isEditing }) => {
+const DependenciaModal = ({ dependencia, onClose, onSubmitted, isEditing, token }) => {
   const [formData, setFormData] = useState({
     nombre: "",
     descripcion: "",
@@ -10,8 +10,12 @@ const DependenciaModal = ({ dependencia, onClose, onSubmitted, isEditing }) => {
   const [zonas, setZonas] = useState([]);
 
   useEffect(() => {
-    fetchData("zonas", setZonas);
-  }, []);
+    const cargarZonas = async () => {
+      const data = await fetchData("zonas", token);
+      if (data) setZonas(data);
+    };
+    cargarZonas();
+  }, [token]);
 
   useEffect(() => {
     if (dependencia) {
@@ -37,9 +41,9 @@ const DependenciaModal = ({ dependencia, onClose, onSubmitted, isEditing }) => {
     try {
       let result;
       if (isEditing && dependencia?.id) {
-        result = await putData(`dependencias/${dependencia.id}`, formData);
+        result = await putData(`dependencias/${dependencia.id}`, formData, token);
       } else {
-        result = await postData("dependencias", formData);
+        result = await postData("dependencias", formData, token);
       }
 
       if (result) {
