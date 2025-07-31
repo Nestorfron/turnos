@@ -307,6 +307,16 @@ const EscalafonServicio = () => {
                         text = "text-white";
                         fw = "font-bold";
                         ts = "text-xs";
+                      }else if (valor === "CH") {
+                        bg = "bg-green-600";
+                        text = "text-white";
+                        fw = "font-bold";
+                        ts = "text-xs";
+                      }else if (valor === "L.Ext") {
+                        bg = "bg-green-600";
+                        text = "text-white";
+                        fw = "font-bold";
+                        ts = "text-xs";
                       }
                       return (
                         <tr key={f.id}>
