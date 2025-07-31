@@ -48,7 +48,7 @@ const FuncionarioPanel = () => {
           turnos: dep.turnos,
           usuarios: dep.usuarios,
         });
-
+        
         setTurnos(dep.turnos || []);
         setFuncionarios(funcs);
         setCantidadFuncionarios(dep.usuarios.length);
@@ -86,12 +86,17 @@ const FuncionarioPanel = () => {
     return Array.from({ length: 7 }).map((_, i) => dayjs().add(i, "day"));
   }, []);
 
+
   const funcionariosPorTurno = useCallback(
     (turnoId) => {
-      return funcionarios.filter((f) => f.turno_id === turnoId);
+      return funcionarios.filter((f) => f.turno_id === turnoId).sort((a, b) => (b.grado || 0) - (a.grado || 0));
     },
     [funcionarios]
   );
+
+
+
+  
 
   const getCelda = useCallback(
     (usuario, dia) => {
