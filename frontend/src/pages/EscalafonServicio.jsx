@@ -6,9 +6,10 @@ import { useAppContext } from "../context/AppContext";
 import { fetchData, putData } from "../utils/api";
 import { Pencil, Home } from "lucide-react";
 import AsignarTurnoModal from "../components/AsignarTurnoModal";
+import { estaTokenExpirado } from "../utils/tokenUtils.js";
 
 const EscalafonServicio = () => {
-  const { usuario } = useAppContext();
+  const { usuario, logout } = useAppContext();
   const location = useLocation();
   const { id } = useParams();
   const navigate = useNavigate();
@@ -63,6 +64,10 @@ const EscalafonServicio = () => {
   };
 
   useEffect(() => {
+    if (estaTokenExpirado(usuario.token)) {
+      logout();
+      navigate("/");
+    }
     const cargarDependencia = async () => {
       try {
         if (location.state?.sec) {

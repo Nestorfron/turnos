@@ -9,7 +9,7 @@ import { fetchData, deleteData } from "../utils/api.js";
 import Loading from "../components/Loading.jsx";
 
 const AdminPanel = () => {
-  const { usuario } = useAppContext();
+  const { usuario, logout } = useAppContext();
   const navigate = useNavigate();
 
   const [jefatura, setJefatura] = useState(null);
@@ -28,6 +28,10 @@ const AdminPanel = () => {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
+    if (estaTokenExpirado(usuario.token)) {
+      logout();
+      navigate("/");
+    }
     if (!usuario?.token || usuario?.rol_jerarquico !== "ADMINISTRADOR") {
       navigate("/");
       return;

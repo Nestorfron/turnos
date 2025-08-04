@@ -5,9 +5,10 @@ import { fetchData } from "../utils/api";
 import Table from "../components/Table";
 import Loading from "../components/Loading";
 import dayjs from "dayjs";
+import { estaTokenExpirado } from "../utils/tokenUtils.js";
 
 const FuncionarioPanel = () => {
-  const { usuario } = useAppContext();
+  const { usuario, logout } = useAppContext();
   const navigate = useNavigate();
 
   const [dependencia, setDependencia] = useState(null);
@@ -17,6 +18,10 @@ const FuncionarioPanel = () => {
   const [licencias, setLicencias] = useState([]);
 
   useEffect(() => {
+    if (estaTokenExpirado(usuario.token)) {
+      logout();
+      navigate("/");
+    }
     if (usuario?.rol_jerarquico !== "FUNCIONARIO") {
       navigate("/");
       return;

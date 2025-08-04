@@ -11,6 +11,7 @@ import LicenciaModal from "../components/LicenciaModal.jsx";
 import EliminarGuardiasModal from "../components/EliminarGuardiasModal.jsx";
 import Loading from "../components/Loading";
 import { Camera } from "lucide-react";
+import { estaTokenExpirado } from "../utils/tokenUtils.js";
 
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
@@ -21,7 +22,9 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
 const GuardiasPanel = () => {
-  const { usuario } = useAppContext();
+
+
+  const { usuario, logout } = useAppContext();
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -42,6 +45,7 @@ const GuardiasPanel = () => {
   const dias = Array.from({ length: daysToShow }, (_, i) =>
     startDate.add(i, "day")
   );
+
 
   const exportarPDF = () => {
     const contenedor = document.getElementById("contenedor-tablas");
@@ -80,11 +84,11 @@ const GuardiasPanel = () => {
     const contenedor = document.getElementById("contenedor-tablas");
     if (!contenedor) return;
   
-    // Forzar ancho mínimo
+    
     const prevWidth = contenedor.style.minWidth;
-    contenedor.style.minWidth = "1200px"; // por ejemplo
+    contenedor.style.minWidth = "1200px"; 
   
-    // Forzar estilos de celdas como ya hacés
+    
     contenedor.querySelectorAll("td").forEach((td) => {
       td.style.paddingTop = "8px";
       td.style.paddingBottom = "8px";
@@ -107,14 +111,14 @@ const GuardiasPanel = () => {
       link.download = "guardias_completo.png";
       link.click();
   
-      // Limpiar estilos forzados
+      
       contenedor.querySelectorAll("td").forEach((td) => {
         td.style.paddingTop = "";
         td.style.paddingBottom = "";
         td.style.lineHeight = "";
         td.style.verticalAlign = "";
       });
-      contenedor.style.minWidth = prevWidth; // restaurar
+      contenedor.style.minWidth = prevWidth; 
     });
   };
   
@@ -123,6 +127,10 @@ const GuardiasPanel = () => {
     if (!usuario.token) {
       navigate("/");
     };
+    if (estaTokenExpirado(usuario.token)) {
+      logout();
+      navigate("/");
+    }
     
     if (!dependencia?.id) return;
   
@@ -142,13 +150,18 @@ const GuardiasPanel = () => {
         const guardiasFiltradas = todasGuardias.filter((g) =>
           ids.has(g.usuario_id)
         );
+
+        const todasLicenciasMedicas = await fetchData("licencias-medicas", usuario.token);
+        const licenciasFiltradasMedicas = todasLicenciasMedicas
+          .filter((l) => ids.has(l.usuario_id))
+          .map((l) => ({ ...l, tipo: "licencia_medica" }));
   
         const todasLicencias = await fetchData("licencias", usuario.token);
         const licenciasFiltradas = todasLicencias
           .filter((l) => ids.has(l.usuario_id))
           .map((l) => ({ ...l, tipo: "licencia" }));
   
-        setGuardias([...guardiasFiltradas, ...licenciasFiltradas]);
+        setGuardias([...guardiasFiltradas, ...licenciasFiltradas, ...licenciasFiltradasMedicas]);
   
         const turnosData = await fetchData(
           `turnos?dependencia_id=${dependencia.id}`,
@@ -204,6 +217,7 @@ const GuardiasPanel = () => {
   
       if (registro) {
         if (registro.tipo === "licencia") return "L";
+        if (registro.tipo === "licencia_medica") return "L.Medica";
         if (registro.tipo === "guardia") return "T";
         if (registro.tipo === "Compensacion") return "CH";
         if (registro.tipo === "licencia-ext") return "L.Ext";
@@ -220,15 +234,19 @@ const GuardiasPanel = () => {
     if (!token) return;
   
     const fechaStr = dia.format("YYYY-MM-DD");
-  
     const key = `${usuario.id}_${fechaStr}`;
     const existente = guardiasMap.get(key);
   
     if (existente) {
-      const endpoint =
-        existente.tipo === "licencia"
-          ? `licencias/${existente.id}`
-          : `guardias/${existente.id}`;
+      let endpoint = "";
+  
+      if (existente.tipo === "licencia") {
+        endpoint = `licencias/${existente.id}`;
+      } else if (existente.tipo === "licencia_medica") {
+        endpoint = `licencias-medicas/${existente.id}`;
+      } else {
+        endpoint = `guardias/${existente.id}`;
+      }
   
       if (typeof token !== "string" || token.trim() === "") return;
   
@@ -241,7 +259,6 @@ const GuardiasPanel = () => {
       }
     }
   
-    // ✅ Nuevo comportamiento para tipo "D"
     if (nuevoTipo === "D") {
       const nueva = {
         usuario_id: usuario.id,
@@ -301,6 +318,13 @@ const GuardiasPanel = () => {
   };
   
   
+  const abrirModalLicencia = (usuario_licencia, dia) => {
+    setModalData({
+      usuario: usuario_licencia,
+      fechaInicio: dia,
+    });
+  };
+  
   const eliminarLicencia = async (usuario_licencia, dia) => {
     const token = usuario.token;
     if (!token) {
@@ -312,18 +336,28 @@ const GuardiasPanel = () => {
     const key = `${usuario_licencia.id}_${fechaStr}`;
     const existente = guardiasMap.get(key);
   
-    if (!existente || existente.tipo !== "licencia") {
-      console.warn(`No se encontró licencia para el ${fechaStr}`);
+    
+    if (
+      !existente ||
+      (existente.tipo !== "licencia" && existente.tipo !== "licencia_medica")
+    ) {
+      console.warn(`No se encontró licencia válida para el ${fechaStr}`);
       return false;
     }
   
+    
+    const endpoint =
+      existente.tipo === "licencia_medica"
+        ? `licencias-medicas/${existente.id}`
+        : `licencias/${existente.id}`;
+  
     try {
-      const ok = await deleteData(`licencias/${existente.id}`, token);
+      const ok = await deleteData(endpoint, token);
       if (ok) {
         setGuardias((prev) => prev.filter((g) => g.id !== existente.id));
         return true;
       } else {
-        console.error(`❌ Error al borrar licencia ID ${existente.id}`);
+        console.error(`❌ Error al borrar ${existente.tipo} ID ${existente.id}`);
         return false;
       }
     } catch (error) {
@@ -332,12 +366,18 @@ const GuardiasPanel = () => {
     }
   };
   
+
+  
   const abrirModalEditarLicencia = (usuario, dia) => {
     const fechaStr = dia.format("YYYY-MM-DD");
     const key = `${usuario.id}_${fechaStr}`;
     const existente = guardiasMap.get(key);
   
-    if (!existente || existente.tipo !== "licencia") return;
+    if (
+      !existente ||
+      (existente.tipo !== "licencia" && existente.tipo !== "licencia_medica")
+    )
+      return;
   
     setModalData({
       usuario,
@@ -345,15 +385,19 @@ const GuardiasPanel = () => {
       fechaInicio: existente.fecha_inicio,
       fechaFin: existente.fecha_fin,
       motivo: existente.motivo,
+      tipo: existente.tipo,
     });
   };
   
-  const handleLicenciaSubmit = async ({ fechaFin, motivo }) => {
+
+  
+  const handleLicenciaSubmit = async ({ fechaFin, motivo, esMedica }) => {
     try {
       const usuarioId = modalData.usuario.id;
       const fechaInicio = dayjs(modalData.fechaInicio);
       const fechaFinDayjs = dayjs(fechaFin);
   
+      
       const guardiasAEliminar = guardias.filter((g) => {
         if (g.usuario_id !== usuarioId || g.tipo !== "guardia") return false;
   
@@ -377,6 +421,7 @@ const GuardiasPanel = () => {
         })
       );
   
+      
       const nuevaLicencia = {
         usuario_id: usuarioId,
         fecha_inicio: fechaInicio.utc().format("YYYY-MM-DD"),
@@ -385,10 +430,15 @@ const GuardiasPanel = () => {
         estado: "activo",
       };
   
-      const creada = await postData("licencias", nuevaLicencia, usuario.token);
+      
+      const endpoint = esMedica ? "licencias-medicas" : "licencias";
+  
+      
+      const creada = await postData(endpoint, nuevaLicencia, usuario.token);
   
       if (creada) {
-        setGuardias((prev) => [...prev, { ...creada, tipo: "licencia" }]);
+        const tipo = esMedica ? "licencia_medica" : "licencia";
+        setGuardias((prev) => [...prev, { ...creada, tipo }]);
         setModalData(null);
       } else {
         console.error("❌ Error al guardar licencia");
@@ -397,6 +447,7 @@ const GuardiasPanel = () => {
       console.error("❌ Error en handleLicenciaSubmit:", error);
     }
   };
+  
   
   const eliminarGuardiasFiltradas = async ({ desde, hasta, usuario_ids }) => {
     const desdeD = dayjs.utc(desde).startOf("day");
@@ -431,7 +482,7 @@ const GuardiasPanel = () => {
     setModalEliminar(null);
   };
   
-  // ✅ Precalcula funcionarios por turno
+  
   const funcionariosPorTurnoMap = useMemo(() => {
     const map = new Map();
     for (const f of funcionarios) {
@@ -537,7 +588,7 @@ const GuardiasPanel = () => {
                             let bgBase = "";
                             let textColor = "text-black";
                             let fontWeight = "font-normal";
-                            let textSize = "text-sm";
+                            let textSize = "text-xs";
 
                             switch (valor) {
                               case "D":
@@ -574,7 +625,6 @@ const GuardiasPanel = () => {
                                 bgBase = "bg-green-600";
                                 textColor = "text-white";
                                 fontWeight = "font-bold";
-                                textSize = "text-xs";
                                 break;
                               case "BROU":
                                 bgBase = "bg-white";
@@ -586,15 +636,18 @@ const GuardiasPanel = () => {
                                 bgBase = "bg-blue-600";
                                 textColor = "text-white";
                                 fontWeight = "font-bold";
-                                textSize = "text-xs";
                                 break;
                               case "CH":
                                 bgBase = "bg-green-600";
                                 textColor = "text-white";
                                 fontWeight = "font-bold";
-                                textSize = "text-xs";
                                 break;
                               case "L.Ext":
+                                bgBase = "bg-green-600";
+                                textColor = "text-white";
+                                fontWeight = "font-bold";
+                                break;
+                              case "L.Medica":
                                 bgBase = "bg-green-600";
                                 textColor = "text-white";
                                 fontWeight = "font-bold";
@@ -603,7 +656,6 @@ const GuardiasPanel = () => {
                                 bgBase = "bg-gray-300";
                                 textColor = "text-gray-300";
                                 fontWeight = "font-normal";
-                                textSize = "text-xs";
                                 break;
                               default:
                                 bgBase = "";
@@ -618,21 +670,12 @@ const GuardiasPanel = () => {
                                 className={`border py-1 h-5 relative group ${bgBase} ${textColor} ${fontWeight} ${textSize}`}
                               >
                                 {valor}
-                                {valor === "L"
+                                {valor === "L" || valor === "L.Medica"
                                   ? usuario?.rol_jerarquico ===
                                       "JEFE_DEPENDENCIA" && (
                                       <>
                                         <button
-                                          onClick={() =>
-                                            abrirModalEditarLicencia(f, d)
-                                          }
-                                          className="absolute top-0 right-6 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-blue-700 transition"
-                                          title="Editar Licencia"
-                                        >
-                                          ✏️
-                                        </button>
-                                        <button
-                                          onClick={() => eliminarLicencia(f, d)}
+                                          onClick={() =>  eliminarLicencia(f, d) }
                                           className="absolute top-0 right-0 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-red-700 transition"
                                           title="Eliminar Licencia"
                                         >
