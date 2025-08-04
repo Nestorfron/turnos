@@ -169,9 +169,9 @@ const EscalafonServicio = () => {
       if (registro) {
         if (registro.tipo === "guardia" || registro.tipo === "T")
           return "En Servicio";
+        if (registro.tipo === "descanso") return "Descanso";
         return registro.tipo;
       }
-      return "Descanso";
     },
     [licencias, guardias]
   );
@@ -317,8 +317,12 @@ const EscalafonServicio = () => {
                         text = "text-white";
                         fw = "font-bold";
                         ts = "text-xs";
-                      }
-                      return (
+                      }else if (valor === "-") {
+                        bg = "bg-gray-300";
+                        text = "text-gray-300";
+                        fw = "font-normal";
+                        ts = "text-xs";
+                      }return (
                         <tr key={f.id}>
                           <td className="border px-2 text-center w-20">
                             G{f.grado}

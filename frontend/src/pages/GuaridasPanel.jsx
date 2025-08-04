@@ -128,7 +128,6 @@ const GuardiasPanel = () => {
   
     const cargarDatos = async () => {
       try {
-        // ✅ Filtra usuarios con Set
         const usuarios = await fetchData("usuarios", usuario.token);
         const filtrados = usuarios.filter(
           (u) =>
@@ -185,7 +184,6 @@ const GuardiasPanel = () => {
     }
   }, [usuario]);
   
-  // ✅ Precalcula lookup
   const guardiasMap = useMemo(() => {
     const map = new Map();
     guardias.forEach((g) => {
@@ -209,10 +207,11 @@ const GuardiasPanel = () => {
         if (registro.tipo === "guardia") return "T";
         if (registro.tipo === "Compensacion") return "CH";
         if (registro.tipo === "licencia-ext") return "L.Ext";
+        if (registro.tipo === "descanso") return "D";
         return registro.tipo;
       }
   
-      return "D";
+      return "-";
     },
     [guardiasMap]
   );
@@ -242,7 +241,23 @@ const GuardiasPanel = () => {
       }
     }
   
-    if (nuevoTipo === "D") return;
+    // ✅ Nuevo comportamiento para tipo "D"
+    if (nuevoTipo === "D") {
+      const nueva = {
+        usuario_id: usuario.id,
+        fecha_inicio: fechaStr,
+        fecha_fin: fechaStr,
+        tipo: "descanso",
+        comentario: "Agregada manualmente",
+      };
+  
+      const creada = await postData("guardias", nueva, token, {
+        "Content-Type": "application/json",
+      });
+  
+      if (creada) setGuardias((prev) => [...prev, creada]);
+      return;
+    }
   
     let esBloque =
       (nuevoTipo === "T" || nuevoTipo.toLowerCase() === "brou") &&
@@ -285,12 +300,6 @@ const GuardiasPanel = () => {
     }
   };
   
-  const abrirModalLicencia = (usuario_licencia, dia) => {
-    setModalData({
-      usuario: usuario_licencia,
-      fechaInicio: dia,
-    });
-  };
   
   const eliminarLicencia = async (usuario_licencia, dia) => {
     const token = usuario.token;
@@ -455,7 +464,6 @@ const GuardiasPanel = () => {
             value={daysToShow}
             onChange={(e) => setDaysToShow(parseInt(e.target.value))}
             className="border rounded px-2 py-1"
-            disabled={usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA"}
           >
             <option value={7}>1 Semana</option>
             <option value={14}>2 Semanas</option>
@@ -511,7 +519,7 @@ const GuardiasPanel = () => {
                             key={d.format("YYYY-MM-DD")}
                             className="border px-2 py-1"
                           >
-                            {d.format("ddd")} <br /> {d.format("D")}
+                            {d.format("DD")}/{d.format("MM")} <br /> {d.format("ddd")}
                           </th>
                         ))}
                       </tr>
@@ -590,6 +598,12 @@ const GuardiasPanel = () => {
                                 bgBase = "bg-green-600";
                                 textColor = "text-white";
                                 fontWeight = "font-bold";
+                                break;
+                              case "-":
+                                bgBase = "bg-gray-300";
+                                textColor = "text-gray-300";
+                                fontWeight = "font-normal";
+                                textSize = "text-xs";
                                 break;
                               default:
                                 bgBase = "";
