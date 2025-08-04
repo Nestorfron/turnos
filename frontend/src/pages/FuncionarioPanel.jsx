@@ -18,13 +18,13 @@ const FuncionarioPanel = () => {
   const [licencias, setLicencias] = useState([]);
 
   useEffect(() => {
-    if (estaTokenExpirado(usuario.token)) {
-      logout();
-      navigate("/");
-    }
     if (usuario?.rol_jerarquico !== "FUNCIONARIO") {
       navigate("/");
       return;
+    }
+    if (estaTokenExpirado(usuario.token)) {
+      logout();
+      navigate("/");
     }
 
     const cargarDatos = async () => {
