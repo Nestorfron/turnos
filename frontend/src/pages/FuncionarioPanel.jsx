@@ -137,10 +137,11 @@ const FuncionarioPanel = () => {
       const registro = guardiasMap.get(key);
       if (registro) {
         if (registro.tipo === "guardia") return "T";
+        if (registro.tipo === "descanso") return "D";
         return registro.tipo;
       }
 
-      return "D";
+      return "-";
     },
     [licenciasMap, guardiasMap]
   );
@@ -264,6 +265,12 @@ const FuncionarioPanel = () => {
                             bgBase = "bg-blue-600";
                             textColor = "text-white";
                             fontWeight = "font-bold";
+                            textSize = "text-xs";
+                            break;
+                          case "-":
+                            bgBase = "bg-gray-300";
+                            textColor = "text-gray-300";
+                            fontWeight = "font-normal";
                             textSize = "text-xs";
                             break;
                           default:
