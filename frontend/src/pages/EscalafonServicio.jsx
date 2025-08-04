@@ -410,12 +410,15 @@ const EscalafonServicio = () => {
                         <td className="border px-3 py-2">{turnoNombre}</td>
                         <td className="flex border px-3 py-2">
                           {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ? (
+                            <><Link to={`/funcionario/${f.id}/detalle`} className="text-blue-600 hover:underline">Ver Detalle</Link>
+
                             <button
                               onClick={() => abrirModalEditarAsignacion(f)}
                               className="m-auto p-1 text-yellow-600 rounded"
                             >
                               <Pencil size={18} />
-                            </button>
+                            </button></>
+                            
                           ) : (
                             <span className="text-gray-500">Sin acciones.</span>
                           )}

@@ -446,6 +446,12 @@ def listar_usuarios():
     data = Usuario.query.all()
     return jsonify([x.serialize() for x in data]), 200
 
+@api.route('/usuarios/<int:id>', methods=['GET'])
+def obtener_usuario(id):
+    usuario = Usuario.query.get_or_404(id)
+    return jsonify(usuario.serialize()), 200
+
+
 @api.route('/usuarios/<int:id>', methods=['PUT'])
 @jwt_required()
 def actualizar_usuario(id):
