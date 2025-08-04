@@ -6,10 +6,12 @@ const LicenciaModal = ({ usuario, fechaInicio, onClose, onSubmit }) => {
 
   const [motivo, setMotivo] = useState("");
   const [fechaFin, setFechaFin] = useState(inicioFormateado);
+  const [esMedica, setEsMedica] = useState(false);
 
   useEffect(() => {
     setMotivo("Licencia agregada manualmente");
     setFechaFin(inicioFormateado);
+    setEsMedica(false);
   }, [fechaInicio]);
 
   return (
@@ -22,6 +24,19 @@ const LicenciaModal = ({ usuario, fechaInicio, onClose, onSubmit }) => {
         <p className="text-gray-700">
           Fecha de inicio: <strong>{inicioFormateado}</strong>
         </p>
+
+        <div className="flex items-center space-x-2">
+          <input
+            id="esMedica"
+            type="checkbox"
+            checked={esMedica}
+            onChange={(e) => setEsMedica(e.target.checked)}
+          />
+          <label htmlFor="esMedica" className="text-sm text-gray-700">
+            Es licencia médica
+          </label>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700">Fecha de fin</label>
           <input
@@ -32,6 +47,7 @@ const LicenciaModal = ({ usuario, fechaInicio, onClose, onSubmit }) => {
             className="border border-gray-300 px-2 py-1 rounded w-full"
           />
         </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700">Motivo</label>
           <textarea
@@ -40,6 +56,7 @@ const LicenciaModal = ({ usuario, fechaInicio, onClose, onSubmit }) => {
             className="border border-gray-300 px-2 py-1 rounded w-full"
           />
         </div>
+
         <div className="flex justify-end space-x-2">
           <button
             onClick={onClose}
@@ -52,6 +69,7 @@ const LicenciaModal = ({ usuario, fechaInicio, onClose, onSubmit }) => {
               onSubmit({
                 fechaFin: dayjs(fechaFin).format("YYYY-MM-DD"),
                 motivo,
+                esMedica, 
               })
             }
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"

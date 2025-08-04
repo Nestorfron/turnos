@@ -6,9 +6,10 @@ import DonutChart from "../components/DonutChart";
 import DependenciaModal from "../components/DependenciaModal.jsx";
 import { fetchData } from "../utils/api";
 import Loading from "../components/Loading";
+import { estaTokenExpirado } from "../utils/tokenUtils.js";
 
 const JefeZonaDashboard = () => {
-  const { usuario } = useAppContext();
+  const { usuario, logout } = useAppContext();
   const navigate = useNavigate();
 
   const [jefatura, setJefatura] = useState(null);
@@ -19,6 +20,10 @@ const JefeZonaDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (estaTokenExpirado(usuario.token)) {
+      logout();
+      navigate("/");
+    }
     if (usuario?.rol_jerarquico !== "JEFE_ZONA") {
       navigate("/");
       return;

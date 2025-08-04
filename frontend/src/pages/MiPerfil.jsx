@@ -3,6 +3,7 @@ import { Users, Edit2, Key, Home } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
 import { cambiarPassword } from "../utils/api";
+import { estaTokenExpirado } from "../utils/tokenUtils.js";
 
 export default function MiPerfil() {
   const { usuario, login, logout } = useAppContext();
@@ -17,8 +18,11 @@ export default function MiPerfil() {
   const [confirmPass, setConfirmPass] = useState("");
   const [loadingPass, setLoadingPass] = useState(false);
 
-  // Sincronizar tempCorreo con usuario actualizado
   useEffect(() => {
+    if (estaTokenExpirado(usuario.token)) {
+      logout();
+      navigate("/");
+    }
     setTempCorreo(usuario?.correo || "");
   }, [usuario]);
 
