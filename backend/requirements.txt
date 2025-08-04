@@ -9,4 +9,5 @@ Werkzeug
 python-dotenv
 gunicorn
 WTForms-SQLAlchemy
+Flask-Mail
 
