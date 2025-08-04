@@ -267,7 +267,7 @@ def listar_licencias():
     data = Licencia.query.all()
     return jsonify([x.serialize() for x in data]), 200
 
-@app.route("/usuarios/<int:usuario_id>/licencias", methods=["GET"])
+@api.route("/usuarios/<int:usuario_id>/licencias", methods=["GET"])
 @jwt_required()
 def obtener_todas_licencias_usuario(usuario_id):
     usuario = Usuario.query.get_or_404(usuario_id)
