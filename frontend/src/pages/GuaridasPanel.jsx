@@ -78,41 +78,46 @@ const GuardiasPanel = () => {
 
   const exportarImagen = () => {
     const contenedor = document.getElementById("contenedor-tablas");
-
     if (!contenedor) return;
-
-    // Forzar estilos para exportación
+  
+    // Forzar ancho mínimo
+    const prevWidth = contenedor.style.minWidth;
+    contenedor.style.minWidth = "1200px"; // por ejemplo
+  
+    // Forzar estilos de celdas como ya hacés
     contenedor.querySelectorAll("td").forEach((td) => {
-      td.style.paddingTop = "4px";
+      td.style.paddingTop = "8px";
       td.style.paddingBottom = "8px";
       td.style.lineHeight = "1.4";
       td.style.verticalAlign = "middle";
       td.style.webkitFontSmoothing = "antialiased";
     });
-
-    contenedor.style.backgroundColor = "#fff"; // Fondo blanco
-
+  
+    contenedor.style.backgroundColor = "#fff";
+  
     html2canvas(contenedor, {
       scale: 2,
       backgroundColor: "#fff",
       useCORS: true,
     }).then((canvas) => {
       const imgData = canvas.toDataURL("image/png");
-
+  
       const link = document.createElement("a");
       link.href = imgData;
       link.download = "guardias_completo.png";
       link.click();
-
-      // Opcional: limpiar estilos forzados si es necesario
+  
+      // Limpiar estilos forzados
       contenedor.querySelectorAll("td").forEach((td) => {
         td.style.paddingTop = "";
         td.style.paddingBottom = "";
         td.style.lineHeight = "";
         td.style.verticalAlign = "";
       });
+      contenedor.style.minWidth = prevWidth; // restaurar
     });
   };
+  
 
   useEffect(() => {
     if (!usuario.token) {
