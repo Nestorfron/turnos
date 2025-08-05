@@ -3,10 +3,8 @@ import { useAppContext } from "../context/AppContext";
 import { Link, useNavigate } from "react-router-dom";
 
 import img from "../assets/logo.png";
-
-
 const Navbar = () => {
-  const { usuario, logout } = useAppContext();
+  const { usuario, logout, solicitudes } = useAppContext();
   const [open, setOpen] = useState(false);
   const menuRef = useRef();
   const navigate = useNavigate();
@@ -26,22 +24,29 @@ const Navbar = () => {
   }
 
   const inicial = usuario.nombre?.charAt(0).toUpperCase() || "?";
+  const notificaciones = solicitudes.length || 0;
+
 
   return (
     <nav className="bg-blue-700 text-white px-6 py-3 flex justify-between items-center relative">
       <div className="flex items-center max-w-xs md:max-w-md lg:max-w-lg">
         <Link to="/" className="block w-full">
-          <img src={img} alt="Logo" className="w-auto h-12" />          
+          <img src={img} alt="Logo" className="w-auto h-12" />
         </Link>
       </div>
 
       <div className="relative" ref={menuRef}>
         <button
           onClick={() => setOpen((o) => !o)}
-          className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center font-bold text-lg select-none"
+          className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center font-bold text-lg select-none relative"
           aria-label="Menú de usuario"
         >
           {inicial}
+          {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
+            <span className={notificaciones !== 0 ? "absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full" : "hidden"}>
+              {notificaciones}
+            </span>
+          )}
         </button>
 
         {open && (
@@ -50,6 +55,15 @@ const Navbar = () => {
               <p className="font-semibold">{usuario.nombre}</p>
               <p className="text-xs text-gray-600 truncate">{usuario.correo}</p>
             </div>
+            {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && <button
+              onClick={() => {
+                setOpen(false);
+                navigate("/solicitudes-licencia");
+              }}
+              className="w-full text-left px-4 py-2 hover:bg-gray-100"
+            >
+             Solicitudes {notificaciones > 0 ? `(${notificaciones})` : ""}
+            </button>}
             <Link
               to="/mi-perfil"
               className="block px-4 py-2 hover:bg-gray-100"

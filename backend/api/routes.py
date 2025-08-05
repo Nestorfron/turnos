@@ -308,7 +308,10 @@ def obtener_todas_licencias_solicitadas_usuario(usuario_id):
     return jsonify({
         "licencias_solicitadas": [ls.serialize() for ls in usuario.licencias_solicitadas],
     })
+
+
 @api.route("/licencias-solicitadas/<int:id>/", methods=["PUT"])
+@jwt_required()
 def actualizar_licencia_solicitada(id):
     body = request.json
     usuario = Usuario.query.get(id)
@@ -332,11 +335,16 @@ def actualizar_licencia_solicitada(id):
     return jsonify(licencia.serialize()), 200
 
 @api.route("/licencias-solicitadas/<int:id>/", methods=["DELETE"])
+@jwt_required()
 def eliminar_licencia_solicitada(id):
     licencia = LicenciaSolicitada.query.get(id)
+    if not licencia:
+        return jsonify({"error": "Licencia no encontrada"}), 404
+
     db.session.delete(licencia)
     db.session.commit()
-    return jsonify({'status': 'ok'}), 200
+    return jsonify({"status": "ok"}), 200
+
 
 # -------------------------------------------------------------------
 # LICENCIAS MEDICAS

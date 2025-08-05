@@ -6,7 +6,7 @@ import { useAppContext } from "../context/AppContext";
 import dayjs from "dayjs";
 import LicenciaModal from "../components/LicenciaModal.jsx";
 import { estaTokenExpirado } from "../utils/tokenUtils.js";
-import { Trash } from "lucide-react";
+import { Trash, Check  } from "lucide-react";
 
 const FuncionarioDetallePanel = () => {
   const { id } = useParams();
@@ -15,6 +15,7 @@ const FuncionarioDetallePanel = () => {
 
   const [funcionario, setFuncionario] = useState(null);
   const [licencias, setLicencias] = useState([]);
+  const [licenciasSolicitadas, setLicenciasSolicitadas] = useState([]);
   const [licenciasMedicas, setLicenciasMedicas] = useState([]);
   const [modalData, setModalData] = useState(null);
   const [guardias, setGuardias] = useState([]);
@@ -42,6 +43,7 @@ const FuncionarioDetallePanel = () => {
         const func = await fetchData(`usuarios/${id}`);
         const lic = await fetchData(`usuarios/${id}/licencias`);
         const guardias = await fetchData(`/guardias`);
+        const licenciasSolicitadas = await fetchData(`usuarios/${id}/licencias-solicitadas`);
 
         setGuardias(guardias);
 
@@ -49,6 +51,7 @@ const FuncionarioDetallePanel = () => {
         if (lic) {
           setLicencias(lic.licencias || []);
           setLicenciasMedicas(lic.licencias_medicas || []);
+          setLicenciasSolicitadas(licenciasSolicitadas.licencias_solicitadas || []);
         }
       } catch (error) {
         console.error("Error al cargar funcionario:", error);
@@ -103,12 +106,81 @@ const FuncionarioDetallePanel = () => {
     });
   };
 
-  const handleLicenciaSubmit = async ({ fechaInicio, fechaFin, motivo, esMedica }) => {
+  const handleSolicitudLicenciaSubmit = async ({ fechaInicio, fechaFin, motivo, esMedica }) => {
     try {
       const usuarioId = usuario.id;
       const fechaInicioDayjs = dayjs(fechaInicio);
       const fechaFinDayjs = dayjs(fechaFin);
   
+      const nuevaLicencia = {
+        usuario_id: usuarioId,
+        fecha_inicio: fechaInicioDayjs.utc().format("YYYY-MM-DD"),
+        fecha_fin: fechaFinDayjs.utc().format("YYYY-MM-DD"),
+        motivo,
+        estado: "pendiente", 
+      };
+  
+      const endpoint = esMedica ? "licencias-medicas" : "licencias-solicitadas";
+  
+      const creada = await postData(endpoint, nuevaLicencia, usuario.token);
+  
+      if (creada) {
+        const tipo = esMedica ? "licencia_medica" : "licencia-solicitada";
+        setGuardias((prev) => [...prev, { ...creada, tipo }]); 
+        setModalData(null);
+  
+        const ok = await fetchData(`usuarios/${usuarioId}/licencias-solicitadas`);
+        if (ok) {
+          setLicenciasSolicitadas(ok.licencias_solicitadas);
+        }
+      } else {
+        console.error("❌ Error al guardar licencia");
+      }
+    } catch (error) {
+      console.error("❌ Error en handleSolicitudLicenciaSubmit:", error);
+    }
+  };
+
+  const eliminarLicencia = async (Licencia_id) => {
+    const token = usuario.token;
+    if (!token) return;
+  
+    const resp = await deleteData(`licencias/${Licencia_id}`, token);
+    
+    if (resp) {
+      const ok = await fetchData(`usuarios/${id}/licencias`);
+      if (ok) {
+        setLicencias(ok.licencias);
+      }
+    } else {
+      console.error("❌ No se pudo eliminar la licencia");
+    }
+  };
+  
+
+  const eliminarSolicitudLicencia = async (Licencia_id) => {
+    const token = usuario.token;
+    if (!token) return;
+  
+    const resp = await deleteData(`licencias-solicitadas/${Licencia_id}/`, token);
+    
+    if (resp) {
+      const ok = await fetchData(`usuarios/${id}/licencias-solicitadas`);
+      if (ok) {
+        setLicenciasSolicitadas(ok.licencias_solicitadas);
+      }
+    } else {
+      console.error("❌ No se pudo eliminar la licencia");
+    }
+  };
+
+  const handleAutorizarLicencia = async (licencia) => {
+    try {
+      const usuarioId = licencia.usuario_id; 
+      const fechaInicioDayjs = dayjs(licencia.fecha_inicio);
+      const fechaFinDayjs = dayjs(licencia.fecha_fin);
+  
+      
       const guardiasAEliminar = guardias.filter((g) => {
         if (g.usuario_id !== usuarioId || g.tipo !== "guardia") return false;
   
@@ -121,6 +193,7 @@ const FuncionarioDetallePanel = () => {
         );
       });
   
+      
       await Promise.all(
         guardiasAEliminar.map(async (g) => {
           const ok = await deleteData(`guardias/${g.id}`, usuario.token);
@@ -132,46 +205,36 @@ const FuncionarioDetallePanel = () => {
         })
       );
   
+      
       const nuevaLicencia = {
         usuario_id: usuarioId,
         fecha_inicio: fechaInicioDayjs.utc().format("YYYY-MM-DD"),
         fecha_fin: fechaFinDayjs.utc().format("YYYY-MM-DD"),
-        motivo,
-        estado: "pendiente",
+        motivo: licencia.motivo,
+        estado: "activo",
       };
   
-      const endpoint = esMedica ? "licencias-medicas" : "licencias";
+      const creada = await postData("licencias", nuevaLicencia, usuario.token);
   
-      const creada = await postData(endpoint, nuevaLicencia, usuario.token);
-  
-      if (creada) {
-        const tipo = esMedica ? "licencia_medica" : "licencia";
-        setGuardias((prev) => [...prev, { ...creada, tipo }]);
-        setModalData(null);
-        const ok = await fetchData(`usuarios/${usuarioId}/licencias`);
-        if (ok) {
-          setLicencias(ok.licencias);
-        }
-      } else {
+      if (!creada) {
         console.error("❌ Error al guardar licencia");
+        return;
+      }
+  
+      eliminarSolicitudLicencia(licencia.id);
+  
+    
+      const tipo = "licencia";
+      setGuardias((prev) => [...prev, { ...creada, tipo }]);
+      setLicencias((prev) => prev.filter((l) => l.id !== licencia.id));
+      setModalData(null);
+  
+      const ok = await fetchData(`usuarios/${usuarioId}/licencias`);
+      if (ok) {
+        setLicencias(ok.licencias);
       }
     } catch (error) {
-      console.error("❌ Error en handleLicenciaSubmit:", error);
-    }
-  };
-
-  const eliminarLicencia = async (id) => {
-    const token = usuario.token;
-    if (!token) {
-      console.error("Token no proporcionado para eliminar licencia");
-      return false;
-    }
-    alert ("¿Seguro que deseas eliminar esta licencia?");
-  
-    const resp = await deleteData(`licencias/${id}`, token);
-    if (resp) {
-      setLicencias((prev) => prev.filter((l) => l.id !== id));
-      alert("Licencia eliminada correctamente");
+      console.error("❌ Error en handleAutorizarLicencia:", error);
     }
   };
   
@@ -214,17 +277,17 @@ const FuncionarioDetallePanel = () => {
         </select>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold text-blue-900">Licencias</h3>
-          <button
+          {usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA" && <button
             onClick={() => abrirModalLicencia(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
           >
             + Solicitar Licencia
-          </button>
+          </button>}
         </div>
       </div>
 
       <div className="bg-white rounded shadow p-6 mb-6">
-        <h3 className="text-xl font-semibold text-blue-900 mb-4">Licencias</h3>
+        <h3 className="text-xl font-semibold text-blue-900 mb-4">Autorizado</h3>
         {licencias.length > 0 ? (
           <ul className="space-y-2">
             {licencias.map((l) => (
@@ -235,12 +298,12 @@ const FuncionarioDetallePanel = () => {
                 </strong>
                 <p>Motivo: {l.motivo}</p>
                 <p>Estado: {l.estado}</p>
-                <button
+                {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && <button
                   onClick={() => eliminarLicencia(l.id)}
                   className="flex ms-auto text-red-500 hover:text-red-600"
                 >
                   <Trash size={18} />
-                </button>
+                </button>}
               </li>
             ))}
           </ul>
@@ -252,9 +315,45 @@ const FuncionarioDetallePanel = () => {
         </p>
       </div>
 
+      <div className="bg-white rounded shadow p-6 mb-6"> 
+        <h3 className="text-xl font-semibold text-blue-900 mb-4">
+          Solicitado
+        </h3>
+        {licenciasSolicitadas.length > 0 ? (
+          <ul className="space-y-2">
+            {licenciasSolicitadas.map((l) => (
+              <li key={l.id} className="border p-3 rounded">
+                <strong>
+                  {dayjs(l.fecha_inicio).format("DD/MM/YYYY")} -{" "}
+                  {dayjs(l.fecha_fin).format("DD/MM/YYYY")}
+                </strong>
+                <p>Motivo: {l.motivo}</p>
+                <p>Estado: {l.estado}</p>
+               <div className="flex justify-end gap-6">
+               <button
+                  onClick={() => eliminarSolicitudLicencia(l.id)}
+                  className="flex text-red-500 hover:text-red-600"
+                >
+                  <Trash size={18} />
+                </button>
+                {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && <button
+                  onClick={() => handleAutorizarLicencia(l)}
+                  className="flex text-green-500 hover:text-green-600"
+                >
+                  <Check size={18} />
+                </button>}
+               </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No hay licencias solicitadas registradas.</p>
+        )}
+      </div>
+
       <div className="bg-white rounded shadow p-6">
         <h3 className="text-xl font-semibold text-blue-900 mb-4">
-          Licencias Médicas
+          Médicas
         </h3>
         {licenciasMedicas.length > 0 ? (
           <ul className="space-y-2">
@@ -295,7 +394,7 @@ const FuncionarioDetallePanel = () => {
           motivoInicial={modalData.motivoInicial}
           esMedicaInicial={modalData.esMedicaInicial}
           onClose={() => setModalData(null)}
-          onSubmit={handleLicenciaSubmit}
+          onSubmit={handleSolicitudLicenciaSubmit}
         />
       )}
     </div>
