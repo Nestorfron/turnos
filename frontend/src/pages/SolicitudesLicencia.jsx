@@ -12,6 +12,7 @@ const SolicitudesLicencia = () => {
   const { usuario, logout, solicitudes, getSolicitudes } = useAppContext();
   const [funcionarios, setFuncionarios] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [guardias, setGuardias] = useState([]);
 
   const navigate = useNavigate();
 
@@ -28,6 +29,8 @@ const SolicitudesLicencia = () => {
       try {
         const usuarios = await fetchData("usuarios", usuario.token);
         if (usuarios) setFuncionarios(usuarios);
+        const todasGuardias = await fetchData("guardias", usuario.token);
+        if (todasGuardias) setGuardias(todasGuardias);
         getSolicitudes();
       } catch (error) {
         console.error("Error cargando datos:", error);
@@ -48,7 +51,7 @@ const SolicitudesLicencia = () => {
       const fechaInicioDayjs = dayjs(licencia.fecha_inicio);
       const fechaFinDayjs = dayjs(licencia.fecha_fin);
 
-      const guardiasAEliminar = solicitudes.filter((g) => {
+      const guardiasAEliminar = guardias.filter((g) => {
         if (g.usuario_id !== usuarioId || g.tipo !== "guardia") return false;
 
         const inicio = dayjs.utc(g.fecha_inicio);
@@ -80,11 +83,10 @@ const SolicitudesLicencia = () => {
       };
 
       const creada = await postData("licencias", nuevaLicencia, usuario.token);
-
+      eliminarSolicitudLicencia(licencia.id);
       if (creada) {
         const tipo = creada.es_medica ? "licencia_medica" : "licencia";
         getSolicitudes();
-        alert("Licencia agregada correctamente");
       } else {
         console.error("❌ Error al guardar licencia");
       }
@@ -103,7 +105,6 @@ const SolicitudesLicencia = () => {
     );
     if (resp) {
       getSolicitudes();
-      alert("Licencia eliminada correctamente");
     } else {
       console.error("❌ No se pudo eliminar la licencia");
     }
@@ -148,6 +149,16 @@ const SolicitudesLicencia = () => {
       ) : (
         <p>No hay licencias solicitadas registradas.</p>
       )}
+           <button
+        onClick={() =>
+          usuario?.rol_jerarquico === "JEFE_DEPENDENCIA"
+            ? navigate("/escalafon-servicio")
+            : navigate("/funcionario/" + usuario.id)
+        }
+        className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"
+      >
+        ← Volver
+      </button>
     </div>
   );
 };
