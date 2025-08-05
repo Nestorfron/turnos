@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify # type: ignore
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, get_current_user # type: ignore
 from werkzeug.security import generate_password_hash, check_password_hash # type: ignore
-from api.models import db, Jefatura, Zona, Dependencia, Usuario, RolOperativo, Turno, TurnoAsignado, Guardia, Licencia, SolicitudCambio, LicenciaMedica, PasswordResetToken
+from api.models import db, Jefatura, Zona, Dependencia, Usuario, RolOperativo, Turno, TurnoAsignado, Guardia, Licencia, LicenciaSolicitada, SolicitudCambio, LicenciaMedica, PasswordResetToken
 import secrets
 from datetime import datetime, timedelta
 from .utils.email_utils import send_email  
@@ -276,6 +276,74 @@ def obtener_todas_licencias_usuario(usuario_id):
         "licencias_medicas": [lm.serialize() for lm in usuario.licencias_medicas],
     })
 
+
+# -------------------------------------------------------------------
+# LICENCIAS SOLICITADAS
+# -------------------------------------------------------------------
+
+@api.route('/licencias-solicitadas', methods=['POST'])
+@jwt_required()
+def crear_licencia_solicitada():
+    body = request.json
+    usuario_id = body.get("usuario_id")
+    fecha_inicio = body.get("fecha_inicio")
+    fecha_fin = body.get("fecha_fin")
+    motivo = body.get("motivo")
+    estado = body.get("estado")
+
+    nueva = LicenciaSolicitada(usuario_id=usuario_id, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, motivo=motivo, estado=estado)
+    db.session.add(nueva)
+    db.session.commit()
+    return jsonify(nueva.serialize()), 201
+
+@api.route('/licencias-solicitadas', methods=['GET'])
+def listar_licencias_solicitadas():
+    data = LicenciaSolicitada.query.all()
+    return jsonify([x.serialize() for x in data]), 200
+
+@api.route("/usuarios/<int:usuario_id>/licencias-solicitadas", methods=["GET"])
+def obtener_todas_licencias_solicitadas_usuario(usuario_id):
+    usuario = Usuario.query.get_or_404(usuario_id)
+
+    return jsonify({
+        "licencias_solicitadas": [ls.serialize() for ls in usuario.licencias_solicitadas],
+    })
+
+
+@api.route("/licencias-solicitadas/<int:id>/", methods=["PUT"])
+@jwt_required()
+def actualizar_licencia_solicitada(id):
+    body = request.json
+    usuario = Usuario.query.get(id)
+    if not usuario:
+        return jsonify({"error": "Usuario no encontrado"}), 404
+
+    licencia = LicenciaSolicitada.query.get(id)
+    if not licencia:
+        return jsonify({"error": "Licencia no encontrada"}), 404
+
+    if not body.get("motivo"):
+        return jsonify({"error": "Falta motivo"}), 400
+
+    if not body.get("estado"):
+        return jsonify({"error": "Falta estado"}), 400
+
+    licencia.motivo = body.get("motivo")
+    licencia.estado = body.get("estado")
+
+    db.session.commit()
+    return jsonify(licencia.serialize()), 200
+
+@api.route("/licencias-solicitadas/<int:id>/", methods=["DELETE"])
+@jwt_required()
+def eliminar_licencia_solicitada(id):
+    licencia = LicenciaSolicitada.query.get(id)
+    if not licencia:
+        return jsonify({"error": "Licencia no encontrada"}), 404
+
+    db.session.delete(licencia)
+    db.session.commit()
+    return jsonify({"status": "ok"}), 200
 
 
 # -------------------------------------------------------------------

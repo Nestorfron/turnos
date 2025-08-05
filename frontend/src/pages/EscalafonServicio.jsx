@@ -9,7 +9,7 @@ import AsignarTurnoModal from "../components/AsignarTurnoModal";
 import { estaTokenExpirado } from "../utils/tokenUtils.js";
 
 const EscalafonServicio = () => {
-  const { usuario, logout } = useAppContext();
+  const { usuario, logout, getSolicitudes } = useAppContext();
   const location = useLocation();
   const { id } = useParams();
   const navigate = useNavigate();
@@ -68,6 +68,7 @@ const EscalafonServicio = () => {
       logout();
       navigate("/");
     }
+    getSolicitudes();
     const cargarDependencia = async () => {
       try {
         if (location.state?.sec) {

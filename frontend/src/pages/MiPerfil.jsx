@@ -19,6 +19,10 @@ export default function MiPerfil() {
   const [loadingPass, setLoadingPass] = useState(false);
 
   useEffect(() => {
+    if (!usuario?.token) {
+      navigate("/");
+      return;
+    }
     if (estaTokenExpirado(usuario.token)) {
       logout();
       navigate("/");
@@ -26,7 +30,6 @@ export default function MiPerfil() {
     setTempCorreo(usuario?.correo || "");
   }, [usuario]);
 
-  if (!usuario) return <p>Cargando usuario...</p>;
 
   const handleCorreoSave = async () => {
     if (!tempCorreo.trim()) {

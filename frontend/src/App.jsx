@@ -10,6 +10,7 @@ import GuardiasPanel from "./pages/GuaridasPanel";
 import Navbar from "./components/Navbar";
 import EscalafonServicio from "./pages/EscalafonServicio";
 import FuncionarioDetallePanel from "./pages/FuncionarioDetallePanel";
+import SolicitudesLicencia from "./pages/SolicitudesLicencia";
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         <Route path="/funcionario/:id" element={<FuncionarioPanel />} />
         <Route path="/funcionario/:id/detalle" element={<FuncionarioDetallePanel />} />
         <Route path="/guardias" element={<GuardiasPanel />} />
+        <Route path="/solicitudes-licencia" element={<SolicitudesLicencia />} />
       </Routes>
     </BrowserRouter>
   );
