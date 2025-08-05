@@ -9,6 +9,7 @@ import FuncionarioPanel from "./pages/FuncionarioPanel";
 import GuardiasPanel from "./pages/GuaridasPanel";
 import Navbar from "./components/Navbar";
 import EscalafonServicio from "./pages/EscalafonServicio";
+import FuncionarioDetallePanel from "./pages/FuncionarioDetallePanel";
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         <Route path="/jefe-zona" element={<JefeZonaDashboard />} />
         <Route path="/escalafon-servicio" element={<EscalafonServicio />} />
         <Route path="/funcionario/:id" element={<FuncionarioPanel />} />
+        <Route path="/funcionario/:id/detalle" element={<FuncionarioDetallePanel />} />
         <Route path="/guardias" element={<GuardiasPanel />} />
       </Routes>
     </BrowserRouter>

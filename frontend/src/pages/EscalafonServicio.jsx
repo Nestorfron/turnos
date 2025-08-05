@@ -64,7 +64,7 @@ const EscalafonServicio = () => {
   };
 
   useEffect(() => {
-    if (estaTokenExpirado(usuario.token)) {
+    if (estaTokenExpirado(usuario?.token)) {
       logout();
       navigate("/");
     }
@@ -190,14 +190,11 @@ const EscalafonServicio = () => {
     (turnoId) =>
       funcionarios
         .filter(
-          (f) =>
-            f.turno_id === turnoId &&
-            f.estado?.toLowerCase() === "activo"
+          (f) => f.turno_id === turnoId && f.estado?.toLowerCase() === "activo"
         )
         .sort((a, b) => (b.grado || 0) - (a.grado || 0)),
     [funcionarios]
   );
-  
 
   if (isLoading || cargandoGuardias || cargandoLicencias || !dependencia)
     return <Loading />;
@@ -220,13 +217,21 @@ const EscalafonServicio = () => {
           </p>
         </div>
         {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
-          <Link
-            to={`/guardias`}
-            state={{ sec: dependencia }}
-            className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-          >
-            Ver Escalafón
-          </Link>
+          <div className="flex justify-between items-center">
+            <Link
+              to={`/guardias`}
+              state={{ sec: dependencia }}
+              className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+            >
+              Escalafón
+            </Link>
+            <Link
+              to={`/funcionario/${usuario?.id}/detalle`}
+              className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+            >
+              Mis Licencias
+            </Link>
+          </div>
         )}
       </header>
 
@@ -312,22 +317,23 @@ const EscalafonServicio = () => {
                         text = "text-white";
                         fw = "font-bold";
                         ts = "text-xs";
-                      }else if (valor === "CH") {
+                      } else if (valor === "CH") {
                         bg = "bg-green-600";
                         text = "text-white";
                         fw = "font-bold";
                         ts = "text-xs";
-                      }else if (valor === "L.Ext") {
+                      } else if (valor === "L.Ext") {
                         bg = "bg-green-600";
                         text = "text-white";
                         fw = "font-bold";
                         ts = "text-xs";
-                      }else if (valor === "-") {
+                      } else if (valor === "-") {
                         bg = "bg-gray-300";
                         text = "text-gray-300";
                         fw = "font-normal";
                         ts = "text-xs";
-                      }return (
+                      }
+                      return (
                         <tr key={f.id}>
                           <td className="border px-2 text-center w-20">
                             G{f.grado}
@@ -410,12 +416,21 @@ const EscalafonServicio = () => {
                         <td className="border px-3 py-2">{turnoNombre}</td>
                         <td className="flex border px-3 py-2">
                           {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ? (
-                            <button
-                              onClick={() => abrirModalEditarAsignacion(f)}
-                              className="m-auto p-1 text-yellow-600 rounded"
-                            >
-                              <Pencil size={18} />
-                            </button>
+                            <>
+                              <Link
+                                to={`/funcionario/${f.id}/detalle`}
+                                className="text-blue-600 hover:underline"
+                              >
+                                Licencias
+                              </Link>
+
+                              <button
+                                onClick={() => abrirModalEditarAsignacion(f)}
+                                className="m-auto p-1 text-yellow-600 rounded"
+                              >
+                                <Pencil size={18} />
+                              </button>
+                            </>
                           ) : (
                             <span className="text-gray-500">Sin acciones.</span>
                           )}

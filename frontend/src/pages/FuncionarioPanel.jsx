@@ -170,14 +170,23 @@ const FuncionarioPanel = () => {
             <strong>Total de funcionarios:</strong> {cantidadFuncionarios}
           </p>
         </div>
-
+        <div className="flex justify-between items-center">
         <Link
           to={`/guardias`}
           state={{ sec: dependencia }}
           className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
         >
-          Ver Escalafón
+          Escalafón
         </Link>
+
+        <Link
+          to={`/funcionario/${usuario?.id}/detalle`}
+          className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+        >
+          Mis Licencias
+        </Link>
+        </div>
+       
       </header>
 
       <main className="space-y-10">
@@ -216,7 +225,10 @@ const FuncionarioPanel = () => {
                     </h2>
                   </th>
                   {dias.map((d) => (
-                    <th key={d.format("YYYY-MM-DD")} className="border px-2 py-1">
+                    <th
+                      key={d.format("YYYY-MM-DD")}
+                      className="border px-2 py-1"
+                    >
                       {d.format("ddd")} <br /> {d.format("D")}
                     </th>
                   ))}
