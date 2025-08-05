@@ -93,7 +93,7 @@ const FuncionarioDetallePanel = () => {
   const diasRestantes = totalPermitido - totalDiasLicencia;
   const diasRestantesMedica = totalPermitidoMedica - totalDiasLicenciaMedica;
 
-  const abrirModalEditarLicencia = (licencia) => {
+  const abrirModalLicencia = (licencia) => {
     setModalData({
       id: licencia.id,
       fechaInicio: licencia.fecha_inicio,
@@ -137,7 +137,7 @@ const FuncionarioDetallePanel = () => {
         fecha_inicio: fechaInicioDayjs.utc().format("YYYY-MM-DD"),
         fecha_fin: fechaFinDayjs.utc().format("YYYY-MM-DD"),
         motivo,
-        estado: "activo",
+        estado: "pendiente",
       };
   
       const endpoint = esMedica ? "licencias-medicas" : "licencias";
@@ -215,7 +215,7 @@ const FuncionarioDetallePanel = () => {
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold text-blue-900">Licencias</h3>
           <button
-            onClick={() => abrirModalEditarLicencia(true)}
+            onClick={() => abrirModalLicencia(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
           >
             + Solicitar Licencia

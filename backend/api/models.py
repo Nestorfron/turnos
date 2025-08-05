@@ -118,6 +118,7 @@ class Usuario(db.Model):
 
     guardias = db.relationship('Guardia', backref='usuario', lazy=True)
     licencias = db.relationship('Licencia', backref='usuario', lazy=True)
+    licencias_solicitadas = db.relationship('LicenciaSolicitada', backref='usuario', lazy=True)
     licencias_medicas = db.relationship('LicenciaMedica', backref='usuario', lazy=True)
 
     solicitudes_cambio = db.relationship(
@@ -328,6 +329,28 @@ class Licencia(db.Model):
 
     def __repr__(self):
         return f'<Licencia {self.id}>'
+
+class LicenciaSolicitada(db.Model):
+    __tablename__ = 'licencias_solicitadas'
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    fecha_inicio = db.Column(db.Date, nullable=False)
+    fecha_fin = db.Column(db.Date, nullable=False)
+    motivo = db.Column(db.String(50), nullable=False)
+    estado = db.Column(db.String(50), nullable=False)
+
+    def serialize(self):
+        return {
+            'id': self.id,
+            'usuario_id': self.usuario_id,
+            'fecha_inicio': self.fecha_inicio,
+            'fecha_fin': self.fecha_fin,
+            'motivo': self.motivo,
+            'estado': self.estado
+        }
+
+    def __repr__(self):
+        return f'<LicenciaSolicitada {self.id}>'
 
 class LicenciaMedica(db.Model):
     __tablename__ = 'licencias_medicas'
