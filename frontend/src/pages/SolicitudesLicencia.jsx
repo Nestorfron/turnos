@@ -22,7 +22,6 @@ const SolicitudesLicencia = () => {
       return;
     }
     if (estaTokenExpirado(usuario.token)) {
-      logout();
       navigate("/");
     }
     const cargarDatos = async () => {

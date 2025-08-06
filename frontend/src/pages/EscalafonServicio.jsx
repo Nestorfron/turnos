@@ -19,10 +19,12 @@ const EscalafonServicio = () => {
   const [funcionarios, setFuncionarios] = useState([]);
   const [guardias, setGuardias] = useState([]);
   const [licencias, setLicencias] = useState([]);
+  const [licenciasMedicas, setLicenciasMedicas] = useState([]);
   const [cantidadFuncionarios, setCantidadFuncionarios] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [cargandoGuardias, setCargandoGuardias] = useState(true);
   const [cargandoLicencias, setCargandoLicencias] = useState(true);
+  const [cargandoLicenciasMedicas, setCargandoLicenciasMedicas] = useState(true);
 
   const [startDate, setStartDate] = useState(dayjs());
 
@@ -65,7 +67,6 @@ const EscalafonServicio = () => {
 
   useEffect(() => {
     if (estaTokenExpirado(usuario?.token)) {
-      logout();
       navigate("/");
     }
     getSolicitudes();
@@ -151,6 +152,12 @@ const EscalafonServicio = () => {
       setLicencias(l || []);
       setCargandoLicencias(false);
     };
+    const cargarLicenciasMedicas = async () => {
+      const l = await fetchData("licencias-medicas", usuario?.token);
+      setLicenciasMedicas(l || []);
+      setCargandoLicenciasMedicas(false);
+    };
+    cargarLicenciasMedicas();
     cargarGuardias();
     cargarLicencias();
   }, [usuario?.token]);
@@ -165,6 +172,14 @@ const EscalafonServicio = () => {
           fecha <= dayjs(lic.fecha_fin).utc().format("YYYY-MM-DD")
       );
       if (licencia) return "Licencia";
+
+      const licenciaMedica = licenciasMedicas.find(
+        (lic) =>
+          lic.usuario_id === usuario.id &&
+          fecha >= dayjs(lic.fecha_inicio).utc().format("YYYY-MM-DD") &&
+          fecha <= dayjs(lic.fecha_fin).utc().format("YYYY-MM-DD")
+      );
+      if (licenciaMedica) return "Licencia médica";
 
       const registro = guardias.find(
         (g) =>
@@ -235,9 +250,7 @@ const EscalafonServicio = () => {
           </div>
         )}
       </header>
-
-      <main className="space-y-10">
-        <div className="flex  items-center mb-8">
+      <div className="flex  items-center mb-8">
           <label className="mr-2 font-semibold text-blue-900">Fecha:</label>
           <input
             type="date"
@@ -252,12 +265,13 @@ const EscalafonServicio = () => {
           />
         </div>
 
-        {turnos.map((turno) => {
+      <main className="space-y-10 overflow-x-auto">
+      {turnos.map((turno) => {
           const lista = funcionariosPorTurno(turno.id);
           return (
             <section
               key={turno.id}
-              className="bg-white rounded shadow p-4 overflow-x-auto mb-6"
+              className="bg-white roundedmb-6"
             >
               <h2 className="text-xl font-bold text-blue-900 mb-2">
                 {turno.nombre}
@@ -266,7 +280,7 @@ const EscalafonServicio = () => {
                 <thead>
                   <tr className="bg-gray-200">
                     <th className="border px-2 py-1 w-20">Grado</th>
-                    <th className="border px-2 py-1 w-60 min-w-[15rem]">
+                    <th className="border px-2 py-1 w-50 min-w-[10rem]">
                       Nombres
                     </th>
                     <th className="border px-2 py-1 w-32">
@@ -299,6 +313,10 @@ const EscalafonServicio = () => {
                       } else if (valor === "Licencia") {
                         bg = "bg-green-600";
                         text = "text-white";
+                        fw = "font-bold";
+                      } else if (valor === "Licencia médica") {
+                        bg = "bg-yellow-300";
+                        text = "text-black";
                         fw = "font-bold";
                       } else if (valor === "En Servicio") {
                         bg = "bg-white";
@@ -370,13 +388,13 @@ const EscalafonServicio = () => {
             </section>
           );
         })}
-
-        {/* Tabla General */}
-        <section className="bg-white rounded shadow p-4 mt-6">
+      </main>
+       {/* Tabla General */}
+       <section className="bg-white rounded shadow p-4 mt-6">
           <h3 className="text-xl font-semibold text-blue-900 mb-4">
             Listado General del Personal
           </h3>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto ">
             <table className="min-w-full border border-gray-300 text-sm text-left">
               <thead className="bg-gray-100">
                 <tr>
@@ -444,7 +462,6 @@ const EscalafonServicio = () => {
             </table>
           </div>
         </section>
-      </main>
 
       {asignarModalOpen && (
         <AsignarTurnoModal

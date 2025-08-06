@@ -23,7 +23,6 @@ const FuncionarioPanel = () => {
       return;
     }
     if (estaTokenExpirado(usuario.token)) {
-      logout();
       navigate("/");
     }
 

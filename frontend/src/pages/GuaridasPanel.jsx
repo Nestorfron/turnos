@@ -128,7 +128,6 @@ const GuardiasPanel = () => {
       navigate("/");
     };
     if (estaTokenExpirado(usuario.token)) {
-      logout();
       navigate("/");
     }
     
@@ -550,17 +549,17 @@ const GuardiasPanel = () => {
       guardias.length === 0 ? (
         <Loading />
       ) : (
-        <div id="contenedor-tablas" className="mb-6">
+        <div id="contenedor-tablas" className="mb-6 overflow-x-auto">
           {turnos.map((turno) => {
             const lista = funcionariosPorTurno(turno.id);
 
             return (
               <div key={turno.id} className="bg-white rounded shadow p-4">
-                <div className="overflow-x-auto">
+                <div>
                   <table className="min-w-full border border-gray-300 text-sm text-center">
                     <thead>
                       <tr className="bg-gray-200">
-                        <th className="border px-2 py-1 w-48">
+                        <th className="bg-white border px-2 text-left whitespace-nowrap  w-48 min-w-48 ">
                           <h2 className="text-lg font-semibold text-blue-800">
                             {turno.nombre}
                           </h2>
@@ -568,7 +567,7 @@ const GuardiasPanel = () => {
                         {dias.map((d) => (
                           <th
                             key={d.format("YYYY-MM-DD")}
-                            className="border px-2 py-1"
+                            className="bg-gray-200 border px-2 py-1"
                           >
                             {d.format("DD")}/{d.format("MM")} <br /> {d.format("ddd")}
                           </th>
@@ -578,7 +577,8 @@ const GuardiasPanel = () => {
                     <tbody>
                       {lista.map((f) => (
                         <tr key={f.id}>
-                          <td className="border px-2 text-left whitespace-nowrap w-48 min-w-48">
+                          <td className="bg-white border px-2 text-left whitespace-nowrap  w-48 min-w-48 ">
+
                             G{f.grado} {f.nombre}
                           </td>
                           {dias.map((d) => {
@@ -648,8 +648,8 @@ const GuardiasPanel = () => {
                                 fontWeight = "font-bold";
                                 break;
                               case "L.Medica":
-                                bgBase = "bg-green-600";
-                                textColor = "text-white";
+                                bgBase = "bg-yellow-300";
+                                textColor = "text-black";
                                 fontWeight = "font-bold";
                                 break;
                               case "-":

@@ -24,7 +24,6 @@ export default function MiPerfil() {
       return;
     }
     if (estaTokenExpirado(usuario.token)) {
-      logout();
       navigate("/");
     }
     setTempCorreo(usuario?.correo || "");

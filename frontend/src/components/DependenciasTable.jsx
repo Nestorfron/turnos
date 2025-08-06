@@ -1,4 +1,3 @@
-// src/components/DependenciasTable.jsx
 import React, { useEffect, useState } from 'react';
 
 const DependenciasTable = () => {

@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useAppContext } from "../context/AppContext";
 import { Link, useNavigate } from "react-router-dom";
-
 import img from "../assets/logo.png";
+
+
 const Navbar = () => {
   const { usuario, logout, solicitudes } = useAppContext();
   const [open, setOpen] = useState(false);
