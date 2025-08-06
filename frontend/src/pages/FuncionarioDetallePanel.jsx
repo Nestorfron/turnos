@@ -4,9 +4,16 @@ import { fetchData, putData, deleteData, postData } from "../utils/api";
 import Loading from "../components/Loading";
 import { useAppContext } from "../context/AppContext";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import LicenciaModal from "../components/LicenciaModal.jsx";
 import { estaTokenExpirado } from "../utils/tokenUtils.js";
 import { Trash, Check  } from "lucide-react";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
+dayjs.extend(utc);
+dayjs.locale("es");
 
 const FuncionarioDetallePanel = () => {
   const { id } = useParams();
@@ -29,12 +36,10 @@ const FuncionarioDetallePanel = () => {
 
   useEffect(() => {
     if (!usuario?.token) {
-      logout();
       navigate("/");
       return;
     }
     if (estaTokenExpirado(usuario.token)) {
-      logout();
       navigate("/");
     }  
 
@@ -65,15 +70,15 @@ const FuncionarioDetallePanel = () => {
   if (!funcionario) return <Loading />;
 
   const calcularDiasEnAnio = (inicio, fin) => {
-    const start = dayjs(inicio);
-    const end = dayjs(fin);
+    const start = dayjs(inicio).utc();
+    const end = dayjs(fin).utc();
 
     const inicioAContar = start.isBefore(`${anioSeleccionado}-01-01`)
-      ? dayjs(`${anioSeleccionado}-01-01`)
+      ? dayjs(`${anioSeleccionado}-01-01`).utc()
       : start;
 
     const finAContar = end.isAfter(`${anioSeleccionado}-12-31`)
-      ? dayjs(`${anioSeleccionado}-12-31`)
+      ? dayjs(`${anioSeleccionado}-12-31`).utc()
       : end;
 
     const dias = finAContar.diff(inicioAContar, "day") + 1;
@@ -109,8 +114,8 @@ const FuncionarioDetallePanel = () => {
   const handleSolicitudLicenciaSubmit = async ({ fechaInicio, fechaFin, motivo, esMedica }) => {
     try {
       const usuarioId = usuario.id;
-      const fechaInicioDayjs = dayjs(fechaInicio);
-      const fechaFinDayjs = dayjs(fechaFin);
+      const fechaInicioDayjs = dayjs(fechaInicio).utc();
+      const fechaFinDayjs = dayjs(fechaFin).utc();
   
       const nuevaLicencia = {
         usuario_id: usuarioId,
@@ -293,8 +298,8 @@ const FuncionarioDetallePanel = () => {
             {licencias.map((l) => (
               <li key={l.id} className="border p-3 rounded">
                 <strong>
-                  {dayjs(l.fecha_inicio).format("DD/MM/YYYY")} -{" "}
-                  {dayjs(l.fecha_fin).format("DD/MM/YYYY")}
+                  {dayjs(l.fecha_inicio).utc().format("DD/MM/YYYY")} -{" "}
+                  {dayjs(l.fecha_fin).utc().format("DD/MM/YYYY")}
                 </strong>
                 <p>Motivo: {l.motivo}</p>
                 <p>Estado: {l.estado}</p>
@@ -324,8 +329,8 @@ const FuncionarioDetallePanel = () => {
             {licenciasSolicitadas.map((l) => (
               <li key={l.id} className="border p-3 rounded">
                 <strong>
-                  {dayjs(l.fecha_inicio).format("DD/MM/YYYY")} -{" "}
-                  {dayjs(l.fecha_fin).format("DD/MM/YYYY")}
+                  {dayjs(l.fecha_inicio).utc().format("DD/MM/YYYY")} -{" "}
+                  {dayjs(l.fecha_fin).utc().format("DD/MM/YYYY")}
                 </strong>
                 <p>Motivo: {l.motivo}</p>
                 <p>Estado: {l.estado}</p>
@@ -360,8 +365,8 @@ const FuncionarioDetallePanel = () => {
             {licenciasMedicas.map((l) => (
               <li key={l.id} className="border p-3 rounded">
                 <strong>
-                  {dayjs(l.fecha_inicio).format("DD/MM/YYYY")} -{" "}
-                  {dayjs(l.fecha_fin).format("DD/MM/YYYY")}
+                  {dayjs(l.fecha_inicio).utc().format("DD/MM/YYYY")} -{" "}
+                  {dayjs(l.fecha_fin).utc().format("DD/MM/YYYY")}
                 </strong>
                 <p>Motivo: {l.motivo}</p>
                 <p>Estado: {l.estado}</p>

@@ -2,15 +2,19 @@ import React, { useEffect } from "react";
 import { useAppContext } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
 import LoginForm from "../components/LoginForm";
+import { estaTokenExpirado } from "../utils/tokenUtils";
 
 
 import img from "../assets/logo.png";
 
 const Home = () => {
-  const { usuario } = useAppContext();
+  const { usuario, logout } = useAppContext();
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (estaTokenExpirado(usuario?.token)) {
+      logout();
+    }
     if (usuario?.token) {
       switch (usuario.rol_jerarquico) {
         case "JEFE_ZONA":

@@ -6,7 +6,7 @@ import { Home } from "lucide-react";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
-  const [estado, setEstado] = useState("IDLE"); // IDLE | LOADING | SUCCESS | ERROR
+  const [estado, setEstado] = useState("IDLE"); 
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {

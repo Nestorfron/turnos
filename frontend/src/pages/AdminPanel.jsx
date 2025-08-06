@@ -29,7 +29,6 @@ const AdminPanel = () => {
 
   useEffect(() => {
     if (estaTokenExpirado(usuario.token)) {
-      logout();
       navigate("/");
     }
     if (!usuario?.token || usuario?.rol_jerarquico !== "ADMINISTRADOR") {

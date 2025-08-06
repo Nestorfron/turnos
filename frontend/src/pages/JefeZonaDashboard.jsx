@@ -20,9 +20,13 @@ const JefeZonaDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (estaTokenExpirado(usuario.token)) {
-      logout();
+    if (!usuario?.token) {
       navigate("/");
+      return;
+    }
+    if (estaTokenExpirado(usuario.token)) {
+      navigate("/");
+      return;
     }
     if (usuario?.rol_jerarquico !== "JEFE_ZONA") {
       navigate("/");
@@ -143,7 +147,7 @@ const JefeZonaDashboard = () => {
           </p>
         ) : (
           <>
-            <section className="mb-8 bg-white rounded-md shadow p-4">
+            <section className="overflow-x-auto mb-8 bg-white rounded-md shadow p-4">
               <table className="min-w-full border-collapse border border-gray-300 text-sm">
                 <thead>
                   <tr className="bg-gray-100 text-gray-700 uppercase text-xs font-medium tracking-wide">
