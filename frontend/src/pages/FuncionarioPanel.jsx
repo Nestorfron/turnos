@@ -16,6 +16,7 @@ const FuncionarioPanel = () => {
   const [funcionarios, setFuncionarios] = useState([]);
   const [guardias, setGuardias] = useState([]);
   const [licencias, setLicencias] = useState([]);
+  const [extraordinariaGuardias, setExtraordinariaGuardias] = useState([]);
 
   useEffect(() => {
     if (usuario?.rol_jerarquico !== "FUNCIONARIO" || estaTokenExpirado(usuario.token)) {
@@ -52,9 +53,10 @@ const FuncionarioPanel = () => {
         setTurnos(dep.turnos || []);
         setFuncionarios(funcs);
 
-        const [guardiasData, licenciasData] = await Promise.all([
+        const [guardiasData, licenciasData, extraordinariaGuardiasData] = await Promise.all([
           fetchData("guardias"),
           fetchData("licencias"),
+          fetchData("extraordinaria-guardias"),
         ]);
 
         if (guardiasData) {
@@ -70,6 +72,13 @@ const FuncionarioPanel = () => {
             .map((l) => ({ ...l, tipo: "licencia" }));
           setLicencias(licenciasFiltradas);
         }
+
+        if (extraordinariaGuardiasData) {
+          const extraordinariaGuardiasFiltradas = extraordinariaGuardiasData
+            .filter((l) => l.usuario_id === usuario.id)
+          setExtraordinariaGuardias(extraordinariaGuardiasFiltradas);
+        }
+        
       } catch (error) {
         console.error("Error cargando datos:", error);
       }
@@ -194,6 +203,64 @@ const FuncionarioPanel = () => {
         </div>
        
       </header>
+
+      <main className="space-y-10 bg-white rounded mb-6 overflow-x-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-blue-900 mb-4">
+            Extraordinarias / Cursos
+          </h2>
+        </div>
+        <div className="overflow-x-auto rounded shadow p-4">
+        <table className="min-w-full border border-gray-300 text-sm text-center">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="border px-2 py-1">Fecha y horario</th>
+              <th className="border px-2 py-1">Tipo</th>
+              <th className="border px-2 py-1">
+                Comentario
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {extraordinariaGuardias.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="text-center py-4 text-gray-500">
+                  No tienes guardias extraordinarias pendientes.
+                </td>
+              </tr>
+            ) : (
+              extraordinariaGuardias.map((g) => {
+                return (
+                  <tr
+                    key={g.id}
+                    className="even:bg-gray-50 hover:bg-blue-50 transition-colors"
+                  >
+                    <td className="border px-2 py-1">
+                    {dayjs.utc(g.fecha_inicio).format("DD/MM/YYYY")}{" "}
+                      <span className="text-xs text-gray-600">
+                        {"de "}
+                        {dayjs.utc(g.fecha_inicio).format("HH:mm")} a{" "}
+                        {dayjs.utc(g.fecha_fin).format("HH:mm")}
+                      </span> 
+                    </td>
+                    <td className="border px-2 py-1 text-left whitespace-nowrap">
+                      {g.tipo}  
+                      </td>
+                    <td className="border px-2 py-1 text-left whitespace-nowrap">
+                      {g.comentario}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+        </div>
+
+        
+      </main>
+
+      {/* Mi Turno Actual */}
 
       <main className="space-y-10">
         <h3 className="text-xl font-semibold text-blue-900 mb-4">
