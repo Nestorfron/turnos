@@ -11,6 +11,7 @@ import LicenciaModal from "../components/LicenciaModal.jsx";
 import EliminarGuardiasModal from "../components/EliminarGuardiasModal.jsx";
 import Loading from "../components/Loading";
 import { Camera } from "lucide-react";
+import { toPng } from "html-to-image";
 import { estaTokenExpirado } from "../utils/tokenUtils.js";
 
 dayjs.extend(isSameOrAfter);
@@ -18,8 +19,8 @@ dayjs.extend(isSameOrBefore);
 dayjs.extend(utc);
 dayjs.locale("es");
 
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+//import jsPDF from "jspdf";
+//import html2canvas from "html2canvas";
 
 const GuardiasPanel = () => {
 
@@ -47,80 +48,77 @@ const GuardiasPanel = () => {
   );
 
 
-  const exportarPDF = () => {
-    const contenedor = document.getElementById("contenedor-tablas");
+  // const exportarPDF = () => {
+  //   const contenedor = document.getElementById("contenedor-tablas");
 
-    if (!contenedor) return;
+  //   if (!contenedor) return;
 
-    html2canvas(contenedor, { scale: 2 }).then((canvas) => {
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("landscape", "pt", "a4");
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pageWidth;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  //   html2canvas(contenedor, { scale: 2 }).then((canvas) => {
+  //     const imgData = canvas.toDataURL("image/png");
+  //     const pdf = new jsPDF("landscape", "pt", "a4");
+  //     const pageWidth = pdf.internal.pageSize.getWidth();
+  //     const pageHeight = pdf.internal.pageSize.getHeight();
+  //     const imgWidth = pageWidth;
+  //     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      if (imgHeight < pageHeight) {
-        pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
-      } else {
-        let heightLeft = imgHeight;
-        let y = 0;
+  //     if (imgHeight < pageHeight) {
+  //       pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+  //     } else {
+  //       let heightLeft = imgHeight;
+  //       let y = 0;
 
-        while (heightLeft > 0) {
-          pdf.addImage(imgData, "PNG", 0, y, imgWidth, imgHeight);
-          heightLeft -= pageHeight;
-          if (heightLeft > 0) {
-            pdf.addPage();
-            y -= pageHeight;
-          }
-        }
-      }
+  //       while (heightLeft > 0) {
+  //         pdf.addImage(imgData, "PNG", 0, y, imgWidth, imgHeight);
+  //         heightLeft -= pageHeight;
+  //         if (heightLeft > 0) {
+  //           pdf.addPage();
+  //           y -= pageHeight;
+  //         }
+  //       }
+  //     }
 
-      pdf.save("guardias_completo.pdf");
-    });
-  };
+  //     pdf.save("guardias_completo.pdf");
+  //   });
+  // };
 
-  const exportarImagen = () => {
-    const contenedor = document.getElementById("contenedor-tablas");
-    if (!contenedor) return;
+  const capturar = () => {
+    const elemento = document.getElementById("contenedor-tablas");
   
-    
-    const prevWidth = contenedor.style.minWidth;
-    contenedor.style.minWidth = "1200px"; 
+    const originalWidth = elemento.style.width;
+    const originalHeight = elemento.style.height;
+    const originalPadding = elemento.style.padding;
   
-    
-    contenedor.querySelectorAll("td").forEach((td) => {
-      td.style.paddingTop = "8px";
-      td.style.paddingBottom = "8px";
-      td.style.lineHeight = "1.4";
-      td.style.verticalAlign = "middle";
-      td.style.webkitFontSmoothing = "antialiased";
-    });
+    elemento.style.padding = "20px";
   
-    contenedor.style.backgroundColor = "#fff";
+
+    elemento.style.width = elemento.scrollWidth + 40 + "px"; // +40 = 20px izquierda + 20px derecha
+    elemento.style.height = elemento.scrollHeight + 40 + "px"; // igual para altura
   
-    html2canvas(contenedor, {
-      scale: 2,
-      backgroundColor: "#fff",
-      useCORS: true,
-    }).then((canvas) => {
-      const imgData = canvas.toDataURL("image/png");
+    toPng(elemento, {
+      cacheBust: true,
+      width: elemento.scrollWidth + 40,
+      height: elemento.scrollHeight + 40,
+    })
+      .then((dataUrl) => {
+        elemento.style.width = originalWidth;
+        elemento.style.height = originalHeight;
+        elemento.style.padding = originalPadding;
   
-      const link = document.createElement("a");
-      link.href = imgData;
-      link.download = "guardias_completo.png";
-      link.click();
+        const link = document.createElement("a");
+        link.download = "turnos.png";
+        link.href = dataUrl;
+        link.click();
+      })
+      .catch((err) => {
+        console.error("Error capturando pantalla:", err);
   
-      
-      contenedor.querySelectorAll("td").forEach((td) => {
-        td.style.paddingTop = "";
-        td.style.paddingBottom = "";
-        td.style.lineHeight = "";
-        td.style.verticalAlign = "";
+        elemento.style.width = originalWidth;
+        elemento.style.height = originalHeight;
+        elemento.style.padding = originalPadding;
       });
-      contenedor.style.minWidth = prevWidth; 
-    });
   };
+  
+
   
 
   useEffect(() => {
@@ -489,11 +487,11 @@ const GuardiasPanel = () => {
   
     for (const [, lista] of map) {
       lista.sort((a, b) => {
-        // Primero por grado (mayor primero)
+        
         const diffGrado = (b.grado || 0) - (a.grado || 0);
         if (diffGrado !== 0) return diffGrado;
   
-        // Luego por fecha_ingreso (más antiguo primero)
+        
         const fechaA = a.fecha_ingreso ? new Date(a.fecha_ingreso) : new Date(9999, 0, 1);
         const fechaB = b.fecha_ingreso ? new Date(b.fecha_ingreso) : new Date(9999, 0, 1);
         return fechaA - fechaB;
@@ -544,7 +542,7 @@ const GuardiasPanel = () => {
 
         <div className="ml-auto">
           <button
-            onClick={exportarImagen}
+            onClick={capturar}
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow flex items-center gap-2"
           >
             <Camera className="w-5 h-5" />
