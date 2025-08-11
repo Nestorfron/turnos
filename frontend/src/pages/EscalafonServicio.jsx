@@ -3,10 +3,11 @@ import { useLocation, useParams, useNavigate, Link } from "react-router-dom";
 import dayjs from "dayjs";
 import Loading from "../components/Loading";
 import { useAppContext } from "../context/AppContext";
-import { fetchData, putData } from "../utils/api";
-import { Pencil, Home } from "lucide-react";
+import { fetchData, putData, postData, deleteData } from "../utils/api";
+import { Pencil, Home, Plus, Trash } from "lucide-react";
 import AsignarTurnoModal from "../components/AsignarTurnoModal";
 import { estaTokenExpirado } from "../utils/tokenUtils.js";
+import ExtraordinariaGuardiaModal from "../components/ExtraorindariaGuaridaModal.jsx";
 
 const EscalafonServicio = () => {
   const { usuario, logout, getSolicitudes } = useAppContext();
@@ -18,13 +19,19 @@ const EscalafonServicio = () => {
   const [turnos, setTurnos] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
   const [guardias, setGuardias] = useState([]);
+  const [extraordinariaGuardias, setExtraordinariaGuardias] = useState([]);
   const [licencias, setLicencias] = useState([]);
   const [licenciasMedicas, setLicenciasMedicas] = useState([]);
   const [cantidadFuncionarios, setCantidadFuncionarios] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [cargandoGuardias, setCargandoGuardias] = useState(true);
   const [cargandoLicencias, setCargandoLicencias] = useState(true);
-  const [cargandoLicenciasMedicas, setCargandoLicenciasMedicas] = useState(true);
+  const [cargandoLicenciasMedicas, setCargandoLicenciasMedicas] =
+    useState(true);
+  const [cargandoExtraordinariaGuardias, setCargandoExtraordinariaGuardias] =
+    useState(true);
+  const [modalGuardiaOpen, setModalGuardiaOpen] = useState(false);
+  const [guardiaSeleccionada, setGuardiaSeleccionada] = useState(null);
 
   const [startDate, setStartDate] = useState(dayjs());
 
@@ -41,6 +48,66 @@ const EscalafonServicio = () => {
     });
     setAsignarModalOpen(true);
   }, []);
+
+  const abrirModalNuevaGuardia = () => {
+    setGuardiaSeleccionada(null);
+    setModalGuardiaOpen(true);
+  };
+
+  const handleGuardarExtraordinariaGuardia = async (
+    extraordinariaGuardiaForm
+  ) => {
+    try {
+      const resultado = await postData(
+        `extraordinaria-guardias`,
+        {
+          usuario_id:
+            extraordinariaGuardiaForm.usuarioId ||
+            extraordinariaGuardiaForm.usuario_id,
+          fecha_inicio:
+            extraordinariaGuardiaForm.fechaInicio ||
+            extraordinariaGuardiaForm.fecha_inicio,
+          fecha_fin:
+            extraordinariaGuardiaForm.fechaFin ||
+            extraordinariaGuardiaForm.fecha_fin,
+          tipo: extraordinariaGuardiaForm.tipo,
+          comentario: extraordinariaGuardiaForm.comentario,
+        },
+        usuario?.token
+      );
+
+      if (resultado) {
+        setExtraordinariaGuardias((prev) => {
+          const existe = prev.find((g) => g.id === resultado.id);
+          if (existe) {
+            // Actualizar existente
+            return prev.map((g) => (g.id === resultado.id ? resultado : g));
+          } else {
+            // Agregar nuevo
+            return [...prev, resultado];
+          }
+        });
+      }
+
+      setModalGuardiaOpen(false);
+    } catch (error) {
+      console.error("Error guardando guardia extraordinaria:", error);
+    }
+  };
+
+  const handleBorrarExtraordinariaGuardia = async (id) => {
+    if (!window.confirm("¿Estás seguro que querés eliminar esta guardia?"))
+      return;
+
+    try {
+      await deleteData(`extraordinaria-guardias/${id}`, usuario.token);
+
+      setExtraordinariaGuardias((prev) => prev.filter((g) => g.id !== id));
+    } catch (error) {
+      console.error("Error eliminando guardia:", error);
+      alert("No se pudo eliminar la guardia, intenta nuevamente.");
+    }
+  };
 
   const handleGuardarAsignacion = async (asignacionForm) => {
     try {
@@ -157,9 +224,21 @@ const EscalafonServicio = () => {
       setLicenciasMedicas(l || []);
       setCargandoLicenciasMedicas(false);
     };
+    const cargarExtraordinariaGuardias = async () => {
+      const l = await fetchData("extraordinaria-guardias", usuario?.token);
+      const hoy = dayjs().startOf("day");
+      const guardiasFiltradas = (l || []).filter(
+        (g) =>
+          dayjs(g.fecha_inicio).isSame(hoy) ||
+          dayjs(g.fecha_inicio).isAfter(hoy)
+      );
+      setExtraordinariaGuardias(guardiasFiltradas);
+      setCargandoExtraordinariaGuardias(false);
+    };
     cargarLicenciasMedicas();
     cargarGuardias();
     cargarLicencias();
+    cargarExtraordinariaGuardias();
   }, [usuario?.token]);
 
   const getCelda = useCallback(
@@ -203,7 +282,7 @@ const EscalafonServicio = () => {
         // Primero por grado (mayor primero)
         const diffGrado = (b.grado || 0) - (a.grado || 0);
         if (diffGrado !== 0) return diffGrado;
-  
+
         // Luego por fecha_ingreso (más antiguo primero)
         const fechaA = new Date(a.fecha_ingreso);
         const fechaB = new Date(b.fecha_ingreso);
@@ -212,7 +291,22 @@ const EscalafonServicio = () => {
     [funcionarios]
   );
 
-  
+  const funcionarioNombre = useCallback(
+    (id) => {
+      const f = funcionarios.find((f) => f.id === id);
+      return f ? `G${f.grado} ${f.nombre}` : "";
+    },
+    [funcionarios]
+  );
+
+  const extraordinariaGuardiaOrdenadas = [...extraordinariaGuardias].sort(
+    (a, b) => {
+      const fechaA = dayjs.utc(a.fecha_inicio);
+      const fechaB = dayjs.utc(b.fecha_inicio);
+      return fechaA - fechaB;
+    }
+  );
+
   const funcionariosPorTurno = useCallback(
     (turnoId) =>
       funcionarios
@@ -223,7 +317,7 @@ const EscalafonServicio = () => {
           // Primero por grado (mayor primero)
           const diffGrado = (b.grado || 0) - (a.grado || 0);
           if (diffGrado !== 0) return diffGrado;
-  
+
           // Luego por fecha_ingreso (más antiguo primero)
           const fechaA = new Date(a.fecha_ingreso);
           const fechaB = new Date(b.fecha_ingreso);
@@ -231,9 +325,14 @@ const EscalafonServicio = () => {
         }),
     [funcionarios]
   );
-  
 
-  if (isLoading || cargandoGuardias || cargandoLicencias || !dependencia)
+  if (
+    isLoading ||
+    cargandoGuardias ||
+    cargandoLicencias ||
+    cargandoExtraordinariaGuardias ||
+    !dependencia
+  )
     return <Loading />;
 
   return (
@@ -272,28 +371,124 @@ const EscalafonServicio = () => {
         )}
       </header>
       <div className="flex  items-center mb-8">
-          <label className="mr-2 font-semibold text-blue-900">Fecha:</label>
-          <input
-            type="date"
-            value={startDate.format("YYYY-MM-DD")}
-            onChange={(e) => setStartDate(dayjs(e.target.value))}
-            className="border rounded px-2 py-1"
-          />
-          <Home
-            size={18}
-            className="mx-2 cursor-pointer"
-            onClick={() => setStartDate(dayjs())}
-          />
+        <label className="mr-2 font-semibold text-blue-900">Fecha:</label>
+        <input
+          type="date"
+          value={startDate.format("YYYY-MM-DD")}
+          onChange={(e) => setStartDate(dayjs(e.target.value))}
+          className="border rounded px-2 py-1"
+        />
+        <Home
+          size={18}
+          className="mx-2 cursor-pointer"
+          onClick={() => setStartDate(dayjs())}
+        />
+      </div>
+      <main className="bg-white rounded mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-blue-900 mb-4">
+            Extraordinarias / Cursos
+          </h2>
+          <button
+            onClick={abrirModalNuevaGuardia}
+            className="mb-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+          >
+            <Plus size={18} />
+          </button>
         </div>
+        <table className="min-w-full border border-gray-300 text-sm text-center">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="border px-2 py-1">Fecha y horario</th>
+              <th className="border px-2 py-1">Funcionario</th>
+              <th className="border px-2 py-1">Tipo</th>
+              <th className="border px-2 py-1 hidden sm:table-cell">
+                Comentario
+              </th>
+              <th className="border px-2 py-1">Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {extraordinariaGuardias.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="text-center py-4 text-gray-500">
+                  No hay guardias extraordinarias registradas.
+                </td>
+              </tr>
+            ) : (
+              extraordinariaGuardiaOrdenadas.map((g) => {
+                return (
+                  <tr
+                    key={g.id}
+                    className="even:bg-gray-50 hover:bg-blue-50 transition-colors"
+                  >
+                    <td className="border px-2 py-1">
+                      {dayjs.utc(g.fecha_inicio).format("DD/MM")}{" "}
+                      <span className="text-xs text-gray-500">
+                        {"("}
+                        {dayjs.utc(g.fecha_inicio).format("HH:mm")} a{" "}
+                        {dayjs.utc(g.fecha_fin).format("HH:mm")} {")"}
+                      </span>
+                    </td>
+
+                    <td className="border px-2 py-1 text-left whitespace-nowrap">
+                      {funcionarioNombre(g.usuario_id)}
+                    </td>
+
+                    <td
+                      className="border px-2 py-1 text-left whitespace-nowrap md:max-w-48"
+                      title={
+                        g.comentario && window.innerWidth < 1024
+                          ? g.comentario
+                          : ""
+                      }
+                    >
+                      {g.tipo}
+                    </td>
+
+                    {/* Columna comentario visible solo en pantallas medianas o más grandes */}
+                    <td className="border px-2 py-1 text-left whitespace-nowrap hidden sm:table-cell">
+                      {g.comentario}
+                    </td>
+
+                    <td className="border px-2 py-1">
+                      {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ? (
+                        <button
+                          onClick={() =>
+                            handleBorrarExtraordinariaGuardia(g.id)
+                          }
+                          className="m-auto p-1 text-red-600 rounded hover:bg-red-100"
+                          title="Eliminar Guardia"
+                        >
+                          <Trash size={18} />
+                        </button>
+                      ) : (
+                        <span className="text-gray-500">Sin acciones.</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+
+        {modalGuardiaOpen && (
+          <ExtraordinariaGuardiaModal
+            usuarios={funcionariosOrdenados}
+            extraordinariaGuardia={guardiaSeleccionada}
+            onClose={() => setModalGuardiaOpen(false)}
+            onSubmit={handleGuardarExtraordinariaGuardia}
+          />
+        )}
+      </main>
 
       <main className="space-y-10 overflow-x-auto">
-      {turnos.map((turno) => {
+        {turnos.map((turno) => {
           const lista = funcionariosPorTurno(turno.id);
           return (
-            <section
-              key={turno.id}
-              className="bg-white roundedmb-6"
-            >
+            <section key={turno.id} className="bg-white roundedmb-6">
               <h2 className="text-xl font-bold text-blue-900 mb-2">
                 {turno.nombre}
               </h2>
@@ -410,83 +605,83 @@ const EscalafonServicio = () => {
           );
         })}
       </main>
-       {/* Tabla General */}
-       <section className="bg-white rounded shadow p-4 mt-6">
-          <h3 className="text-xl font-semibold text-blue-900 mb-4">
-            Listado General del Personal
-          </h3>
-          <div className="overflow-x-auto ">
-            <table className="min-w-full border border-gray-300 text-sm text-left">
-              <thead className="bg-gray-100">
+      {/* Tabla General */}
+      <section className="bg-white rounded shadow p-4 mt-6">
+        <h3 className="text-xl font-semibold text-blue-900 mb-4">
+          Listado General del Personal
+        </h3>
+        <div className="overflow-x-auto ">
+          <table className="min-w-full border border-gray-300 text-sm text-left">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="border px-3 py-2">Grado</th>
+                <th className="border px-3 py-2">Nombre</th>
+                <th className="border px-3 py-2">Estado</th>
+                <th className="border px-3 py-2">Turno</th>
+                <th className="border px-3 py-2">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {funcionariosOrdenados.length === 0 ? (
                 <tr>
-                  <th className="border px-3 py-2">Grado</th>
-                  <th className="border px-3 py-2">Nombre</th>
-                  <th className="border px-3 py-2">Estado</th>
-                  <th className="border px-3 py-2">Turno</th>
-                  <th className="border px-3 py-2">Acciones</th>
+                  <td colSpan={5} className="text-center py-4 text-gray-500">
+                    No hay funcionarios registrados.
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {funcionariosOrdenados.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="text-center py-4 text-gray-500">
-                      No hay funcionarios registrados.
-                    </td>
-                  </tr>
-                ) : (
-                  funcionariosOrdenados.map((f) => {
-                    const turnoNombre =
-                      turnos.find((t) => t.id === f.turno_id)?.nombre ||
-                      "Sin asignar";
-                    return (
-                      <tr key={f.id} className="even:bg-gray-50">
-                        <td className="border px-3 py-2">G{f.grado}</td>
-                        <td className="border px-3 py-2">{f.nombre}</td>
-                        <td className="border px-3 py-2">
-                          <span
-                            className={
-                              f.estado?.toLowerCase() === "activo"
-                                ? "text-green-600 font-semibold"
-                                : "text-red-600 font-semibold"
-                            }
-                          >
-                            {f.estado || "Sin estado"}
-                          </span>
-                        </td>
-                        <td className="border px-3 py-2">{turnoNombre}</td>
-                        <td className="flex border px-3 py-2">
-                          {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ? (
-                            <>
-                              <Link
-                                to={`/funcionario/${f.id}/detalle`}
-                                className="text-blue-600 hover:underline"
-                              >
-                                Licencias
-                              </Link>
+              ) : (
+                funcionariosOrdenados.map((f) => {
+                  const turnoNombre =
+                    turnos.find((t) => t.id === f.turno_id)?.nombre ||
+                    "Sin asignar";
+                  return (
+                    <tr key={f.id} className="even:bg-gray-50">
+                      <td className="border px-3 py-2">G{f.grado}</td>
+                      <td className="border px-3 py-2">{f.nombre}</td>
+                      <td className="border px-3 py-2">
+                        <span
+                          className={
+                            f.estado?.toLowerCase() === "activo"
+                              ? "text-green-600 font-semibold"
+                              : "text-red-600 font-semibold"
+                          }
+                        >
+                          {f.estado || "Sin estado"}
+                        </span>
+                      </td>
+                      <td className="border px-3 py-2">{turnoNombre}</td>
+                      <td className="flex border px-3 py-2">
+                        {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ? (
+                          <>
+                            <Link
+                              to={`/funcionario/${f.id}/detalle`}
+                              className="text-blue-600 hover:underline"
+                            >
+                              Licencias
+                            </Link>
 
-                              <button
-                                onClick={() => abrirModalEditarAsignacion(f)}
-                                className="m-auto p-1 text-yellow-600 rounded"
-                              >
-                                <Pencil size={18} />
-                              </button>
-                            </>
-                          ) : (
-                            <span className="text-gray-500">Sin acciones.</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
+                            <button
+                              onClick={() => abrirModalEditarAsignacion(f)}
+                              className="m-auto p-1 text-yellow-600 rounded"
+                            >
+                              <Pencil size={18} />
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-gray-500">Sin acciones.</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       {asignarModalOpen && (
         <AsignarTurnoModal
-          funcionarios={funcionarios}
+          funcionarios={funcionariosOrdenados}
           turnos={turnos}
           asignacion={asignacionSeleccionada}
           isEdit={true}

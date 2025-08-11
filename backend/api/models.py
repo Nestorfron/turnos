@@ -119,6 +119,7 @@ class Usuario(db.Model):
     zona = db.relationship('Zona', backref='usuarios', foreign_keys=[zona_id])
 
     guardias = db.relationship('Guardia', backref='usuario', lazy=True)
+    extraordinaria_guardias = db.relationship('ExtraordinariaGuardia', backref='usuario', lazy=True)
     licencias = db.relationship('Licencia', backref='usuario', lazy=True)
     licencias_solicitadas = db.relationship('LicenciaSolicitada', backref='usuario', lazy=True)
     licencias_medicas = db.relationship('LicenciaMedica', backref='usuario', lazy=True)
@@ -309,6 +310,29 @@ class Guardia(db.Model):
 
     def __repr__(self):
         return f'<Guardia {self.id}>'
+    
+
+class ExtraordinariaGuardia(db.Model):
+    __tablename__ = 'extraordinaria_guardias'
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    fecha_inicio = db.Column(db.DateTime, nullable=False)
+    fecha_fin = db.Column(db.DateTime, nullable=False)
+    tipo = db.Column(db.String(50), nullable=False)
+    comentario = db.Column(db.Text)
+
+    def serialize(self):
+        return {
+            'id': self.id,
+            'usuario_id': self.usuario_id,
+            'fecha_inicio': self.fecha_inicio,
+            'fecha_fin': self.fecha_fin,
+            'tipo': self.tipo,
+            'comentario': self.comentario
+        }
+    
+    def __repr__(self):
+        return f'<ExtraordinariaGuardia {self.id}>'
 
 
 class Licencia(db.Model):

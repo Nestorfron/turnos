@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify # type: ignore
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, get_current_user # type: ignore
 from werkzeug.security import generate_password_hash, check_password_hash # type: ignore
-from api.models import db, Jefatura, Zona, Dependencia, Usuario, RolOperativo, Turno, TurnoAsignado, Guardia, Licencia, LicenciaSolicitada, SolicitudCambio, LicenciaMedica, PasswordResetToken
+from api.models import db, Jefatura, Zona, Dependencia, Usuario, RolOperativo, Turno, TurnoAsignado, Guardia, Licencia, LicenciaSolicitada, SolicitudCambio, LicenciaMedica, PasswordResetToken, ExtraordinariaGuardia
 import secrets
 from datetime import datetime, timedelta
 from .utils.email_utils import send_email  
@@ -218,6 +218,63 @@ def eliminar_guardia(id):
 def listar_guardias():
     data = Guardia.query.all()
     return jsonify([x.serialize() for x in data]), 200
+
+# -------------------------------------------------------------------
+# EXTRAORDINARIA GUARDIAS
+# -------------------------------------------------------------------
+
+@api.route('/extraordinaria-guardias', methods=['POST'])
+@jwt_required()
+def crear_extraordinaria_guardia():
+    body = request.json
+    usuario_id = body.get("usuario_id")
+    fecha_inicio = body.get("fecha_inicio")
+    fecha_fin = body.get("fecha_fin")
+    tipo = body.get("tipo")
+    comentario = body.get("comentario")
+
+    nueva = ExtraordinariaGuardia(usuario_id=usuario_id, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, tipo=tipo, comentario=comentario)
+    db.session.add(nueva)
+    db.session.commit()
+    return jsonify(nueva.serialize()), 201
+
+@api.route('/extraordinaria-guardias/<int:id>', methods=['PUT'])
+@jwt_required()
+def actualizar_extraordinaria_guardia(id):
+    body = request.json
+    extraordinaria_guardia = ExtraordinariaGuardia.query.get(id)
+    if not extraordinaria_guardia:
+        return jsonify({"error": "Extraordinaria Guardia no encontrada"}), 404
+
+    extraordinaria_guardia.usuario_id = body.get("usuario_id")
+    extraordinaria_guardia.fecha_inicio = body.get("fecha_inicio")
+    extraordinaria_guardia.fecha_fin = body.get("fecha_fin")
+    extraordinaria_guardia.tipo = body.get("tipo")
+    extraordinaria_guardia.comentario = body.get("comentario")
+
+    db.session.commit()
+    return jsonify(extraordinaria_guardia.serialize()), 200
+
+@api.route('/extraordinaria-guardias/<int:id>', methods=['DELETE'])
+@jwt_required()
+def eliminar_extraordinaria_guardia(id):
+    extraordinaria_guardia = ExtraordinariaGuardia.query.get(id)
+    db.session.delete(extraordinaria_guardia)
+    db.session.commit()
+    return jsonify({'status': 'ok'}), 200
+
+@api.route('/extraordinaria-guardias', methods=['GET'])
+def listar_extraordinaria_guardias():
+    data = ExtraordinariaGuardia.query.all()
+    return jsonify([x.serialize() for x in data]), 200
+
+@api.route("/usuarios/<int:usuario_id>/extraordinaria-guardias", methods=["GET"])
+def obtener_todas_extraordinaria_guardias_usuario(usuario_id):
+    usuario = Usuario.query.get_or_404(usuario_id)
+
+    return jsonify({
+        "extraordinaria_guardias": [eg.serialize() for eg in usuario.extraordinaria_guardias],
+    })
 
 # -------------------------------------------------------------------
 # LICENCIAS
