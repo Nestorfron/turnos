@@ -17,12 +17,9 @@ const SolicitudesLicencia = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!usuario?.token) {
+    if (!usuario || estaTokenExpirado(usuario.token)) {
       navigate("/");
       return;
-    }
-    if (estaTokenExpirado(usuario.token)) {
-      navigate("/");
     }
     const cargarDatos = async () => {
       try {

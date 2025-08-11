@@ -15,7 +15,7 @@ const Home = () => {
     if (estaTokenExpirado(usuario?.token)) {
       logout();
     }
-    if (usuario?.token) {
+    if (usuario) {
       switch (usuario.rol_jerarquico) {
         case "JEFE_ZONA":
           navigate("/jefe-zona");

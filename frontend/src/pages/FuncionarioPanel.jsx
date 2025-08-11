@@ -18,12 +18,9 @@ const FuncionarioPanel = () => {
   const [licencias, setLicencias] = useState([]);
 
   useEffect(() => {
-    if (usuario?.rol_jerarquico !== "FUNCIONARIO") {
+    if (usuario?.rol_jerarquico !== "FUNCIONARIO" || estaTokenExpirado(usuario.token)) {
       navigate("/");
       return;
-    }
-    if (estaTokenExpirado(usuario.token)) {
-      navigate("/");
     }
 
     const cargarDatos = async () => {
@@ -99,10 +96,20 @@ const FuncionarioPanel = () => {
     (turnoId) => {
       return funcionarios
         .filter((f) => f.turno_id === turnoId)
-        .sort((a, b) => (b.grado || 0) - (a.grado || 0));
+        .sort((a, b) => {
+          // Primero por grado (mayor primero)
+          const diffGrado = (b.grado || 0) - (a.grado || 0);
+          if (diffGrado !== 0) return diffGrado;
+  
+          // Luego por fecha_ingreso (más antiguo primero)
+          const fechaA = a.fecha_ingreso ? new Date(a.fecha_ingreso) : new Date(9999, 0, 1);
+          const fechaB = b.fecha_ingreso ? new Date(b.fecha_ingreso) : new Date(9999, 0, 1);
+          return fechaA - fechaB;
+        });
     },
     [funcionarios]
   );
+  
 
   // OPTIMIZA lookups
   const licenciasMap = useMemo(() => {
@@ -268,7 +275,7 @@ const FuncionarioPanel = () => {
                             textColor = "text-white";
                             fontWeight = "font-bold";
                             break;
-                          case "CURSO":
+                          case "Curso":
                             bgBase = "bg-green-600";
                             textColor = "text-white";
                             fontWeight = "font-bold";
@@ -277,7 +284,7 @@ const FuncionarioPanel = () => {
                           case "BROU":
                             textSize = "text-xs";
                             break;
-                          case "CUSTODIA":
+                          case "Custodia":
                             bgBase = "bg-blue-600";
                             textColor = "text-white";
                             fontWeight = "font-bold";

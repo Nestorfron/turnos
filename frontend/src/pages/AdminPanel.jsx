@@ -7,6 +7,7 @@ import DependenciaModal from "../components/DependenciaModal.jsx";
 import FuncionarioModal from "../components/FuncionarioModal.jsx";
 import { fetchData, deleteData } from "../utils/api.js";
 import Loading from "../components/Loading.jsx";
+import {estaTokenExpirado } from "../utils/tokenUtils";
 
 const AdminPanel = () => {
   const { usuario, logout } = useAppContext();
@@ -28,10 +29,7 @@ const AdminPanel = () => {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    if (estaTokenExpirado(usuario.token)) {
-      navigate("/");
-    }
-    if (!usuario?.token || usuario?.rol_jerarquico !== "ADMINISTRADOR") {
+    if (!usuario || usuario?.rol_jerarquico !== "ADMINISTRADOR" || estaTokenExpirado(usuario.token)) {
       navigate("/");
       return;
     }

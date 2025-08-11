@@ -124,12 +124,9 @@ const GuardiasPanel = () => {
   
 
   useEffect(() => {
-    if (!usuario.token) {
+    if (!usuario || estaTokenExpirado(usuario.token)) {
       navigate("/");
     };
-    if (estaTokenExpirado(usuario.token)) {
-      navigate("/");
-    }
     
     if (!dependencia?.id) return;
   
@@ -188,7 +185,7 @@ const GuardiasPanel = () => {
     };
   
     cargarDatos();
-  }, [dependencia, usuario.token]);
+  }, [dependencia, usuario]);
   
   useEffect(() => {
     if (usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA") {
@@ -484,15 +481,28 @@ const GuardiasPanel = () => {
   
   const funcionariosPorTurnoMap = useMemo(() => {
     const map = new Map();
+  
     for (const f of funcionarios) {
       if (!map.has(f.turno_id)) map.set(f.turno_id, []);
       map.get(f.turno_id).push(f);
     }
+  
     for (const [, lista] of map) {
-      lista.sort((a, b) => (b.grado || 0) - (a.grado || 0));
+      lista.sort((a, b) => {
+        // Primero por grado (mayor primero)
+        const diffGrado = (b.grado || 0) - (a.grado || 0);
+        if (diffGrado !== 0) return diffGrado;
+  
+        // Luego por fecha_ingreso (más antiguo primero)
+        const fechaA = a.fecha_ingreso ? new Date(a.fecha_ingreso) : new Date(9999, 0, 1);
+        const fechaB = b.fecha_ingreso ? new Date(b.fecha_ingreso) : new Date(9999, 0, 1);
+        return fechaA - fechaB;
+      });
     }
+  
     return map;
   }, [funcionarios]);
+  
   
   const funcionariosPorTurno = useCallback(
     (turnoId) => funcionariosPorTurnoMap.get(turnoId) || [],
@@ -621,7 +631,7 @@ const GuardiasPanel = () => {
                                 textColor = "text-white";
                                 fontWeight = "font-bold";
                                 break;
-                              case "CURSO":
+                              case "Curso":
                                 bgBase = "bg-green-600";
                                 textColor = "text-white";
                                 fontWeight = "font-bold";
@@ -632,7 +642,7 @@ const GuardiasPanel = () => {
                                 fontWeight = "font-normal";
                                 textSize = "text-xs";
                                 break;
-                              case "CUSTODIA":
+                              case "Custodia":
                                 bgBase = "bg-blue-600";
                                 textColor = "text-white";
                                 fontWeight = "font-bold";
@@ -768,7 +778,7 @@ const GuardiasPanel = () => {
               Seleccionar tipo de guardia
             </h3>
 
-            {["D", "T", "1ro", "2do", "3er", "CURSO", "BROU", "CUSTODIA", "CH", "L.Ext"].map(
+            {["D", "T", "1ro", "2do", "3er", "Curso", "BROU", "Custodia", "CH", "L.Ext"].map(
               (tipo) => (
                 <button
                   key={tipo}
@@ -784,7 +794,7 @@ const GuardiasPanel = () => {
                   className={`w-full ${
                     tipo === "D"
                       ? "bg-gray-100 hover:bg-gray-200 text-gray-800"
-                      : tipo === "CURSO" || tipo === "CUSTODIA"
+                      : tipo === "Curso" || tipo === "Custodia"
                       ? "bg-blue-600 hover:bg-blue-700 text-white font-bold"
                       : tipo === "BROU"
                       ? "bg-white hover:bg-gray-100 text-black"
