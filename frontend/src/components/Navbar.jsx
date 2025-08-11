@@ -24,6 +24,12 @@ const Navbar = () => {
     return null;
   }
 
+  const handleLogout = () => {
+    logout();
+    setOpen(false);
+    navigate("/");
+  };
+
   const inicial = usuario.nombre?.charAt(0).toUpperCase() || "?";
   const notificaciones = solicitudes.length || 0;
 
@@ -73,11 +79,7 @@ const Navbar = () => {
               Ver perfil
             </Link>
             <button
-              onClick={() => {
-                logout();
-                setOpen(false);
-                navigate("/");
-              }}
+              onClick={() => handleLogout()}
               className="w-full text-left px-4 py-2 hover:bg-gray-100"
             >
               Cerrar sesión
