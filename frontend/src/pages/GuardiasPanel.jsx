@@ -9,7 +9,7 @@ import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import LicenciaModal from "../components/LicenciaModal.jsx";
 import EliminarGuardiasModal from "../components/EliminarGuardiasModal.jsx";
-import Loading from "../components/Loading";
+import Loading from "../components/Loading.jsx";
 import { Camera } from "lucide-react";
 import { toPng } from "html-to-image";
 import { estaTokenExpirado } from "../utils/tokenUtils.js";
