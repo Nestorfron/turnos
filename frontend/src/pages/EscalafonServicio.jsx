@@ -66,7 +66,7 @@ const EscalafonServicio = () => {
   };
 
   useEffect(() => {
-    if (estaTokenExpirado(usuario?.token)) {
+    if (!usuario || estaTokenExpirado(usuario?.token)) {
       navigate("/");
     }
     getSolicitudes();
@@ -198,19 +198,40 @@ const EscalafonServicio = () => {
   );
 
   const funcionariosOrdenados = useMemo(
-    () => [...funcionarios].sort((a, b) => (b.grado || 0) - (a.grado || 0)),
+    () =>
+      [...funcionarios].sort((a, b) => {
+        // Primero por grado (mayor primero)
+        const diffGrado = (b.grado || 0) - (a.grado || 0);
+        if (diffGrado !== 0) return diffGrado;
+  
+        // Luego por fecha_ingreso (más antiguo primero)
+        const fechaA = new Date(a.fecha_ingreso);
+        const fechaB = new Date(b.fecha_ingreso);
+        return fechaA - fechaB;
+      }),
     [funcionarios]
   );
 
+  
   const funcionariosPorTurno = useCallback(
     (turnoId) =>
       funcionarios
         .filter(
           (f) => f.turno_id === turnoId && f.estado?.toLowerCase() === "activo"
         )
-        .sort((a, b) => (b.grado || 0) - (a.grado || 0)),
+        .sort((a, b) => {
+          // Primero por grado (mayor primero)
+          const diffGrado = (b.grado || 0) - (a.grado || 0);
+          if (diffGrado !== 0) return diffGrado;
+  
+          // Luego por fecha_ingreso (más antiguo primero)
+          const fechaA = new Date(a.fecha_ingreso);
+          const fechaB = new Date(b.fecha_ingreso);
+          return fechaA - fechaB;
+        }),
     [funcionarios]
   );
+  
 
   if (isLoading || cargandoGuardias || cargandoLicencias || !dependencia)
     return <Loading />;
@@ -324,14 +345,14 @@ const EscalafonServicio = () => {
                         bg = "bg-blue-600";
                         text = "text-white";
                         fw = "font-bold";
-                      } else if (valor === "CURSO") {
+                      } else if (valor === "Curso") {
                         bg = "bg-green-600";
                         text = "text-white";
                         fw = "font-bold";
                         ts = "text-xs";
                       } else if (valor === "BROU") {
                         ts = "text-xs";
-                      } else if (valor === "CUSTODIA") {
+                      } else if (valor === "Custodia") {
                         bg = "bg-blue-600";
                         text = "text-white";
                         fw = "font-bold";

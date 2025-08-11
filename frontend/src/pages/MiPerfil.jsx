@@ -4,6 +4,9 @@ import { useAppContext } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
 import { cambiarPassword } from "../utils/api";
 import { estaTokenExpirado } from "../utils/tokenUtils.js";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+dayjs.extend(utc);
 
 export default function MiPerfil() {
   const { usuario, login, logout } = useAppContext();
@@ -19,12 +22,9 @@ export default function MiPerfil() {
   const [loadingPass, setLoadingPass] = useState(false);
 
   useEffect(() => {
-    if (!usuario?.token) {
+    if (!usuario || estaTokenExpirado(usuario.token)) {
       navigate("/");
       return;
-    }
-    if (estaTokenExpirado(usuario.token)) {
-      navigate("/");
     }
     setTempCorreo(usuario?.correo || "");
   }, [usuario]);
@@ -100,11 +100,15 @@ export default function MiPerfil() {
       setLoadingPass(false);
     }
   };
+
+  const formatDate = (date) => {
+    return dayjs.utc(date).format("DD/MM/YYYY");
+  };
   
 
   const handleLogout = async () => {
     try {
-      await logout();
+      logout();
       navigate("/");
     } catch (error) {
       console.error(error);
@@ -117,27 +121,30 @@ export default function MiPerfil() {
       {/* Icono y nombre */}
       <div className="flex flex-col items-center space-y-2">
         <Users size={48} className="text-blue-600" />
-        <h1 className="text-xl font-bold">{usuario.nombre}</h1>
-        <p className="text-gray-500">{usuario.grado}</p>
+        <h1 className="text-xl font-bold">{usuario?.nombre || "Usuario no registrado"}</h1>
+        <p className="text-gray-500">{usuario?.grado || "Usuario no registrado"}</p>
       </div>
 
       {/* Datos básicos */}
       <div>
         <p>
-          <strong>Grado:</strong> {usuario.Grado}
+          <strong>Grado:</strong> {usuario?.Grado}
+        </p>
+        <p >
+          <strong>Fecha de Ingreso:</strong> {formatDate(usuario?.fecha_ingreso) || "No asignada"}
         </p>
         <p>
-          <strong>Rol jerárquico:</strong> {usuario.rol_jerarquico}
+          <strong>Rol jerárquico:</strong> {usuario?.rol_jerarquico}
         </p>
         <p>
           <strong>Dependencia:</strong>{" "}
-          {usuario.dependencia_nombre || "No asignada"}
+          {usuario?.dependencia_nombre || "No asignada"}
         </p>
         <p>
-          <strong>Estado:</strong> {usuario.estado || "No especificado"}
+          <strong>Estado:</strong> {usuario?.estado || "No especificado"}
         </p>
         <p>
-          <strong>Correo:</strong> {usuario.correo || "No asignado"}
+          <strong>Correo:</strong> {usuario?.correo || "No asignado"}
         </p>
       </div>
 

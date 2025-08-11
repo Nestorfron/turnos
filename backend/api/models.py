@@ -102,6 +102,8 @@ class Usuario(db.Model):
     correo = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
     rol_jerarquico = db.Column(db.String(50), nullable=False)
+    fecha_ingreso = db.Column(db.DateTime, nullable=True)
+
 
     dependencia_id = db.Column(db.Integer, db.ForeignKey('dependencias.id'), nullable=True)
     zona_id = db.Column(db.Integer, db.ForeignKey('zonas.id'), nullable=True)
@@ -141,6 +143,7 @@ class Usuario(db.Model):
             'nombre': self.nombre,
             'correo': self.correo,
             'rol_jerarquico': self.rol_jerarquico,
+            'fecha_ingreso': self.fecha_ingreso,
             'dependencia_id': self.dependencia_id,
             'dependencia_nombre': self.dependencia.nombre if self.dependencia_id and self.dependencia else None,
             'zona_id': self.zona_id,

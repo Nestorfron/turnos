@@ -13,11 +13,6 @@ export const AppProvider = ({ children }) => {
     if (storedUser) {
       setUsuario(JSON.parse(storedUser));
     }
-    const fetchSolicitudes = async () => {
-      const res = await fetchData("licencias-solicitadas", usuario?.token);
-      setSolicitudes(res);
-    };
-    fetchSolicitudes();
     setLoading(false);
   }, []);
 
@@ -29,6 +24,7 @@ export const AppProvider = ({ children }) => {
   const login = (userData) => {
     setUsuario(userData);
     localStorage.setItem("usuario", JSON.stringify(userData));
+    getSolicitudes();
   };
 
   const logout = () => {

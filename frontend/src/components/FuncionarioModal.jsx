@@ -30,6 +30,7 @@ const FuncionarioModal = ({
     password: "",
     grado: "",
     rol_jerarquico: "usuario",
+    fecha_ingreso: "",
     dependencia_id: "",
     zona_id: zonaId || "",
   });
@@ -45,6 +46,7 @@ const FuncionarioModal = ({
         password: "",
         grado: funcionario.grado || "",
         rol_jerarquico: reverseRolMap[funcionario.rol_jerarquico] || "usuario",
+        fecha_ingreso: funcionario.fecha_ingreso || "",
         dependencia_id: funcionario.dependencia_id || "",
         zona_id: funcionario.zona_id || zonaId || "",
       });
@@ -75,7 +77,6 @@ const FuncionarioModal = ({
       return;
     }
 
-    // Ajuste del payload según rol
     if (payload.rol_jerarquico === "JEFE_ZONA") {
       payload.dependencia_id = null;
       if (!form.zona_id) {
@@ -155,6 +156,14 @@ const FuncionarioModal = ({
             <option value="encargado_dependencia">Encargado de Seccional</option>
             <option value="jefe_zona">Jefe de Zona</option>
           </select>
+          <input
+            name="fecha_ingreso"
+            type="date"
+            value={form.fecha_ingreso}
+            onChange={handleChange}
+            placeholder="Fecha de ingreso"
+            className="w-full border px-3 py-2 rounded"
+          />
           {!isEditing && (
             <input
               name="password"

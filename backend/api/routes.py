@@ -533,6 +533,7 @@ def actualizar_usuario(id):
     nombre = body.get("nombre", usuario.nombre)
     correo = body.get("correo", usuario.correo)
     rol_jerarquico = body.get("rol_jerarquico", usuario.rol_jerarquico)
+    fecha_ingreso = body.get("fecha_ingreso", usuario.fecha_ingreso)
     dependencia_id = body.get("dependencia_id", usuario.dependencia_id)
     zona_id = body.get("zona_id", usuario.zona_id)
     estado = body.get("estado", usuario.estado)
@@ -552,6 +553,7 @@ def actualizar_usuario(id):
     usuario.nombre = nombre
     usuario.correo = correo
     usuario.rol_jerarquico = rol_jerarquico
+    usuario.fecha_ingreso = fecha_ingreso
     usuario.dependencia_id = dependencia_id
     usuario.zona_id = zona_id
     usuario.estado = estado

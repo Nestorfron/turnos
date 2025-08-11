@@ -20,15 +20,11 @@ const JefeZonaDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!usuario?.token) {
+    if (!usuario || usuario?.rol_jerarquico !== "JEFE_ZONA") {
       navigate("/");
       return;
     }
     if (estaTokenExpirado(usuario.token)) {
-      navigate("/");
-      return;
-    }
-    if (usuario?.rol_jerarquico !== "JEFE_ZONA") {
       navigate("/");
       return;
     }
