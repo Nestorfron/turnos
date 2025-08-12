@@ -678,7 +678,6 @@ const GuardiasPanel = () => {
                                 fontWeight = "font-normal";
                             }
 
-
                             return (
                               <td
                                 key={d.format("YYYY-MM-DD")}
@@ -687,7 +686,7 @@ const GuardiasPanel = () => {
                                 {valor}
                                 {valor === "L" || valor === "L.Medica"
                                   ? usuario?.rol_jerarquico ===
-                                      "JEFE_DEPENDENCIA" || usuario?.is_admin === true && (
+                                      "JEFE_DEPENDENCIA" && (
                                       <>
                                         <button
                                           onClick={() =>  eliminarLicencia(f, d) }
@@ -699,7 +698,44 @@ const GuardiasPanel = () => {
                                       </>
                                     )
                                   : usuario?.rol_jerarquico ===
-                                      "JEFE_DEPENDENCIA" || usuario?.is_admin === true && (
+                                      "JEFE_DEPENDENCIA" && (
+                                      <>
+                                        <button
+                                          onClick={() =>
+                                            setSelectorTipo({
+                                              usuario: f,
+                                              dia: d,
+                                            })
+                                          }
+                                          className="absolute top-0 right-6 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-blue-700 transition"
+                                          title="Cambiar Guardia"
+                                        >
+                                          ✏️
+                                        </button>
+                                        <button
+                                          onClick={() =>
+                                            abrirModalLicencia(f, d)
+                                          }
+                                          className="absolute top-0 right-0 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-red-500 transition"
+                                          title="Agregar Licencia"
+                                        >
+                                          📄
+                                        </button>
+                                      </>
+                                    )}
+                                    {valor === "L" || valor === "L.Medica"
+                                  ? usuario?.is_admin === true && (
+                                      <>
+                                        <button
+                                          onClick={() =>  eliminarLicencia(f, d) }
+                                          className="absolute top-0 right-0 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-red-700 transition"
+                                          title="Eliminar Licencia"
+                                        >
+                                          ❌
+                                        </button>
+                                      </>
+                                    )
+                                  : usuario?.is_admin === true && (
                                       <>
                                         <button
                                           onClick={() =>
