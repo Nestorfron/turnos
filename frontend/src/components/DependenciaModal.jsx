@@ -60,7 +60,7 @@ const DependenciaModal = ({ dependencia, onClose, onSubmitted, isEditing, token 
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-      <div className="bg-white rounded p-6 w-full max-w-md">
+      <div className="bg-white rounded p-6 max-w-md">
         <h2 className="text-xl font-bold mb-4">
           {isEditing ? "Editar Seccional" : "Agregar Seccional"}
         </h2>

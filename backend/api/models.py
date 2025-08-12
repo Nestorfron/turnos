@@ -103,6 +103,7 @@ class Usuario(db.Model):
     password = db.Column(db.String(255), nullable=False)
     rol_jerarquico = db.Column(db.String(50), nullable=False)
     fecha_ingreso = db.Column(db.DateTime, nullable=True)
+    is_admin = db.Column(db.Boolean, default=False)
 
 
     dependencia_id = db.Column(db.Integer, db.ForeignKey('dependencias.id'), nullable=True)
@@ -151,7 +152,8 @@ class Usuario(db.Model):
             'zona_nombre': self.zona.nombre if self.zona_id and self.zona else None,
             'turno_id': self.turno_id,
             'turno_nombre': self.turno.nombre if self.turno_id and self.turno else None,
-            'estado': self.estado
+            'estado': self.estado,
+            'is_admin': self.is_admin
         }
 
 

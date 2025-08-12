@@ -24,7 +24,10 @@ const JefeZonaDashboard = () => {
       navigate("/");
       return;
     }
-    if (estaTokenExpirado(usuario.token)) {
+    
+    if (estaTokenExpirado(usuario?.token)) {
+      alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
+      localStorage.removeItem("usuario");
       navigate("/");
       return;
     }

@@ -38,13 +38,15 @@ const LoginForm = () => {
           zona_nombre: data.usuario.zona_nombre,
           turno_id: data.usuario.turno_id,
           estado: data.usuario.estado,
+          is_admin: data.usuario.is_admin,
         });
+
 
         if (data.usuario.rol_jerarquico === "JEFE_ZONA") {
           navigate("/jefe-zona");
-        } else if (data.usuario.rol_jerarquico === "JEFE_DEPENDENCIA") {
+        } else if (data.usuario.rol_jerarquico === "JEFE_DEPENDENCIA" || data.usuario.is_admin === true) {
           navigate(`/escalafon-servicio`);
-        } else if (data.usuario.rol_jerarquico === "FUNCIONARIO") {
+        } else if (data.usuario.rol_jerarquico === "FUNCIONARIO" && data.usuario.is_admin === false) {
           navigate("dependencia/" + data.usuario.dependencia_id);
         } else if (data.usuario.rol_jerarquico === "ADMINISTRADOR") {
           navigate("/admin");

@@ -4,13 +4,13 @@ import dayjs from "dayjs";
 import Loading from "../components/Loading";
 import { useAppContext } from "../context/AppContext";
 import { fetchData, putData, postData, deleteData } from "../utils/api";
-import { Pencil, Home, Plus, Trash } from "lucide-react";
+import { Pencil, Home, Plus, Trash, SearchX } from "lucide-react";
 import AsignarTurnoModal from "../components/AsignarTurnoModal";
 import { estaTokenExpirado } from "../utils/tokenUtils.js";
 import ExtraordinariaGuardiaModal from "../components/ExtraorindariaGuaridaModal.jsx";
 
 const EscalafonServicio = () => {
-  const { usuario, logout, getSolicitudes } = useAppContext();
+  const { usuario, getSolicitudes } = useAppContext();
   const location = useLocation();
   const { id } = useParams();
   const navigate = useNavigate();
@@ -45,6 +45,7 @@ const EscalafonServicio = () => {
       usuario_id: funcionario.id,
       turno_id: funcionario.turno_id || "",
       estado: funcionario.estado || "",
+      is_admin: funcionario.is_admin || false,
     });
     setAsignarModalOpen(true);
   }, []);
@@ -80,10 +81,8 @@ const EscalafonServicio = () => {
         setExtraordinariaGuardias((prev) => {
           const existe = prev.find((g) => g.id === resultado.id);
           if (existe) {
-            // Actualizar existente
             return prev.map((g) => (g.id === resultado.id ? resultado : g));
           } else {
-            // Agregar nuevo
             return [...prev, resultado];
           }
         });
@@ -116,6 +115,7 @@ const EscalafonServicio = () => {
         {
           turno_id: asignacionForm.turno_id,
           estado: asignacionForm.estado,
+          is_admin: asignacionForm.is_admin,
         },
         usuario?.token
       );
@@ -133,9 +133,18 @@ const EscalafonServicio = () => {
   };
 
   useEffect(() => {
-    if (!usuario || estaTokenExpirado(usuario?.token)) {
+    if (!usuario) {
       navigate("/");
+      return;
+    }  
+
+    if (estaTokenExpirado(usuario?.token)) {
+      alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
+      localStorage.removeItem("usuario");
+      navigate("/");
+      return;
     }
+
     getSolicitudes();
     const cargarDependencia = async () => {
       try {
@@ -279,11 +288,9 @@ const EscalafonServicio = () => {
   const funcionariosOrdenados = useMemo(
     () =>
       [...funcionarios].sort((a, b) => {
-        // Primero por grado (mayor primero)
         const diffGrado = (b.grado || 0) - (a.grado || 0);
         if (diffGrado !== 0) return diffGrado;
 
-        // Luego por fecha_ingreso (más antiguo primero)
         const fechaA = new Date(a.fecha_ingreso);
         const fechaB = new Date(b.fecha_ingreso);
         return fechaA - fechaB;
@@ -314,11 +321,9 @@ const EscalafonServicio = () => {
           (f) => f.turno_id === turnoId && f.estado?.toLowerCase() === "activo"
         )
         .sort((a, b) => {
-          // Primero por grado (mayor primero)
           const diffGrado = (b.grado || 0) - (a.grado || 0);
           if (diffGrado !== 0) return diffGrado;
 
-          // Luego por fecha_ingreso (más antiguo primero)
           const fechaA = new Date(a.fecha_ingreso);
           const fechaB = new Date(b.fecha_ingreso);
           return fechaA - fechaB;
@@ -384,40 +389,39 @@ const EscalafonServicio = () => {
           onClick={() => setStartDate(dayjs())}
         />
       </div>
-      <main className="bg-white rounded mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-blue-900 mb-4">
+      <main className="rounded mb-6">
+        <div className="flex justify-between items-center">
+          <h3 className="text-xl font-bold text-blue-900 mb-2">
             Extraordinarias / Cursos
-          </h2>
+          </h3>
           <button
             onClick={abrirModalNuevaGuardia}
-            className="mb-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            className="mb-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
           >
             <Plus size={18} />
           </button>
         </div>
-        <table className="min-w-full border border-gray-300 text-sm text-center">
+
+        {extraordinariaGuardias.length === 0 ? (
+          <div className="rounded shadow mb-6 overflow-x-auto text-center ">
+            <p>Sin asignaciones pendientes.</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded shadow mb-6 overflow-x-auto">
+        <table className="bg-white min-w-full border border-gray-300 text-sm text-center">
           <thead>
             <tr className="bg-gray-200">
               <th className="border px-2 py-1">Fecha y horario</th>
               <th className="border px-2 py-1">Funcionario</th>
               <th className="border px-2 py-1">Tipo</th>
-              <th className="border px-2 py-1 hidden sm:table-cell">
+              <th className="border px-2 py-1">
                 Comentario
               </th>
               <th className="border px-2 py-1">Acciones</th>
             </tr>
           </thead>
-
           <tbody>
-            {extraordinariaGuardias.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="text-center py-4 text-gray-500">
-                  No hay guardias extraordinarias registradas.
-                </td>
-              </tr>
-            ) : (
-              extraordinariaGuardiaOrdenadas.map((g) => {
+            {extraordinariaGuardiaOrdenadas.map((g) => {
                 return (
                   <tr
                     key={g.id}
@@ -447,13 +451,13 @@ const EscalafonServicio = () => {
                       {g.tipo}
                     </td>
 
-                    {/* Columna comentario visible solo en pantallas medianas o más grandes */}
-                    <td className="border px-2 py-1 text-left whitespace-nowrap hidden sm:table-cell">
+                    
+                    <td className="border px-2 py-1 text-left whitespace-nowrap">
                       {g.comentario}
                     </td>
 
                     <td className="border px-2 py-1">
-                      {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ? (
+                      {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" || usuario?.is_admin === true ? (
                         <button
                           onClick={() =>
                             handleBorrarExtraordinariaGuardia(g.id)
@@ -467,12 +471,15 @@ const EscalafonServicio = () => {
                         <span className="text-gray-500">Sin acciones.</span>
                       )}
                     </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                    </tr>
+                  );
+                })
+              }
+              </tbody>
+            </table>
+            </div>
+        
+        )}
 
         {modalGuardiaOpen && (
           <ExtraordinariaGuardiaModal
@@ -488,11 +495,11 @@ const EscalafonServicio = () => {
         {turnos.map((turno) => {
           const lista = funcionariosPorTurno(turno.id);
           return (
-            <section key={turno.id} className="bg-white roundedmb-6">
-              <h2 className="text-xl font-bold text-blue-900 mb-2">
+            <section key={turno.id} className="rounded mb-6">
+              <h3 className="text-xl font-bold text-blue-900 mb-2">
                 {turno.nombre}
-              </h2>
-              <table className="min-w-full border border-gray-300 text-sm text-center">
+              </h3>
+              <table className="bg-white min-w-full border shadow border-gray-300 text-sm text-center">
                 <thead>
                   <tr className="bg-gray-200">
                     <th className="border px-2 py-1 w-20">Grado</th>
@@ -512,7 +519,7 @@ const EscalafonServicio = () => {
                         colSpan={4}
                         className="text-center py-4 text-gray-500"
                       >
-                        No hay funcionarios asignados a este turno.
+                        <SearchX className="ml-2"/> No hay funcionarios asignados a este turno.
                       </td>
                     </tr>
                   ) : (
@@ -582,7 +589,7 @@ const EscalafonServicio = () => {
                             {valor}
                           </td>
                           <td className="border px-2 py-1">
-                            {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ? (
+                            {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" || usuario?.is_admin === true ? (
                               <button
                                 onClick={() => abrirModalEditarAsignacion(f)}
                                 className="m-auto p-1 text-yellow-600 rounded"
@@ -605,13 +612,14 @@ const EscalafonServicio = () => {
           );
         })}
       </main>
+
       {/* Tabla General */}
-      <section className="bg-white rounded shadow p-4 mt-6">
-        <h3 className="text-xl font-semibold text-blue-900 mb-4">
+      <section className="rounded mt-6">
+        <h3 className="text-xl font-bold text-blue-900 mb-2">
           Listado General del Personal
         </h3>
         <div className="overflow-x-auto ">
-          <table className="min-w-full border border-gray-300 text-sm text-left">
+          <table className="bg-white min-w-full border border-gray-300 text-sm text-left">
             <thead className="bg-gray-100">
               <tr>
                 <th className="border px-3 py-2">Grado</th>
@@ -650,7 +658,7 @@ const EscalafonServicio = () => {
                       </td>
                       <td className="border px-3 py-2">{turnoNombre}</td>
                       <td className="flex border px-3 py-2">
-                        {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ? (
+                        {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" || usuario?.is_admin === true ? (
                           <>
                             <Link
                               to={`/funcionario/${f.id}/detalle`}
@@ -701,6 +709,14 @@ const EscalafonServicio = () => {
       {usuario?.rol_jerarquico === "ADMINISTRADOR" && (
         <button
           onClick={() => navigate("/admin")}
+          className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"
+        >
+          ← Volver
+        </button>
+      )}
+      {usuario?.is_admin === true && (
+        <button
+          onClick={() => navigate("/funcionario/" + usuario?.id)}
           className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"
         >
           ← Volver

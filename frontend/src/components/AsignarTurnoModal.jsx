@@ -13,6 +13,7 @@ const AsignarTurnoModal = ({
     usuario_id: "",
     turno_id: "",
     estado: "",
+    is_admin: false,
   });
 
   useEffect(() => {
@@ -21,6 +22,7 @@ const AsignarTurnoModal = ({
         usuario_id: asignacion.usuario_id || "",
         turno_id: asignacion.turno_id || "",
         estado: asignacion.estado || "",
+        is_admin: asignacion.is_admin || false,
       });
     }
   }, [asignacion]);
@@ -37,7 +39,7 @@ const AsignarTurnoModal = ({
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-      <div className="bg-white rounded p-6 w-full max-w-md">
+      <div className="bg-white rounded p-6 max-w-md">
         <h2 className="text-xl font-bold mb-4">Asignar Turno a Funcionario</h2>
 
         {asignacion.usuario_id ? (
@@ -98,6 +100,16 @@ const AsignarTurnoModal = ({
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="flex items-center mb-4">
+          Administrador
+          <input
+            type="checkbox"
+            checked={form.is_admin}
+            onChange={(e) => handleChange("is_admin", e.target.checked)}
+            className="border border-gray-300 m-4 rounded "
+          />
         </label>
 
         <div className="flex justify-end space-x-2">

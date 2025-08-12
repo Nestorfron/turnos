@@ -23,7 +23,7 @@ const Table = ({ columns, data, onEdit, onDelete, title }) => {
         </div>
       )}
 
-      <div className="bg-white rounded-md shadow p-4 overflow-x-auto">
+      <div className="bg-white rounded-md shadow overflow-x-auto">
         <table className="min-w-full border-collapse border border-gray-300 text-sm">
           <thead>
             <tr className="bg-gray-100 text-gray-700 uppercase text-xs font-medium tracking-wide">

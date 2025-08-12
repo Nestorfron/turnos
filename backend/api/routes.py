@@ -595,6 +595,7 @@ def actualizar_usuario(id):
     zona_id = body.get("zona_id", usuario.zona_id)
     estado = body.get("estado", usuario.estado)
     turno_id = body.get("turno_id", usuario.turno_id)  
+    is_admin = body.get("is_admin", usuario.is_admin)
 
     if rol_jerarquico == 'JEFE_ZONA':
         if not zona_id:
@@ -615,6 +616,7 @@ def actualizar_usuario(id):
     usuario.zona_id = zona_id
     usuario.estado = estado
     usuario.turno_id = turno_id
+    usuario.is_admin = is_admin
 
     db.session.commit()
     return jsonify(usuario.serialize()), 200
