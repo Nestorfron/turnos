@@ -6,6 +6,7 @@ import Table from "../components/Table";
 import Loading from "../components/Loading";
 import dayjs from "dayjs";
 import { estaTokenExpirado } from "../utils/tokenUtils.js";
+import { SearchX, Users } from "lucide-react";
 
 const FuncionarioPanel = () => {
   const { usuario, logout } = useAppContext();
@@ -19,7 +20,14 @@ const FuncionarioPanel = () => {
   const [extraordinariaGuardias, setExtraordinariaGuardias] = useState([]);
 
   useEffect(() => {
-    if (usuario?.rol_jerarquico !== "FUNCIONARIO" || estaTokenExpirado(usuario.token)) {
+    if (usuario?.rol_jerarquico !== "FUNCIONARIO") {
+      navigate("/");
+      return;
+    }
+
+    if (estaTokenExpirado(usuario?.token)) {
+      alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
+      localStorage.removeItem("usuario");
       navigate("/");
       return;
     }
@@ -53,11 +61,12 @@ const FuncionarioPanel = () => {
         setTurnos(dep.turnos || []);
         setFuncionarios(funcs);
 
-        const [guardiasData, licenciasData, extraordinariaGuardiasData] = await Promise.all([
-          fetchData("guardias"),
-          fetchData("licencias"),
-          fetchData("extraordinaria-guardias"),
-        ]);
+        const [guardiasData, licenciasData, extraordinariaGuardiasData] =
+          await Promise.all([
+            fetchData("guardias"),
+            fetchData("licencias"),
+            fetchData("extraordinaria-guardias"),
+          ]);
 
         if (guardiasData) {
           const guardiasFiltradas = guardiasData.filter((g) =>
@@ -74,11 +83,12 @@ const FuncionarioPanel = () => {
         }
 
         if (extraordinariaGuardiasData) {
-          const extraordinariaGuardiasFiltradas = extraordinariaGuardiasData
-            .filter((l) => l.usuario_id === usuario.id)
+          const extraordinariaGuardiasFiltradas =
+            extraordinariaGuardiasData.filter(
+              (l) => l.usuario_id === usuario.id
+            );
           setExtraordinariaGuardias(extraordinariaGuardiasFiltradas);
         }
-        
       } catch (error) {
         console.error("Error cargando datos:", error);
       }
@@ -106,21 +116,21 @@ const FuncionarioPanel = () => {
       return funcionarios
         .filter((f) => f.turno_id === turnoId)
         .sort((a, b) => {
-          // Primero por grado (mayor primero)
           const diffGrado = (b.grado || 0) - (a.grado || 0);
           if (diffGrado !== 0) return diffGrado;
-  
-          // Luego por fecha_ingreso (más antiguo primero)
-          const fechaA = a.fecha_ingreso ? new Date(a.fecha_ingreso) : new Date(9999, 0, 1);
-          const fechaB = b.fecha_ingreso ? new Date(b.fecha_ingreso) : new Date(9999, 0, 1);
+
+          const fechaA = a.fecha_ingreso
+            ? new Date(a.fecha_ingreso)
+            : new Date(9999, 0, 1);
+          const fechaB = b.fecha_ingreso
+            ? new Date(b.fecha_ingreso)
+            : new Date(9999, 0, 1);
           return fechaA - fechaB;
         });
     },
     [funcionarios]
   );
-  
 
-  // OPTIMIZA lookups
   const licenciasMap = useMemo(() => {
     const map = new Map();
     licencias.forEach((l) => {
@@ -171,101 +181,108 @@ const FuncionarioPanel = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800">
       <header className="mb-8">
-        <div className="bg-white rounded-md shadow p-6 mb-4">
-          <h2 className="text-2xl font-bold text-blue-900 mb-2">
-            {dependencia.nombre}
-          </h2>
-          <p>
-            <strong>Jefe:</strong> {dependencia.jefe_nombre}
-          </p>
-          <p>
-            <strong>Descripción:</strong> {dependencia.descripcion || "-"}
-          </p>
-          <p>
-            <strong>Total de funcionarios:</strong> {cantidadFuncionarios}
-          </p>
-        </div>
-        <div className="flex justify-between items-center">
-        <Link
-          to={`/guardias`}
-          state={{ sec: dependencia }}
-          className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-        >
-          Escalafón
-        </Link>
+        <div className="flex bg-white rounded-md shadow p-6 mb-4">
+          <div>
+            <h2 className="text-2xl font-bold text-blue-900 mb-2">
+              {dependencia.nombre}
+            </h2>
+            <p>
+              <strong>Jefe:</strong> {dependencia.jefe_nombre}
+            </p>
+            <p>
+              <strong>Descripción:</strong> {dependencia.descripcion || "-"}
+            </p>
+            <p>
+              <strong>Total de funcionarios:</strong> {cantidadFuncionarios}
+            </p>
+          </div>
 
-        <Link
-          to={`/funcionario/${usuario?.id}/detalle`}
-          className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-        >
-          Mis Licencias
-        </Link>
+          {usuario?.is_admin === true && <div className="flex justify-end items-center ml-auto">
+            <Link
+              to={`/escalafon-servicio`}
+              className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+            >
+              <Users size={24} />
+            </Link>
+          </div>}
         </div>
-       
+
+        <div className="flex justify-between items-center">
+          <Link
+            to={`/guardias`}
+            state={{ sec: dependencia }}
+            className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+          >
+            Escalafón
+          </Link>
+
+          <Link
+            to={`/funcionario/${usuario?.id}/detalle`}
+            className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+          >
+            Mis Licencias
+          </Link>
+        </div>
       </header>
 
-      <main className="space-y-10 bg-white rounded mb-6 overflow-x-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-blue-900 mb-4">
+      <main className="space-y-10 rounded mb-6 overflow-x-auto">
+        <div className="flex justify-between items-center">
+          <h3 className="text-xl font-semibold text-blue-900 mb-4">
             Extraordinarias / Cursos
-          </h2>
-        </div>
-        <div className="overflow-x-auto rounded shadow p-4">
-        <table className="min-w-full border border-gray-300 text-sm text-center">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="border px-2 py-1">Fecha y horario</th>
-              <th className="border px-2 py-1">Tipo</th>
-              <th className="border px-2 py-1">
-                Comentario
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {extraordinariaGuardias.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="text-center py-4 text-gray-500">
-                  No tienes guardias extraordinarias pendientes.
-                </td>
-              </tr>
-            ) : (
-              extraordinariaGuardias.map((g) => {
-                return (
-                  <tr
-                    key={g.id}
-                    className="even:bg-gray-50 hover:bg-blue-50 transition-colors"
-                  >
-                    <td className="border px-2 py-1">
-                    {dayjs.utc(g.fecha_inicio).format("DD/MM/YYYY")}{" "}
-                      <span className="text-xs text-gray-600">
-                        {"de "}
-                        {dayjs.utc(g.fecha_inicio).format("HH:mm")} a{" "}
-                        {dayjs.utc(g.fecha_fin).format("HH:mm")}
-                      </span> 
-                    </td>
-                    <td className="border px-2 py-1 text-left whitespace-nowrap">
-                      {g.tipo}  
-                      </td>
-                    <td className="border px-2 py-1 text-left whitespace-nowrap">
-                      {g.comentario}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+          </h3>
         </div>
 
-        
+        {extraordinariaGuardias.length === 0 ? (
+          <div className="flex items-center rounded shadow mb-6 overflow-x-auto text-center ">
+            <p className="m-auto flex text-gray-500">
+              {" "}
+              <SearchX className="ml-2" /> Sin asignaciones
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded shadow p-4">
+            <table className="min-w-full border border-gray-300 text-sm text-center">
+              <thead>
+                <tr className="bg-gray-200">
+                  <th className="border px-2 py-1">Fecha y horario</th>
+                  <th className="border px-2 py-1">Tipo</th>
+                  <th className="border px-2 py-1">Comentario</th>
+                </tr>
+              </thead>
+              <tbody>
+                {extraordinariaGuardias.map((g) => {
+                  return (
+                    <tr
+                      key={g.id}
+                      className="even:bg-gray-50 hover:bg-blue-50 transition-colors"
+                    >
+                      <td className="border px-2 py-1">
+                        {dayjs.utc(g.fecha_inicio).format("DD/MM/YYYY")}{" "}
+                        <span className="text-xs text-gray-600">
+                          {"de "}
+                          {dayjs.utc(g.fecha_inicio).format("HH:mm")} a{" "}
+                          {dayjs.utc(g.fecha_fin).format("HH:mm")}
+                        </span>
+                      </td>
+                      <td className="border px-2 py-1 text-left whitespace-nowrap">
+                        {g.tipo}
+                      </td>
+                      <td className="border px-2 py-1 text-left whitespace-nowrap">
+                        {g.comentario}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </main>
 
       {/* Mi Turno Actual */}
 
       <main className="space-y-10">
-        <h3 className="text-xl font-semibold text-blue-900 mb-4">
-          Mi Turno Actual
-        </h3>
+        <h3 className="text-xl font-semibold text-blue-900">Mi Turno Actual</h3>
         {miTurno ? (
           <Table
             title={null}
@@ -280,16 +297,20 @@ const FuncionarioPanel = () => {
             ]}
           />
         ) : (
-          <p>No tienes un turno asignado actualmente.</p>
+          <p className="text-center text-gray-500">
+            {" "}
+            <SearchX className="ml-2" />
+            No tienes un turno asignado actualmente.
+          </p>
         )}
 
-        <h3 className="text-xl font-semibold text-blue-900 mb-4">
+        <h3 className="text-xl font-semibold text-blue-900">
           Mis Próximas Guardias
         </h3>
 
         {miTurno && (
-          <div className="bg-white rounded shadow p-4 mb-6 overflow-x-auto">
-            <table className="min-w-full border border-gray-300 text-sm text-center">
+          <div className="bg-white rounded shadow mb-6 overflow-x-auto border ">
+            <table className="min-w-full bg-white border border-gray-300 text-sm text-center">
               <thead>
                 <tr className="bg-gray-200">
                   <th className="border px-2 py-1 w-48">

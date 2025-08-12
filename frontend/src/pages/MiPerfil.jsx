@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Users, Edit2, Key, Home } from "lucide-react";
+import { User, Edit2, Key, Home } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
 import { cambiarPassword } from "../utils/api";
@@ -22,10 +22,18 @@ export default function MiPerfil() {
   const [loadingPass, setLoadingPass] = useState(false);
 
   useEffect(() => {
-    if (!usuario || estaTokenExpirado(usuario.token)) {
+    if (!usuario) {
       navigate("/");
       return;
     }
+
+    if (estaTokenExpirado(usuario?.token)) {
+      alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
+      localStorage.removeItem("usuario");
+      navigate("/");
+      return;
+    }
+
     setTempCorreo(usuario?.correo || "");
   }, [usuario]);
 
@@ -117,12 +125,11 @@ export default function MiPerfil() {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white shadow-lg rounded-xl p-6 space-y-6">
+    <div className="max-w-md mx-auto bg-white shadow-lg rounded-xl p-6 space-y-6 mt-2">
       {/* Icono y nombre */}
       <div className="flex flex-col items-center space-y-2">
-        <Users size={48} className="text-blue-600" />
+        <User size={48} className="text-blue-600" />
         <h1 className="text-xl font-bold">{usuario?.nombre || "Usuario no registrado"}</h1>
-        <p className="text-gray-500">{usuario?.grado || "Usuario no registrado"}</p>
       </div>
 
       {/* Datos básicos */}

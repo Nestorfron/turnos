@@ -9,7 +9,7 @@ import { Trash, Check } from "lucide-react";
 import Loading from "../components/Loading";
 
 const SolicitudesLicencia = () => {
-  const { usuario, logout, solicitudes, getSolicitudes } = useAppContext();
+  const { usuario, solicitudes, getSolicitudes } = useAppContext();
   const [funcionarios, setFuncionarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [guardias, setGuardias] = useState([]);
@@ -17,10 +17,18 @@ const SolicitudesLicencia = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!usuario || estaTokenExpirado(usuario.token)) {
+    if (!usuario) {
       navigate("/");
       return;
     }
+
+    if (estaTokenExpirado(usuario?.token)) {
+      alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
+      localStorage.removeItem("usuario");
+      navigate("/");
+      return;
+    }
+
     const cargarDatos = async () => {
       try {
         const usuarios = await fetchData("usuarios", usuario.token);

@@ -25,7 +25,7 @@ dayjs.locale("es");
 const GuardiasPanel = () => {
 
 
-  const { usuario, logout } = useAppContext();
+  const { usuario } = useAppContext();
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -122,9 +122,16 @@ const GuardiasPanel = () => {
   
 
   useEffect(() => {
-    if (!usuario || estaTokenExpirado(usuario.token)) {
+    if (!usuario) {
       navigate("/");
     };
+
+    if (estaTokenExpirado(usuario?.token)) {
+      alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
+      localStorage.removeItem("usuario");
+      navigate("/");
+      return;
+    }
     
     if (!dependencia?.id) return;
   
@@ -186,7 +193,7 @@ const GuardiasPanel = () => {
   }, [dependencia, usuario]);
   
   useEffect(() => {
-    if (usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA") {
+    if (usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA" && usuario?.is_admin !== true) {
       setDaysToShow(14);
     }
   }, [usuario]);
@@ -536,7 +543,7 @@ const GuardiasPanel = () => {
             value={startDate.format("YYYY-MM-DD")}
             onChange={(e) => setStartDate(dayjs(e.target.value))}
             className="border rounded px-2 py-1"
-            disabled={usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA"}
+            disabled={usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA" && usuario?.is_admin !== true}
           />
         </div>
 
@@ -680,7 +687,7 @@ const GuardiasPanel = () => {
                                 {valor}
                                 {valor === "L" || valor === "L.Medica"
                                   ? usuario?.rol_jerarquico ===
-                                      "JEFE_DEPENDENCIA" && (
+                                      "JEFE_DEPENDENCIA" || usuario?.is_admin === true && (
                                       <>
                                         <button
                                           onClick={() =>  eliminarLicencia(f, d) }
@@ -692,7 +699,7 @@ const GuardiasPanel = () => {
                                       </>
                                     )
                                   : usuario?.rol_jerarquico ===
-                                      "JEFE_DEPENDENCIA" && (
+                                      "JEFE_DEPENDENCIA" || usuario?.is_admin === true && (
                                       <>
                                         <button
                                           onClick={() =>
@@ -769,7 +776,7 @@ const GuardiasPanel = () => {
           onConfirm={eliminarGuardiasFiltradas}
         />
       )}
-      {selectorTipo && usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
+      {selectorTipo && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 ">
           <div className="bg-white rounded-lg shadow-lg p-6 w-80 space-y-4 max-h-[80vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-blue-800 mb-2">

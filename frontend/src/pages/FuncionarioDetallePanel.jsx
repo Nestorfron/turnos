@@ -35,10 +35,17 @@ const FuncionarioDetallePanel = () => {
   );
 
   useEffect(() => {
-    if (!usuario || estaTokenExpirado(usuario.token)) {
+    if (!usuario) {
       navigate("/");
       return;
     }  
+
+    if (estaTokenExpirado(usuario.token)) {
+      alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
+      localStorage.removeItem("usuario");
+      navigate("/");
+      return;
+    }
 
     const cargarDatos = async () => {
       try {
@@ -265,7 +272,11 @@ const FuncionarioDetallePanel = () => {
       </div>
 
       <div className="mb-4">
-        <label className="font-semibold mr-2">Año:</label>
+        
+        <div className="flex items-center mb-4">
+        <h3 className="text-xl font-semibold text-blue-900 mr-2">Licencias</h3>
+
+        <label className="font-semibold text-xl text-blue-900 mr-2">Año:</label>
         <select
           className="border rounded px-3 py-1"
           value={anioSeleccionado}
@@ -277,21 +288,19 @@ const FuncionarioDetallePanel = () => {
             </option>
           ))}
         </select>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold text-blue-900">Licencias</h3>
           {usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA" && <button
             onClick={() => abrirModalLicencia(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
+            className="ms-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
           >
             + Solicitar Licencia
           </button>}
         </div>
       </div>
 
-      <div className="bg-white rounded shadow p-6 mb-6">
+      <div className="rounded mb-6">
         <h3 className="text-xl font-semibold text-blue-900 mb-4">Autorizado</h3>
         {licencias.length > 0 ? (
-          <ul className="space-y-2">
+          <ul className="space-y-2 bg-white rounded shadow">
             {licencias.map((l) => (
               <li key={l.id} className="border p-3 rounded">
                 <strong>
@@ -310,14 +319,14 @@ const FuncionarioDetallePanel = () => {
             ))}
           </ul>
         ) : (
-          <p>No hay licencias registradas.</p>
+          <p className="text-center text-gray-500">No hay licencias registradas.</p>
         )}
         <p className="mt-4 font-medium">
           Días utilizados en {anioSeleccionado}: {totalDiasLicencia}
         </p>
       </div>
 
-      <div className="bg-white rounded shadow p-6 mb-6"> 
+      <div className="rounded mb-6"> 
         <h3 className="text-xl font-semibold text-blue-900 mb-4">
           Solicitado
         </h3>
@@ -349,18 +358,18 @@ const FuncionarioDetallePanel = () => {
             ))}
           </ul>
         ) : (
-          <p>No hay licencias solicitadas registradas.</p>
+          <p className="text-center text-gray-500">No hay licencias solicitadas registradas.</p>
         )}
       </div>
 
-      <div className="bg-white rounded shadow p-6">
+      <div >
         <h3 className="text-xl font-semibold text-blue-900 mb-4">
           Médicas
         </h3>
         {licenciasMedicas.length > 0 ? (
           <ul className="space-y-2">
             {licenciasMedicas.map((l) => (
-              <li key={l.id} className="border p-3 rounded">
+              <li key={l.id} className="bg-white border p-3 rounded shadow">
                 <strong>
                   {dayjs(l.fecha_inicio).utc().format("DD/MM/YYYY")} -{" "}
                   {dayjs(l.fecha_fin).utc().format("DD/MM/YYYY")}
@@ -371,7 +380,7 @@ const FuncionarioDetallePanel = () => {
             ))}
           </ul>
         ) : (
-          <p>No hay licencias médicas registradas.</p>
+          <p className="text-center text-gray-500">No hay licencias médicas registradas.</p>
         )}
         <p className="mt-4 font-medium">
           Días utilizados en {anioSeleccionado}: {totalDiasLicenciaMedica}

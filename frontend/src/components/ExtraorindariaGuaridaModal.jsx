@@ -29,7 +29,6 @@ const ExtraordinariaGuardiaModal = ({
     }
   }, [extraordinariaGuardia]);
 
-  // Evitar que fechaFin sea menor que fechaInicio
   useEffect(() => {
     if (dayjs(fechaFin).isBefore(dayjs(fechaInicio))) {
       setFechaFin(fechaInicio);
@@ -38,7 +37,7 @@ const ExtraordinariaGuardiaModal = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded shadow w-full max-w-md space-y-4">
+      <div className="bg-white p-6 rounded shadow max-w-md space-y-4">
         <h2 className="text-xl font-semibold text-blue-800">
           {extraordinariaGuardia ? "Editar Licencia/Guardia" : "Agregar Licencia/Guardia"}
         </h2>

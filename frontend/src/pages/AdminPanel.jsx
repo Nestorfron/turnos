@@ -29,10 +29,18 @@ const AdminPanel = () => {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    if (!usuario || usuario?.rol_jerarquico !== "ADMINISTRADOR" || estaTokenExpirado(usuario.token)) {
+    if (!usuario || usuario?.rol_jerarquico !== "ADMINISTRADOR" ) {
       navigate("/");
       return;
     }
+    
+    if (estaTokenExpirado(usuario?.token)) {
+      alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
+      localStorage.removeItem("usuario");
+      navigate("/");
+      return;
+    }
+
     setIsLoading(true);
 
     const cargarDatos = async () => {

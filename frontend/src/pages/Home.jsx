@@ -8,14 +8,24 @@ import { estaTokenExpirado } from "../utils/tokenUtils";
 import img from "../assets/logo.png";
 
 const Home = () => {
-  const { usuario, logout } = useAppContext();
+  const { usuario } = useAppContext();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (estaTokenExpirado(usuario?.token)) {
-      logout();
+
+    if (!usuario) {
+      navigate("/");
+      return;
     }
-    if (usuario) {
+
+    if (estaTokenExpirado(usuario?.token)) {
+      alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
+      localStorage.removeItem("usuario");
+      navigate("/");
+      return;
+    }
+
+    if (usuario) {     
       switch (usuario.rol_jerarquico) {
         case "JEFE_ZONA":
           navigate("/jefe-zona");
