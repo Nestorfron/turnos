@@ -24,19 +24,19 @@ const Table = ({ columns, data, onEdit, onDelete, title }) => {
       )}
 
       <div className="bg-white rounded-md shadow overflow-x-auto">
-        <table className="min-w-full border-collapse border border-gray-300 text-sm">
+        <table className="min-w-full border-collapse  text-sm">
           <thead>
             <tr className="bg-gray-100 text-gray-700 uppercase text-xs font-medium tracking-wide">
               {columns.map((col) => (
                 <th
                   key={col}
-                  className="border border-gray-300 py-3 px-4 text-left"
+                  className="border py-3 px-4 text-left"
                 >
                   {col}
                 </th>
               ))}
               {(onEdit || onDelete) && (
-                <th className="border border-gray-300 py-3 px-4 text-left">
+                <th className="border py-3 px-4 text-left">
                   Acciones
                 </th>
               )}

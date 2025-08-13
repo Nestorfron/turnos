@@ -87,7 +87,11 @@ const FuncionarioPanel = () => {
             extraordinariaGuardiasData.filter(
               (l) => l.usuario_id === usuario.id
             );
-          setExtraordinariaGuardias(extraordinariaGuardiasFiltradas);
+          const extraordinariasActuales =
+            extraordinariaGuardiasFiltradas.filter(
+              (g) => g.fecha_inicio <= fechaActual && g.fecha_fin >= fechaActual
+            );
+          setExtraordinariaGuardias(extraordinariasActuales);
         }
       } catch (error) {
         console.error("Error cargando datos:", error);
@@ -197,14 +201,16 @@ const FuncionarioPanel = () => {
             </p>
           </div>
 
-          {usuario?.is_admin === true && <div className="flex justify-end items-center ml-auto">
-            <Link
-              to={`/escalafon-servicio`}
-              className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-            >
-              <Users size={24} />
-            </Link>
-          </div>}
+          {usuario?.is_admin === true && (
+            <div className="flex justify-end items-center ml-auto">
+              <Link
+                to={`/escalafon-servicio`}
+                className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+              >
+                <Users size={24} />
+              </Link>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-between items-center">
@@ -309,8 +315,8 @@ const FuncionarioPanel = () => {
         </h3>
 
         {miTurno && (
-          <div className="bg-white rounded shadow mb-6 overflow-x-auto border ">
-            <table className="min-w-full bg-white border border-gray-300 text-sm text-center">
+          <div className="bg-white rounded shadow-lg mb-6 overflow-x-auto border ">
+            <table className="min-w-full bg-white text-sm text-center">
               <thead>
                 <tr className="bg-gray-200">
                   <th className="border px-2 py-1 w-48">

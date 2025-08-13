@@ -564,14 +564,14 @@ const GuardiasPanel = () => {
       guardias.length === 0 ? (
         <Loading />
       ) : (
-        <div id="contenedor-tablas" className="mb-6 overflow-x-auto">
+        <div id="contenedor-tablas" className="mb-6 overflow-x-auto bg-white rounded shadow">
           {turnos.map((turno) => {
             const lista = funcionariosPorTurno(turno.id);
 
             return (
-              <div key={turno.id} className="bg-white rounded shadow p-4">
+              <div key={turno.id} className="p-4">
                 <div>
-                  <table className="min-w-full border border-gray-300 text-sm text-center">
+                  <table className="min-w-full text-sm text-center">
                     <thead>
                       <tr className="bg-gray-200">
                         <th className="bg-white border px-2 text-left whitespace-nowrap  w-48 min-w-48 ">
