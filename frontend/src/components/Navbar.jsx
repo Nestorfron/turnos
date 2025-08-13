@@ -35,7 +35,7 @@ const Navbar = () => {
 
 
   return (
-    <nav className="bg-blue-700 text-white px-6 py-3 flex justify-between items-center relative">
+    <nav className={usuario ? "bg-blue-700 text-white px-6 py-3 flex justify-between items-center relative" : "d-none"}>
       <div className="flex items-center max-w-xs md:max-w-md lg:max-w-lg">
         <Link to="/" className="block w-full">
           <img src={img} alt="Logo" className="w-auto h-12" />
