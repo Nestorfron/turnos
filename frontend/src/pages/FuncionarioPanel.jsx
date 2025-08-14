@@ -11,6 +11,8 @@ import { SearchX, Users } from "lucide-react";
 const FuncionarioPanel = () => {
   const { usuario, logout } = useAppContext();
   const navigate = useNavigate();
+  const fechaActual = new Date();
+
 
   const [dependencia, setDependencia] = useState(null);
   const [turnos, setTurnos] = useState([]);
@@ -87,11 +89,12 @@ const FuncionarioPanel = () => {
             extraordinariaGuardiasData.filter(
               (l) => l.usuario_id === usuario.id
             );
-          const extraordinariasActuales =
-            extraordinariaGuardiasFiltradas.filter(
-              (g) => g.fecha_inicio <= fechaActual && g.fecha_fin >= fechaActual
-            );
-          setExtraordinariaGuardias(extraordinariasActuales);
+          const extraordinariaGuardiasActuales =
+            extraordinariaGuardiasFiltradas.filter((g) => {
+              const inicio = dayjs(g.fecha_inicio).utc();
+              return inicio >= fechaActual;
+            });
+          setExtraordinariaGuardias(extraordinariaGuardiasActuales);
         }
       } catch (error) {
         console.error("Error cargando datos:", error);
