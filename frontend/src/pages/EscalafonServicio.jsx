@@ -8,6 +8,7 @@ import { Pencil, Home, Plus, Trash, SearchX } from "lucide-react";
 import AsignarTurnoModal from "../components/AsignarTurnoModal";
 import { estaTokenExpirado } from "../utils/tokenUtils.js";
 import ExtraordinariaGuardiaModal from "../components/ExtraorindariaGuaridaModal.jsx";
+import Table from "../components/Table.jsx";
 
 const EscalafonServicio = () => {
   const { usuario, getSolicitudes } = useAppContext();
@@ -136,7 +137,7 @@ const EscalafonServicio = () => {
     if (!usuario) {
       navigate("/");
       return;
-    }  
+    }
 
     if (estaTokenExpirado(usuario?.token)) {
       alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
@@ -389,303 +390,254 @@ const EscalafonServicio = () => {
           onClick={() => setStartDate(dayjs())}
         />
       </div>
-      <main className="rounded mb-6">
-        <div className="flex justify-between items-center">
-          <h3 className="text-xl font-bold text-blue-900 mb-2">
-            Extraordinarias / Cursos
-          </h3>
-          <button
-            onClick={abrirModalNuevaGuardia}
-            className="mb-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-          >
-            <Plus size={18} />
-          </button>
-        </div>
 
-        {extraordinariaGuardias.length === 0 ? (
-          <div className="rounded shadow mb-6 overflow-x-auto text-center ">
-            <p>Sin asignaciones pendientes.</p>
+      {/* Guardias Extraordinarias / Cursos */}
+      <Table
+        title={
+          <div className="flex items-center justify-between w-full">
+            <span className="text-lg font-semibold">
+              Guardias Extraordinarias / Cursos
+            </span>
+            <button
+              onClick={abrirModalNuevaGuardia}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center ml-auto"
+            >
+              <Plus size={18} />
+            </button>
           </div>
-        ) : (
-          <div className="bg-white rounded shadow mb-6 overflow-x-auto">
-        <table className="bg-white min-w-full border border-gray-300 text-sm text-center">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="border px-2 py-1">Fecha y horario</th>
-              <th className="border px-2 py-1">Funcionario</th>
-              <th className="border px-2 py-1">Tipo</th>
-              <th className="border px-2 py-1">
-                Comentario
-              </th>
-              <th className="border px-2 py-1">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {extraordinariaGuardiaOrdenadas.map((g) => {
-                return (
-                  <tr
-                    key={g.id}
-                    className="even:bg-gray-50 hover:bg-blue-50 transition-colors"
-                  >
-                    <td className="border px-2 py-1">
-                      {dayjs.utc(g.fecha_inicio).format("DD/MM")}{" "}
-                      <span className="text-xs text-gray-500">
-                        {"("}
-                        {dayjs.utc(g.fecha_inicio).format("HH:mm")} a{" "}
-                        {dayjs.utc(g.fecha_fin).format("HH:mm")} {")"}
-                      </span>
-                    </td>
+        }
+        columns={["Fecha y horario", "Funcionario", "Tipo", "Comentario"]}
+        data={extraordinariaGuardiaOrdenadas}
+        leftAlignColumns={["Funcionario", "Tipo", "Comentario"]}
+        minWidthColumns={{
+          Tipo: "min-w-[150px]",
+          Comentario: "min-w-[200px]",
+        }}
+        renderCell={(item, col) => {
+          if (col === "Fecha y horario") {
+            return {
+              content: (
+                <>
+                  {dayjs.utc(item.fecha_inicio).format("DD/MM")}{" "}
+                  <span className="text-xs text-gray-500">
+                    ({dayjs.utc(item.fecha_inicio).format("HH:mm")} a{" "}
+                    {dayjs.utc(item.fecha_fin).format("HH:mm")})
+                  </span>
+                </>
+              ),
+            };
+          }
+          if (col === "Funcionario") {
+            return { content: funcionarioNombre(item.usuario_id) };
+          }
+          if (col === "Tipo") {
+            return {
+              content: item.tipo,
+              className:
+                item.comentario && window.innerWidth < 1024 ? "truncate" : "",
+              title:
+                item.comentario && window.innerWidth < 1024
+                  ? item.comentario
+                  : "",
+            };
+          }
+          if (col === "Comentario") {
+            return { content: item.comentario || "-" };
+          }
+        }}
+        onDelete={(item) => {
+          if (
+            usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ||
+            usuario?.is_admin === true
+          ) {
+            handleBorrarExtraordinariaGuardia(item.id);
+          } else {
+            alert("No tiene permisos para eliminar esta guardia");
+          }
+        }}
+        renderActions={(item) => {
+          if (
+            usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ||
+            usuario?.is_admin === true
+          ) {
+            return (
+              <button
+                onClick={() => handleBorrarExtraordinariaGuardia(item.id)}
+                className="m-auto p-1 text-red-600 rounded hover:bg-red-100"
+                title="Eliminar Guardia"
+              >
+                <Trash size={18} />
+              </button>
+            );
+          } else {
+            return <span className="text-gray-500">Sin acciones.</span>;
+          }
+        }}
+      />
+      {modalGuardiaOpen && (
+        <ExtraordinariaGuardiaModal
+          usuarios={funcionariosOrdenados}
+          extraordinariaGuardia={guardiaSeleccionada}
+          onClose={() => setModalGuardiaOpen(false)}
+          onSubmit={handleGuardarExtraordinariaGuardia}
+        />
+      )}
 
-                    <td className="border px-2 py-1 text-left whitespace-nowrap">
-                      {funcionarioNombre(g.usuario_id)}
-                    </td>
-
-                    <td
-                      className="border px-2 py-1 text-left whitespace-nowrap md:max-w-48"
-                      title={
-                        g.comentario && window.innerWidth < 1024
-                          ? g.comentario
-                          : ""
-                      }
-                    >
-                      {g.tipo}
-                    </td>
-
-                    
-                    <td className="border px-2 py-1 text-left whitespace-nowrap">
-                      {g.comentario}
-                    </td>
-
-                    <td className="border px-2 py-1">
-                      {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" || usuario?.is_admin === true ? (
-                        <button
-                          onClick={() =>
-                            handleBorrarExtraordinariaGuardia(g.id)
-                          }
-                          className="m-auto p-1 text-red-600 rounded hover:bg-red-100"
-                          title="Eliminar Guardia"
-                        >
-                          <Trash size={18} />
-                        </button>
-                      ) : (
-                        <span className="text-gray-500">Sin acciones.</span>
-                      )}
-                    </td>
-                    </tr>
-                  );
-                })
-              }
-              </tbody>
-            </table>
-            </div>
-        
-        )}
-
-        {modalGuardiaOpen && (
-          <ExtraordinariaGuardiaModal
-            usuarios={funcionariosOrdenados}
-            extraordinariaGuardia={guardiaSeleccionada}
-            onClose={() => setModalGuardiaOpen(false)}
-            onSubmit={handleGuardarExtraordinariaGuardia}
-          />
-        )}
-      </main>
-
+      {/* Listado de funcionarios por turno */}
       <main className="space-y-10 overflow-x-auto">
         {turnos.map((turno) => {
           const lista = funcionariosPorTurno(turno.id);
+
           return (
             <section key={turno.id} className="rounded mb-6">
-              <h3 className="text-xl font-bold text-blue-900 mb-2">
-                {turno.nombre}
-              </h3>
-              <table className="bg-white min-w-full border shadow border-gray-300 text-sm text-center">
-                <thead>
-                  <tr className="bg-gray-200">
-                    <th className="border px-2 py-1 w-20">Grado</th>
-                    <th className="border px-2 py-1 w-50 min-w-[10rem]">
-                      Nombres
-                    </th>
-                    <th className="border px-2 py-1 w-32">
-                      {startDate.format("DD/MM/YYYY")}
-                    </th>
-                    <th className="border px-2 py-1 w-24">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lista.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={4}
-                        className="text-center py-4 text-gray-500"
-                      >
-                        <SearchX className="ml-2"/> No hay funcionarios asignados a este turno.
-                      </td>
-                    </tr>
-                  ) : (
-                    lista.map((f) => {
-                      const valor = getCelda(f, diaActual);
-                      let bg = "",
-                        text = "text-black",
-                        fw = "font-normal",
-                        ts = "text-sm";
-                      if (valor === "Descanso") {
+              <Table
+                title={turno.nombre}
+                columns={["Grado", "Nombres", startDate.format("DD/MM/YYYY")]}
+                data={lista}
+                leftAlignColumns={["Nombres"]}
+                minWidthColumns={{
+                  Nombres: "min-w-[180px]",
+                  [startDate.format("DD/MM/YYYY")]: "min-w-[120px]", // ancho fijo o mínimo para la fecha
+                }}
+                renderCell={(item, col) => {
+                  if (col === "Grado") return { content: `G${item.grado}` };
+                  if (col === "Nombres") return { content: item.nombre };
+                  if (col === startDate.format("DD/MM/YYYY")) {
+                    const valor = getCelda(item, diaActual);
+
+                    let bg = "",
+                      text = "text-black",
+                      fw = "font-normal",
+                      ts = "text-sm";
+
+                    switch (valor) {
+                      case "Descanso":
                         bg = "bg-black";
                         text = "text-white";
                         fw = "font-bold";
-                      } else if (valor === "Licencia") {
+                        break;
+                      case "Licencia":
+                      case "Curso":
+                      case "CH":
+                      case "L.Ext":
                         bg = "bg-green-600";
                         text = "text-white";
                         fw = "font-bold";
-                      } else if (valor === "Licencia médica") {
+                        ts =
+                          valor === "Curso" ||
+                          valor === "CH" ||
+                          valor === "L.Ext"
+                            ? "text-xs"
+                            : ts;
+                        break;
+                      case "Licencia médica":
                         bg = "bg-yellow-300";
                         text = "text-black";
                         fw = "font-bold";
-                      } else if (valor === "En Servicio") {
+                        break;
+                      case "En Servicio":
                         bg = "bg-white";
-                      } else if (["1ro", "2do", "3er"].includes(valor)) {
-                        bg = "bg-blue-600";
-                        text = "text-white";
-                        fw = "font-bold";
-                      } else if (valor === "Curso") {
-                        bg = "bg-green-600";
-                        text = "text-white";
-                        fw = "font-bold";
+                        break;
+                      case "BROU":
                         ts = "text-xs";
-                      } else if (valor === "BROU") {
-                        ts = "text-xs";
-                      } else if (valor === "Custodia") {
+                        break;
+                      case "Custodia":
                         bg = "bg-blue-600";
                         text = "text-white";
                         fw = "font-bold";
                         ts = "text-xs";
-                      } else if (valor === "CH") {
-                        bg = "bg-green-600";
+                        break;
+                      case "1ro":
+                      case "2do":
+                      case "3er":
+                        bg = "bg-blue-600";
                         text = "text-white";
                         fw = "font-bold";
-                        ts = "text-xs";
-                      } else if (valor === "L.Ext") {
-                        bg = "bg-green-600";
-                        text = "text-white";
-                        fw = "font-bold";
-                        ts = "text-xs";
-                      } else if (valor === "-") {
+                        break;
+                      case "-":
                         bg = "bg-gray-300";
                         text = "text-gray-300";
                         fw = "font-normal";
                         ts = "text-xs";
-                      }
-                      return (
-                        <tr key={f.id}>
-                          <td className="border px-2 text-center w-20">
-                            G{f.grado}
-                          </td>
-                          <td className="border px-2 text-left whitespace-nowrap w-48">
-                            {f.nombre}
-                          </td>
-                          <td
-                            className={`border py-1 h-5 ${bg} ${text} ${fw} ${ts}`}
-                          >
-                            {valor}
-                          </td>
-                          <td className="border px-2 py-1">
-                            {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" || usuario?.is_admin === true ? (
-                              <button
-                                onClick={() => abrirModalEditarAsignacion(f)}
-                                className="m-auto p-1 text-yellow-600 rounded"
-                              >
-                                <Pencil size={18} />
-                              </button>
-                            ) : (
-                              <span className="text-gray-500">
-                                Sin acciones.
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                        break;
+                    }
+
+                    return {
+                      content: valor,
+                      className: `${bg} ${text} ${fw} ${ts} `,
+                    };
+                  }
+                }}
+                renderActions={(item) =>
+                  usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ||
+                  usuario?.is_admin === true ? (
+                    <button
+                      onClick={() => abrirModalEditarAsignacion(item)}
+                      className="flex items-center m-auto p-1 text-yellow-600 rounded"
+                    >
+                      <Pencil size={18} />
+                    </button>
+                  ) : (
+                    <span className="text-gray-500">Sin acciones.</span>
+                  )
+                }
+              />
             </section>
           );
         })}
       </main>
 
       {/* Tabla General */}
-      <section className="rounded mt-6">
-        <h3 className="text-xl font-bold text-blue-900 mb-2">
-          Listado General del Personal
-        </h3>
-        <div className="overflow-x-auto ">
-          <table className="bg-white min-w-full border border-gray-300 text-sm text-left">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="border px-3 py-2">Grado</th>
-                <th className="border px-3 py-2">Nombre</th>
-                <th className="border px-3 py-2">Estado</th>
-                <th className="border px-3 py-2">Turno</th>
-                <th className="border px-3 py-2">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {funcionariosOrdenados.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="text-center py-4 text-gray-500">
-                    No hay funcionarios registrados.
-                  </td>
-                </tr>
-              ) : (
-                funcionariosOrdenados.map((f) => {
-                  const turnoNombre =
-                    turnos.find((t) => t.id === f.turno_id)?.nombre ||
-                    "Sin asignar";
-                  return (
-                    <tr key={f.id} className="even:bg-gray-50">
-                      <td className="border px-3 py-2">G{f.grado}</td>
-                      <td className="border px-3 py-2">{f.nombre}</td>
-                      <td className="border px-3 py-2">
-                        <span
-                          className={
-                            f.estado?.toLowerCase() === "activo"
-                              ? "text-green-600 font-semibold"
-                              : "text-red-600 font-semibold"
-                          }
-                        >
-                          {f.estado || "Sin estado"}
-                        </span>
-                      </td>
-                      <td className="border px-3 py-2">{turnoNombre}</td>
-                      <td className="flex border px-3 py-2">
-                        {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" || usuario?.is_admin === true ? (
-                          <>
-                            <Link
-                              to={`/funcionario/${f.id}/detalle`}
-                              className="text-blue-600 hover:underline"
-                            >
-                              Licencias
-                            </Link>
-
-                            <button
-                              onClick={() => abrirModalEditarAsignacion(f)}
-                              className="m-auto p-1 text-yellow-600 rounded"
-                            >
-                              <Pencil size={18} />
-                            </button>
-                          </>
-                        ) : (
-                          <span className="text-gray-500">Sin acciones.</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <Table
+        title="Listado General del Personal"
+        columns={["Grado", "Nombre", "Estado", "Turno"]}
+        data={funcionariosOrdenados}
+        leftAlignColumns={["Nombre", "Estado", "Turno"]}
+        minWidthColumns={{
+          Nombre: "min-w-[12rem]",
+          Estado: "min-w-[10rem]",
+          Turno: "min-w-[10rem]",
+        }}
+        renderCell={(f, col) => {
+          if (col === "Grado") return { content: `G${f.grado}` };
+          if (col === "Nombre") return { content: f.nombre };
+          if (col === "Estado") {
+            const estadoClass =
+              f.estado?.toLowerCase() === "activo"
+                ? "text-green-600 font-semibold"
+                : "text-red-600 font-semibold";
+            return {
+              content: (
+                <span className={estadoClass}>{f.estado || "Sin estado"}</span>
+              ),
+            };
+          }
+          if (col === "Turno") {
+            const turnoNombre =
+              turnos.find((t) => t.id === f.turno_id)?.nombre || "Sin asignar";
+            return { content: turnoNombre };
+          }
+        }}
+        renderActions={(f) => {
+          if (
+            usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ||
+            usuario?.is_admin
+          ) {
+            return (
+              <div className="flex justify-around items-center gap-2">
+                <Link
+                  to={`/funcionario/${f.id}/detalle`}
+                  className="text-blue-600 hover:underline"
+                >
+                  Licencias
+                </Link>
+              </div>
+            );
+          } else {
+            return <span className="text-gray-500">Sin acciones.</span>;
+          }
+        }}
+      />
 
       {asignarModalOpen && (
         <AsignarTurnoModal

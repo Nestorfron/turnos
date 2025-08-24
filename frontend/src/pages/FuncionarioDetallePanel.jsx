@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { fetchData, putData, deleteData, postData } from "../utils/api";    
+import { fetchData, putData, deleteData, postData } from "../utils/api";
 import Loading from "../components/Loading";
 import { useAppContext } from "../context/AppContext";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import LicenciaModal from "../components/LicenciaModal.jsx";
 import { estaTokenExpirado } from "../utils/tokenUtils.js";
-import { Trash, Check  } from "lucide-react";
+import { Trash, Check, Plus, SearchX } from "lucide-react";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 dayjs.extend(isSameOrAfter);
@@ -26,7 +26,6 @@ const FuncionarioDetallePanel = () => {
   const [licenciasMedicas, setLicenciasMedicas] = useState([]);
   const [modalData, setModalData] = useState(null);
   const [guardias, setGuardias] = useState([]);
-  
 
   const [anioSeleccionado, setAnioSeleccionado] = useState(dayjs().year());
   const aniosDisponibles = Array.from(
@@ -38,7 +37,7 @@ const FuncionarioDetallePanel = () => {
     if (!usuario) {
       navigate("/");
       return;
-    }  
+    }
 
     if (estaTokenExpirado(usuario.token)) {
       alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
@@ -52,7 +51,9 @@ const FuncionarioDetallePanel = () => {
         const func = await fetchData(`usuarios/${id}`);
         const lic = await fetchData(`usuarios/${id}/licencias`);
         const guardias = await fetchData(`/guardias`);
-        const licenciasSolicitadas = await fetchData(`usuarios/${id}/licencias-solicitadas`);
+        const licenciasSolicitadas = await fetchData(
+          `usuarios/${id}/licencias-solicitadas`
+        );
 
         setGuardias(guardias);
 
@@ -60,12 +61,13 @@ const FuncionarioDetallePanel = () => {
         if (lic) {
           setLicencias(lic.licencias || []);
           setLicenciasMedicas(lic.licencias_medicas || []);
-          setLicenciasSolicitadas(licenciasSolicitadas.licencias_solicitadas || []);
+          setLicenciasSolicitadas(
+            licenciasSolicitadas.licencias_solicitadas || []
+          );
         }
       } catch (error) {
         console.error("Error al cargar funcionario:", error);
       }
-
     };
 
     cargarDatos();
@@ -115,30 +117,37 @@ const FuncionarioDetallePanel = () => {
     });
   };
 
-  const handleSolicitudLicenciaSubmit = async ({ fechaInicio, fechaFin, motivo, esMedica }) => {
+  const handleSolicitudLicenciaSubmit = async ({
+    fechaInicio,
+    fechaFin,
+    motivo,
+    esMedica,
+  }) => {
     try {
       const usuarioId = usuario.id;
       const fechaInicioDayjs = dayjs(fechaInicio).utc();
       const fechaFinDayjs = dayjs(fechaFin).utc();
-  
+
       const nuevaLicencia = {
         usuario_id: usuarioId,
         fecha_inicio: fechaInicioDayjs.utc().format("YYYY-MM-DD"),
         fecha_fin: fechaFinDayjs.utc().format("YYYY-MM-DD"),
         motivo,
-        estado: "pendiente", 
+        estado: "pendiente",
       };
-  
+
       const endpoint = esMedica ? "licencias-medicas" : "licencias-solicitadas";
-  
+
       const creada = await postData(endpoint, nuevaLicencia, usuario.token);
-  
+
       if (creada) {
         const tipo = esMedica ? "licencia_medica" : "licencia-solicitada";
-        setGuardias((prev) => [...prev, { ...creada, tipo }]); 
+        setGuardias((prev) => [...prev, { ...creada, tipo }]);
         setModalData(null);
-  
-        const ok = await fetchData(`usuarios/${usuarioId}/licencias-solicitadas`);
+
+        const ok = await fetchData(
+          `usuarios/${usuarioId}/licencias-solicitadas`
+        );
         if (ok) {
           setLicenciasSolicitadas(ok.licencias_solicitadas);
         }
@@ -153,9 +162,9 @@ const FuncionarioDetallePanel = () => {
   const eliminarLicencia = async (Licencia_id) => {
     const token = usuario.token;
     if (!token) return;
-  
+
     const resp = await deleteData(`licencias/${Licencia_id}`, token);
-    
+
     if (resp) {
       const ok = await fetchData(`usuarios/${id}/licencias`);
       if (ok) {
@@ -165,14 +174,16 @@ const FuncionarioDetallePanel = () => {
       console.error("❌ No se pudo eliminar la licencia");
     }
   };
-  
 
   const eliminarSolicitudLicencia = async (Licencia_id) => {
     const token = usuario.token;
     if (!token) return;
-  
-    const resp = await deleteData(`licencias-solicitadas/${Licencia_id}/`, token);
-    
+
+    const resp = await deleteData(
+      `licencias-solicitadas/${Licencia_id}/`,
+      token
+    );
+
     if (resp) {
       const ok = await fetchData(`usuarios/${id}/licencias-solicitadas`);
       if (ok) {
@@ -185,24 +196,22 @@ const FuncionarioDetallePanel = () => {
 
   const handleAutorizarLicencia = async (licencia) => {
     try {
-      const usuarioId = licencia.usuario_id; 
+      const usuarioId = licencia.usuario_id;
       const fechaInicioDayjs = dayjs(licencia.fecha_inicio);
       const fechaFinDayjs = dayjs(licencia.fecha_fin);
-  
-      
+
       const guardiasAEliminar = guardias.filter((g) => {
         if (g.usuario_id !== usuarioId || g.tipo !== "guardia") return false;
-  
+
         const inicio = dayjs.utc(g.fecha_inicio);
         const fin = dayjs.utc(g.fecha_fin);
-  
+
         return (
           inicio.isSameOrBefore(fechaFinDayjs, "day") &&
           fin.isSameOrAfter(fechaInicioDayjs, "day")
         );
       });
-  
-      
+
       await Promise.all(
         guardiasAEliminar.map(async (g) => {
           const ok = await deleteData(`guardias/${g.id}`, usuario.token);
@@ -213,8 +222,7 @@ const FuncionarioDetallePanel = () => {
           }
         })
       );
-  
-      
+
       const nuevaLicencia = {
         usuario_id: usuarioId,
         fecha_inicio: fechaInicioDayjs.utc().format("YYYY-MM-DD"),
@@ -222,22 +230,21 @@ const FuncionarioDetallePanel = () => {
         motivo: licencia.motivo,
         estado: "activo",
       };
-  
+
       const creada = await postData("licencias", nuevaLicencia, usuario.token);
-  
+
       if (!creada) {
         console.error("❌ Error al guardar licencia");
         return;
       }
-  
+
       eliminarSolicitudLicencia(licencia.id);
-  
-    
+
       const tipo = "licencia";
       setGuardias((prev) => [...prev, { ...creada, tipo }]);
       setLicencias((prev) => prev.filter((l) => l.id !== licencia.id));
       setModalData(null);
-  
+
       const ok = await fetchData(`usuarios/${usuarioId}/licencias`);
       if (ok) {
         setLicencias(ok.licencias);
@@ -246,7 +253,6 @@ const FuncionarioDetallePanel = () => {
       console.error("❌ Error en handleAutorizarLicencia:", error);
     }
   };
-  
 
   return (
     <div className="min-h-screen p-6 bg-gray-50">
@@ -272,28 +278,33 @@ const FuncionarioDetallePanel = () => {
       </div>
 
       <div className="mb-4">
-        
         <div className="flex items-center mb-4">
-        <h3 className="text-xl font-semibold text-blue-900 mr-2">Licencias</h3>
+          <h3 className="text-xl font-semibold text-blue-900 mr-2">
+            Licencias
+          </h3>
 
-        <label className="font-semibold text-xl text-blue-900 mr-2">Año:</label>
-        <select
-          className="border rounded px-3 py-1"
-          value={anioSeleccionado}
-          onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}
-        >
-          {aniosDisponibles.map((anio) => (
-            <option key={anio} value={anio}>
-              {anio}
-            </option>
-          ))}
-        </select>
-          {usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA" && <button
-            onClick={() => abrirModalLicencia(true)}
-            className="ms-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
+          <label className="font-semibold text-xl text-blue-900 mr-2">
+            Año:
+          </label>
+          <select
+            className="border rounded px-3 py-1"
+            value={anioSeleccionado}
+            onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}
           >
-            + Solicitar Licencia
-          </button>}
+            {aniosDisponibles.map((anio) => (
+              <option key={anio} value={anio}>
+                {anio}
+              </option>
+            ))}
+          </select>
+          {usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA" && (
+            <button
+              onClick={() => abrirModalLicencia(true)}
+              className="ms-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
+            >
+              <Plus size={18} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -309,27 +320,30 @@ const FuncionarioDetallePanel = () => {
                 </strong>
                 <p>Motivo: {l.motivo}</p>
                 <p>Estado: {l.estado}</p>
-                {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && <button
-                  onClick={() => eliminarLicencia(l.id)}
-                  className="flex ms-auto text-red-500 hover:text-red-600"
-                >
-                  <Trash size={18} />
-                </button>}
+                {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
+                  <button
+                    onClick={() => eliminarLicencia(l.id)}
+                    className="flex ms-auto text-red-500 hover:text-red-600"
+                  >
+                    <Trash size={18} />
+                  </button>
+                )}
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-center text-gray-500">No hay licencias registradas.</p>
+          <p className="flex items-center justify-center text-gray-500">
+            <SearchX className="mr-2" />
+            <span>No hay datos disponibles</span>
+          </p>
         )}
         <p className="mt-4 font-medium">
           Días utilizados en {anioSeleccionado}: {totalDiasLicencia}
         </p>
       </div>
 
-      <div className="rounded mb-6"> 
-        <h3 className="text-xl font-semibold text-blue-900 mb-4">
-          Solicitado
-        </h3>
+      <div className="rounded mb-6">
+        <h3 className="text-xl font-semibold text-blue-900 mb-4">Solicitado</h3>
         {licenciasSolicitadas.length > 0 ? (
           <ul className="space-y-2">
             {licenciasSolicitadas.map((l) => (
@@ -340,32 +354,35 @@ const FuncionarioDetallePanel = () => {
                 </strong>
                 <p>Motivo: {l.motivo}</p>
                 <p>Estado: {l.estado}</p>
-               <div className="flex justify-end gap-6">
-               <button
-                  onClick={() => eliminarSolicitudLicencia(l.id)}
-                  className="flex text-red-500 hover:text-red-600"
-                >
-                  <Trash size={18} />
-                </button>
-                {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && <button
-                  onClick={() => handleAutorizarLicencia(l)}
-                  className="flex text-green-500 hover:text-green-600"
-                >
-                  <Check size={18} />
-                </button>}
-               </div>
+                <div className="flex justify-end gap-6">
+                  <button
+                    onClick={() => eliminarSolicitudLicencia(l.id)}
+                    className="flex text-red-500 hover:text-red-600"
+                  >
+                    <Trash size={18} />
+                  </button>
+                  {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
+                    <button
+                      onClick={() => handleAutorizarLicencia(l)}
+                      className="flex text-green-500 hover:text-green-600"
+                    >
+                      <Check size={18} />
+                    </button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-center text-gray-500">No hay licencias solicitadas registradas.</p>
+          <p className="flex items-center justify-center text-gray-500">
+            <SearchX className="mr-2" />
+            <span>No hay datos disponibles</span>
+          </p>
         )}
       </div>
 
-      <div >
-        <h3 className="text-xl font-semibold text-blue-900 mb-4">
-          Médicas
-        </h3>
+      <div>
+        <h3 className="text-xl font-semibold text-blue-900 mb-4">Médicas</h3>
         {licenciasMedicas.length > 0 ? (
           <ul className="space-y-2">
             {licenciasMedicas.map((l) => (
@@ -380,7 +397,10 @@ const FuncionarioDetallePanel = () => {
             ))}
           </ul>
         ) : (
-          <p className="text-center text-gray-500">No hay licencias médicas registradas.</p>
+          <p className="flex items-center justify-center text-gray-500">
+            <SearchX className="mr-2" />
+            <span>No hay datos disponibles</span>
+          </p>
         )}
         <p className="mt-4 font-medium">
           Días utilizados en {anioSeleccionado}: {totalDiasLicenciaMedica}

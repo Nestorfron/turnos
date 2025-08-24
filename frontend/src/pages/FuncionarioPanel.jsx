@@ -13,12 +13,12 @@ const FuncionarioPanel = () => {
   const navigate = useNavigate();
   const fechaActual = new Date();
 
-
   const [dependencia, setDependencia] = useState(null);
   const [turnos, setTurnos] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
   const [guardias, setGuardias] = useState([]);
   const [licencias, setLicencias] = useState([]);
+  const [licenciasMedicas, setLicenciasMedicas] = useState([]);
   const [extraordinariaGuardias, setExtraordinariaGuardias] = useState([]);
 
   useEffect(() => {
@@ -63,18 +63,30 @@ const FuncionarioPanel = () => {
         setTurnos(dep.turnos || []);
         setFuncionarios(funcs);
 
-        const [guardiasData, licenciasData, extraordinariaGuardiasData] =
-          await Promise.all([
-            fetchData("guardias"),
-            fetchData("licencias"),
-            fetchData("extraordinaria-guardias"),
-          ]);
+        const [
+          guardiasData,
+          licenciasData,
+          licenciasMedicasData,
+          extraordinariaGuardiasData,
+        ] = await Promise.all([
+          fetchData("guardias"),
+          fetchData("licencias"),
+          fetchData("licencias-medicas"),
+          fetchData("extraordinaria-guardias"),
+        ]);
 
         if (guardiasData) {
           const guardiasFiltradas = guardiasData.filter((g) =>
             funcs.some((f) => f.id === g.usuario_id)
           );
           setGuardias(guardiasFiltradas);
+        }
+
+        if (licenciasMedicasData) {
+          const licenciasFiltradasMedicas = licenciasMedicasData
+            .filter((l) => funcs.some((f) => f.id === l.usuario_id))
+            .map((l) => ({ ...l, tipo: "licencia_medica" }));
+          setLicenciasMedicas(licenciasFiltradasMedicas);
         }
 
         if (licenciasData) {
@@ -164,12 +176,26 @@ const FuncionarioPanel = () => {
     return map;
   }, [guardias]);
 
+  const licenciasMedicasMap = useMemo(() => {
+    const map = new Map();
+    licenciasMedicas.forEach((l) => {
+      const inicio = dayjs(l.fecha_inicio).utc();
+      const fin = dayjs(l.fecha_fin).utc();
+      for (let d = inicio; d.isSameOrBefore(fin); d = d.add(1, "day")) {
+        const key = `${l.usuario_id}_${d.format("YYYY-MM-DD")}`;
+        map.set(key, l);
+      }
+    });
+    return map;
+  }, [licenciasMedicas]);
+
   const getCelda = useCallback(
     (usuario, dia) => {
       const fecha = dia.format("YYYY-MM-DD");
       const key = `${usuario.id}_${fecha}`;
 
       if (licenciasMap.has(key)) return "L";
+      if (licenciasMedicasMap.has(key)) return "L.Medica";
 
       const registro = guardiasMap.get(key);
       if (registro) {
@@ -180,10 +206,10 @@ const FuncionarioPanel = () => {
 
       return "-";
     },
-    [licenciasMap, guardiasMap]
+    [licenciasMap, guardiasMap, licenciasMedicasMap]
   );
 
-  if (!dependencia) return <Loading />;
+  if (!dependencia || !turnos || !funcionarios || !guardias || !licencias || !licenciasMedicas || !extraordinariaGuardias) return <Loading />;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800">
@@ -235,184 +261,121 @@ const FuncionarioPanel = () => {
       </header>
 
       <main className="space-y-10 rounded mb-6 overflow-x-auto">
-        <div className="flex justify-between items-center">
-          <h3 className="text-xl font-semibold text-blue-900 mb-4">
-            Extraordinarias / Cursos
-          </h3>
-        </div>
 
-        {extraordinariaGuardias.length === 0 ? (
-          <div className="flex items-center rounded shadow mb-6 overflow-x-auto text-center ">
-            <p className="m-auto flex text-gray-500">
-              {" "}
-              <SearchX className="ml-2" /> Sin asignaciones
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto rounded shadow p-4">
-            <table className="min-w-full border border-gray-300 text-sm text-center">
-              <thead>
-                <tr className="bg-gray-200">
-                  <th className="border px-2 py-1">Fecha y horario</th>
-                  <th className="border px-2 py-1">Tipo</th>
-                  <th className="border px-2 py-1">Comentario</th>
-                </tr>
-              </thead>
-              <tbody>
-                {extraordinariaGuardias.map((g) => {
-                  return (
-                    <tr
-                      key={g.id}
-                      className="even:bg-gray-50 hover:bg-blue-50 transition-colors"
-                    >
-                      <td className="border px-2 py-1">
-                        {dayjs.utc(g.fecha_inicio).format("DD/MM/YYYY")}{" "}
-                        <span className="text-xs text-gray-600">
-                          {"de "}
-                          {dayjs.utc(g.fecha_inicio).format("HH:mm")} a{" "}
-                          {dayjs.utc(g.fecha_fin).format("HH:mm")}
-                        </span>
-                      </td>
-                      <td className="border px-2 py-1 text-left whitespace-nowrap">
-                        {g.tipo}
-                      </td>
-                      <td className="border px-2 py-1 text-left whitespace-nowrap">
-                        {g.comentario}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </main>
+        {/* Extraordinarias / Cursos */}
+        <Table
+          title="Extraordinarias / Cursos"
+          columns={["Fecha y horario", "Tipo", "Comentario"]}
+          data={extraordinariaGuardias.map((g) => ({
+            "fecha y horario": `${dayjs
+              .utc(g.fecha_inicio)
+              .format("DD/MM/YYYY")} de ${dayjs
+              .utc(g.fecha_inicio)
+              .format("HH:mm")} a ${dayjs.utc(g.fecha_fin).format("HH:mm")}`,
+            tipo: g.tipo,
+            comentario: g.comentario || "-",
+          }))}
+        />
 
-      {/* Mi Turno Actual */}
+        {/* Mi Turno Actual */}
+        <Table
+          title="Mi Turno Actual"
+          columns={["Nombre", "Hora inicio", "Hora fin", "Descripción"]}
+          data={[
+            {
+              Nombre: miTurno.nombre,
+              "Hora inicio": miTurno.hora_inicio?.slice(0, 5) || "-",
+              "Hora fin": miTurno.hora_fin?.slice(0, 5) || "-",
+              Descripción: miTurno.descripcion || "-",
+            },
+          ]}
+          leftAlignColumns={["Nombre"]}
+          renderCell={(item, col, value) => ({
+            content: value,
+            className: "text-sm text-black",
+          })}
+        />
 
-      <main className="space-y-10">
-        <h3 className="text-xl font-semibold text-blue-900">Mi Turno Actual</h3>
-        {miTurno ? (
-          <Table
-            title={null}
-            columns={["Nombre", "Hora Inicio", "Hora Fin", "Descripción"]}
-            data={[
-              {
-                nombre: miTurno.nombre,
-                "hora inicio": miTurno.hora_inicio?.slice(0, 5),
-                "hora fin": miTurno.hora_fin?.slice(0, 5),
-                descripción: miTurno.descripcion || "-",
-              },
-            ]}
-          />
-        ) : (
-          <p className="text-center text-gray-500">
-            {" "}
-            <SearchX className="ml-2" />
-            No tienes un turno asignado actualmente.
-          </p>
-        )}
+        {/* Mis Próximas Guardias */}
+        <Table
+          title={`Mis Próximas Guardias`}
+          columns={["Funcionario", ...dias.map((d) => d.format("DD/MM"))]}
+          data={funcionariosPorTurno(miTurno.id).map((f) => {
+            const row = { Funcionario: `G${f.grado} ${f.nombre}` };
+            dias.forEach((d) => {
+              row[d.format("DD/MM")] = getCelda(f, d);
+            });
+            return row;
+          })}
+          leftAlignColumns={["Funcionario"]}
+          renderCell={(item, col, value) => {
+            let bgBase = "";
+            let textColor = "text-black";
+            let fontWeight = "font-normal";
+            let textSize = "";
+            let minWidthClass = "min-w-[50px]";
 
-        <h3 className="text-xl font-semibold text-blue-900">
-          Mis Próximas Guardias
-        </h3>
+            if (col === "Funcionario") {
+              minWidthClass = "min-w-[180px]";
+            }
 
-        {miTurno && (
-          <div className="bg-white rounded shadow-lg mb-6 overflow-x-auto border ">
-            <table className="min-w-full bg-white text-sm text-center">
-              <thead>
-                <tr className="bg-gray-200">
-                  <th className="border px-2 py-1 w-48">
-                    <h2 className="text-lg font-semibold text-blue-800">
-                      {miTurno.nombre}
-                    </h2>
-                  </th>
-                  {dias.map((d) => (
-                    <th
-                      key={d.format("YYYY-MM-DD")}
-                      className="border px-2 py-1"
-                    >
-                      {d.format("ddd")} <br /> {d.format("D")}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {funcionariosPorTurno(miTurno.id).map((f) => (
-                  <tr key={f.id}>
-                    <td className="border px-2 text-left whitespace-nowrap w-48 min-w-48">
-                      G{f.grado} {f.nombre}
-                    </td>
-                    {dias.map((d) => {
-                      const valor = getCelda(f, d);
-
-                      let bgBase = "";
-                      let textColor = "text-black";
-                      let fontWeight = "font-normal";
-                      let textSize = "text-sm";
-
-                      if (valor === "D") {
-                        bgBase = "bg-black";
-                        textColor = "text-white";
-                        fontWeight = "font-bold";
-                      } else {
-                        switch (valor) {
-                          case "T":
-                            bgBase = "bg-white";
-                            break;
-                          case "L":
-                            bgBase = "bg-green-600";
-                            textColor = "text-white";
-                            fontWeight = "font-bold";
-                            break;
-                          case "1ro":
-                          case "2do":
-                          case "3er":
-                            bgBase = "bg-blue-600";
-                            textColor = "text-white";
-                            fontWeight = "font-bold";
-                            break;
-                          case "Curso":
-                            bgBase = "bg-green-600";
-                            textColor = "text-white";
-                            fontWeight = "font-bold";
-                            textSize = "text-xs";
-                            break;
-                          case "BROU":
-                            textSize = "text-xs";
-                            break;
-                          case "Custodia":
-                            bgBase = "bg-blue-600";
-                            textColor = "text-white";
-                            fontWeight = "font-bold";
-                            textSize = "text-xs";
-                            break;
-                          case "-":
-                            bgBase = "bg-gray-300";
-                            textColor = "text-gray-300";
-                            fontWeight = "font-normal";
-                            textSize = "text-xs";
-                            break;
-                          default:
-                            break;
-                        }
-                      }
-
-                      return (
-                        <td
-                          key={d.format("YYYY-MM-DD")}
-                          className={`border py-1 h-5 ${bgBase} ${textColor} ${fontWeight} ${textSize}`}
-                        >
-                          {valor}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+            switch (value) {
+              case "D":
+                bgBase = "bg-black";
+                textColor = "text-white";
+                fontWeight = "font-bold";
+                textSize = "text-xs";
+                break;
+              case "T":
+                bgBase = "bg-white";
+                textSize = "text-xs";
+                break;
+              case "L":
+              case "L.Ext":
+                bgBase = "bg-green-600";
+                textColor = "text-white";
+                fontWeight = "font-bold";
+                textSize = "text-xs";
+                break;
+              case "L.Medica":
+                bgBase = "bg-yellow-300";
+                textColor = "text-black";
+                fontWeight = "font-bold";
+                textSize = "text-xs";
+                break;
+              case "1ro":
+              case "2do":
+              case "3er":
+              case "Custodia":
+                bgBase = "bg-blue-600";
+                textColor = "text-white";
+                fontWeight = "font-bold";
+                textSize = "text-xs";
+                break;
+              case "Curso":
+                bgBase = "bg-green-600";
+                textColor = "text-white";
+                fontWeight = "font-bold";
+                textSize = "text-xs";
+                break;
+              case "BROU":
+                textSize = "text-xs";
+                break;
+              case "-":
+                bgBase = "bg-gray-300";
+                textColor = "text-gray-300";
+                fontWeight = "font-normal";
+                textSize = "text-xs";
+                break;
+              default:
+                break;
+            }
+            return {
+              content: value,
+              className: `${bgBase} ${textColor} ${fontWeight} ${textSize} ${minWidthClass}`,
+            };
+          }}
+        />
       </main>
     </div>
   );

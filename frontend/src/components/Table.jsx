@@ -1,7 +1,17 @@
 import React from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, SearchX } from "lucide-react";
 
-const Table = ({ columns, data, onEdit, onDelete, title }) => {
+const Table = ({
+  columns,
+  data,
+  onEdit,
+  onDelete,
+  renderActions,
+  title,
+  renderCell,
+  leftAlignColumns = [],
+  minWidthColumns = {},
+}) => {
   const getCellValue = (item, col) => {
     const keysToTry = [
       col.toLowerCase().replace(/\s+/g, "_"),
@@ -24,21 +34,21 @@ const Table = ({ columns, data, onEdit, onDelete, title }) => {
       )}
 
       <div className="bg-white rounded-md shadow overflow-x-auto">
-        <table className="min-w-full border-collapse  text-sm">
+        <table className="min-w-full border-collapse text-sm">
           <thead>
             <tr className="bg-gray-100 text-gray-700 uppercase text-xs font-medium tracking-wide">
               {columns.map((col) => (
                 <th
                   key={col}
-                  className="border py-3 px-4 text-left"
+                  className={`border py-2 px-2 sm:px-4 text-center ${
+                    minWidthColumns[col] || ""
+                  }`}
                 >
                   {col}
                 </th>
               ))}
-              {(onEdit || onDelete) && (
-                <th className="border py-3 px-4 text-left">
-                  Acciones
-                </th>
+              {(onEdit || onDelete || renderActions) && (
+                <th className="border py-2 px-2 sm:px-4 text-center">Acciones</th>
               )}
             </tr>
           </thead>
@@ -46,10 +56,13 @@ const Table = ({ columns, data, onEdit, onDelete, title }) => {
             {data.length === 0 ? (
               <tr>
                 <td
-                  colSpan={columns.length + (onEdit || onDelete ? 1 : 0)}
+                  colSpan={columns.length + (onEdit || onDelete || renderActions ? 1 : 0)}
                   className="text-center py-4 text-gray-500"
                 >
-                  No hay datos disponibles
+                  <p className="flex items-center justify-center text-gray-500">
+                    <SearchX className="mr-2" />
+                    <span>No hay datos disponibles</span>
+                  </p>
                 </td>
               </tr>
             ) : (
@@ -58,34 +71,54 @@ const Table = ({ columns, data, onEdit, onDelete, title }) => {
                   key={item.id || idx}
                   className="even:bg-gray-50 hover:bg-blue-50 transition-colors"
                 >
-                  {columns.map((col) => (
-                    <td
-                      key={col}
-                      className="border border-gray-300 py-2 px-4"
-                      title={getCellValue(item, col)}
-                    >
-                      {getCellValue(item, col)}
-                    </td>
-                  ))}
-                  {(onEdit || onDelete) && (
-                    <td className="border border-gray-300 py-2 px-4 space-x-2">
-                      {onEdit && (
-                        <button
-                          onClick={() => onEdit(item)}
-                          className="text-yellow-500 hover:text-yellow-600"
-                          title="Editar"
-                        >
-                          <Pencil size={18} />
-                        </button>
-                      )}
-                      {onDelete && (
-                        <button
-                          onClick={() => onDelete(item)}
-                          className="text-red-500 hover:text-red-600"
-                          title="Eliminar"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                  {columns.map((col) => {
+                    let cellContent = getCellValue(item, col);
+                    let cellClass = minWidthColumns[col] || "";
+
+                    if (renderCell) {
+                      const res = renderCell(item, col, cellContent);
+                      if (res) {
+                        cellContent = res.content;
+                        cellClass = `${res.className || ""} ${cellClass}`;
+                      }
+                    }
+
+                    const alignmentClass = leftAlignColumns.includes(col)
+                      ? "text-left"
+                      : "text-center";
+
+                    return (
+                      <td
+                        key={col}
+                        className={`border py-1 px-1 sm:py-2 sm:px-4 ${alignmentClass} ${cellClass}`}
+                      >
+                        {cellContent}
+                      </td>
+                    );
+                  })}
+                  {(onEdit || onDelete || renderActions) && (
+                    <td className="border py-1 px-1 sm:py-2 sm:px-4 flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
+                      {renderActions ? (
+                        renderActions(item)
+                      ) : (
+                        <>
+                          {onEdit && (
+                            <button
+                              onClick={() => onEdit(item)}
+                              className="text-yellow-500 hover:text-yellow-600"
+                            >
+                              <Pencil size={18} />
+                            </button>
+                          )}
+                          {onDelete && (
+                            <button
+                              onClick={() => onDelete(item)}
+                              className="text-red-500 hover:text-red-600"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )}
+                        </>
                       )}
                     </td>
                   )}
