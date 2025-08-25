@@ -4,7 +4,15 @@ import dayjs from "dayjs";
 import Loading from "../components/Loading";
 import { useAppContext } from "../context/AppContext";
 import { fetchData, putData, postData, deleteData } from "../utils/api";
-import { Pencil, Home, Plus, Trash, SearchX } from "lucide-react";
+import {
+  Pencil,
+  Home,
+  Plus,
+  Trash,
+  SearchX,
+  Eye,
+  EyeClosed,
+} from "lucide-react";
 import AsignarTurnoModal from "../components/AsignarTurnoModal";
 import { estaTokenExpirado } from "../utils/tokenUtils.js";
 import ExtraordinariaGuardiaModal from "../components/ExtraorindariaGuaridaModal.jsx";
@@ -21,6 +29,8 @@ const EscalafonServicio = () => {
   const [funcionarios, setFuncionarios] = useState([]);
   const [guardias, setGuardias] = useState([]);
   const [extraordinariaGuardias, setExtraordinariaGuardias] = useState([]);
+  const [extraordinariaGuardiasTodas, setExtraordinariaGuardiasTodas] =
+    useState([]);
   const [licencias, setLicencias] = useState([]);
   const [licenciasMedicas, setLicenciasMedicas] = useState([]);
   const [cantidadFuncionarios, setCantidadFuncionarios] = useState(0);
@@ -40,6 +50,12 @@ const EscalafonServicio = () => {
 
   const [asignarModalOpen, setAsignarModalOpen] = useState(false);
   const [asignacionSeleccionada, setAsignacionSeleccionada] = useState(null);
+
+  const [mostrarTabla, setMostrarTabla] = useState(false);
+
+  const toggleTabla = () => {
+    setMostrarTabla(!mostrarTabla);
+  };
 
   const abrirModalEditarAsignacion = useCallback((funcionario) => {
     setAsignacionSeleccionada({
@@ -242,6 +258,7 @@ const EscalafonServicio = () => {
           dayjs(g.fecha_inicio).isSame(hoy) ||
           dayjs(g.fecha_inicio).isAfter(hoy)
       );
+      setExtraordinariaGuardiasTodas(l);
       setExtraordinariaGuardias(guardiasFiltradas);
       setCargandoExtraordinariaGuardias(false);
     };
@@ -342,9 +359,9 @@ const EscalafonServicio = () => {
     return <Loading />;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800">
+    <div className="min-h-screen bg-gray-50 px-2 font-sans text-gray-800">
       <header className="mb-8">
-        <div className="bg-white rounded-md shadow p-6 mb-4">
+        <div className="bg-white rounded-md shadow p-4 my-4 py-4">
           <h2 className="text-2xl font-bold text-blue-900 mb-2">
             {dependencia.nombre}
           </h2>
@@ -392,288 +409,334 @@ const EscalafonServicio = () => {
       </div>
 
       {/* Guardias Extraordinarias / Cursos */}
-      <Table
-        title={
-          <div className="flex items-center justify-between w-full">
-            <span className="text-lg font-semibold">
-              Guardias Extraordinarias / Cursos
-            </span>
+      <section className="space-y-10 bg-white rounded-md shadow px-2 mb-4">
+        <br />
+        <Table
+          title="Extraordinarias / Cursos"
+          searchable={true}
+          columns={["Fecha y horario", "Funcionario", "Tipo", "Comentario"]}
+          data={extraordinariaGuardiaOrdenadas}
+          leftAlignColumns={["Funcionario", "Tipo", "Comentario"]}
+          minWidthColumns={{
+            Tipo: "min-w-[150px]",
+            Comentario: "min-w-[200px]",
+          }}
+          renderCell={(item, col) => {
+            if (col === "Fecha y horario") {
+              return {
+                content: (
+                  <>
+                    {dayjs.utc(item.fecha_inicio).format("DD/MM")}{" "}
+                    <span className="text-xs text-gray-500">
+                      ({dayjs.utc(item.fecha_inicio).format("HH:mm")} a{" "}
+                      {dayjs.utc(item.fecha_fin).format("HH:mm")})
+                    </span>
+                  </>
+                ),
+              };
+            }
+            if (col === "Funcionario") {
+              return { content: funcionarioNombre(item.usuario_id) };
+            }
+            if (col === "Tipo") {
+              return {
+                content: item.tipo,
+                className:
+                  item.comentario && window.innerWidth < 1024 ? "truncate" : "",
+                title:
+                  item.comentario && window.innerWidth < 1024
+                    ? item.comentario
+                    : "",
+              };
+            }
+            if (col === "Comentario") {
+              return { content: item.comentario || "-" };
+            }
+          }}
+          onDelete={(item) => {
+            if (
+              usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ||
+              usuario?.is_admin === true
+            ) {
+              handleBorrarExtraordinariaGuardia(item.id);
+            } else {
+              alert("No tiene permisos para eliminar esta guardia");
+            }
+          }}
+          renderActions={(item) => {
+            if (
+              usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ||
+              usuario?.is_admin === true
+            ) {
+              return (
+                <button
+                  onClick={() => handleBorrarExtraordinariaGuardia(item.id)}
+                  className="m-auto px-2 text-red-600 rounded hover:bg-red-100"
+                  title="Eliminar Guardia"
+                >
+                  <Trash size={18} />
+                </button>
+              );
+            } else {
+              return <span className="text-gray-500">Sin acciones.</span>;
+            }
+          }}
+        />
+        {modalGuardiaOpen && (
+          <ExtraordinariaGuardiaModal
+            usuarios={funcionariosOrdenados}
+            extraordinariaGuardia={guardiaSeleccionada}
+            onClose={() => setModalGuardiaOpen(false)}
+            onSubmit={handleGuardarExtraordinariaGuardia}
+          />
+        )}
+
+        {/*Extraordinarias / Cursos todas*/}
+        <div
+          className={mostrarTabla ? "bg-gray-100 rounded-md shadow mb-6" : ""}
+        >
+          <div className="flex items-center justify-between">
             <button
               onClick={abrirModalNuevaGuardia}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center ml-auto"
+              className="mx-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center"
             >
               <Plus size={18} />
             </button>
+            <button
+              onClick={toggleTabla}
+              className="m-4 flex ml-auto text-blue-600 hover:underline"
+            >
+              {mostrarTabla ? "Cerrar" : "Ver todas"}
+            </button>
           </div>
-        }
-        columns={["Fecha y horario", "Funcionario", "Tipo", "Comentario"]}
-        data={extraordinariaGuardiaOrdenadas}
-        leftAlignColumns={["Funcionario", "Tipo", "Comentario"]}
-        minWidthColumns={{
-          Tipo: "min-w-[150px]",
-          Comentario: "min-w-[200px]",
-        }}
-        renderCell={(item, col) => {
-          if (col === "Fecha y horario") {
-            return {
-              content: (
-                <>
-                  {dayjs.utc(item.fecha_inicio).format("DD/MM")}{" "}
-                  <span className="text-xs text-gray-500">
-                    ({dayjs.utc(item.fecha_inicio).format("HH:mm")} a{" "}
-                    {dayjs.utc(item.fecha_fin).format("HH:mm")})
-                  </span>
-                </>
-              ),
-            };
-          }
-          if (col === "Funcionario") {
-            return { content: funcionarioNombre(item.usuario_id) };
-          }
-          if (col === "Tipo") {
-            return {
-              content: item.tipo,
-              className:
-                item.comentario && window.innerWidth < 1024 ? "truncate" : "",
-              title:
-                item.comentario && window.innerWidth < 1024
-                  ? item.comentario
-                  : "",
-            };
-          }
-          if (col === "Comentario") {
-            return { content: item.comentario || "-" };
-          }
-        }}
-        onDelete={(item) => {
-          if (
-            usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ||
-            usuario?.is_admin === true
-          ) {
-            handleBorrarExtraordinariaGuardia(item.id);
-          } else {
-            alert("No tiene permisos para eliminar esta guardia");
-          }
-        }}
-        renderActions={(item) => {
-          if (
-            usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ||
-            usuario?.is_admin === true
-          ) {
-            return (
-              <button
-                onClick={() => handleBorrarExtraordinariaGuardia(item.id)}
-                className="m-auto p-1 text-red-600 rounded hover:bg-red-100"
-                title="Eliminar Guardia"
-              >
-                <Trash size={18} />
-              </button>
-            );
-          } else {
-            return <span className="text-gray-500">Sin acciones.</span>;
-          }
-        }}
-      />
-      {modalGuardiaOpen && (
-        <ExtraordinariaGuardiaModal
-          usuarios={funcionariosOrdenados}
-          extraordinariaGuardia={guardiaSeleccionada}
-          onClose={() => setModalGuardiaOpen(false)}
-          onSubmit={handleGuardarExtraordinariaGuardia}
-        />
-      )}
+
+          {mostrarTabla && (
+            <Table
+              title="Extraordinarias / Cursos (todas)"
+              searchable={true}
+              columns={["Fecha y horario", "Funcionario", "Tipo", "Comentario"]}
+              data={extraordinariaGuardiasTodas.map((g) => ({
+                Funcionario: funcionarioNombre(g.usuario_id),
+                "fecha y horario": `${dayjs
+                  .utc(g.fecha_inicio)
+                  .format("DD/MM/YYYY")} de ${dayjs
+                  .utc(g.fecha_inicio)
+                  .format("HH:mm")} a ${dayjs
+                  .utc(g.fecha_fin)
+                  .format("HH:mm")}`,
+                tipo: g.tipo,
+                comentario: g.comentario || "-",
+              }))}
+            />
+          )}
+        </div>
+      </section>
 
       {/* Listado de funcionarios por turno */}
-      <main className="space-y-10 overflow-x-auto">
-        {turnos.map((turno) => {
-          const lista = funcionariosPorTurno(turno.id);
+      <section className="space-y-10 bg-white rounded-md shadow px-2 mb-6">
+        <h1 className="text-xl font-semibold text-blue-900 pt-4 text-center">
+          TURNOS
+        </h1>
+        <main className="space-y-10 ">
+          {turnos.map((turno) => {
+            const lista = funcionariosPorTurno(turno.id);
 
-          return (
-            <section key={turno.id} className="rounded mb-6">
-              <Table
-                title={turno.nombre}
-                columns={["Grado", "Nombres", startDate.format("DD/MM/YYYY")]}
-                data={lista}
-                leftAlignColumns={["Nombres"]}
-                minWidthColumns={{
-                  Nombres: "min-w-[180px]",
-                  [startDate.format("DD/MM/YYYY")]: "min-w-[120px]", // ancho fijo o mínimo para la fecha
-                }}
-                renderCell={(item, col) => {
-                  if (col === "Grado") return { content: `G${item.grado}` };
-                  if (col === "Nombres") return { content: item.nombre };
-                  if (col === startDate.format("DD/MM/YYYY")) {
-                    const valor = getCelda(item, diaActual);
+            return (
+              <section key={turno.id} className="rounded mb-6">
+                <Table
+                  title={turno.nombre}
+                  columns={["Grado", "Nombres", startDate.format("DD/MM/YYYY")]}
+                  data={lista}
+                  leftAlignColumns={["Nombres"]}
+                  minWidthColumns={{
+                    Nombres: "min-w-[150px]",
+                    [startDate.format("DD/MM/YYYY")]: "min-w-[120px]",
+                  }}
+                  renderCell={(item, col) => {
+                    if (col === "Grado") return { content: `G${item.grado}` };
+                    if (col === "Nombres") return { content: item.nombre };
+                    if (col === startDate.format("DD/MM/YYYY")) {
+                      const valor = getCelda(item, diaActual);
 
-                    let bg = "",
-                      text = "text-black",
-                      fw = "font-normal",
-                      ts = "text-sm";
+                      let bg = "",
+                        text = "text-black",
+                        fw = "font-normal",
+                        ts = "text-sm";
 
-                    switch (valor) {
-                      case "Descanso":
-                        bg = "bg-black";
-                        text = "text-white";
-                        fw = "font-bold";
-                        break;
-                      case "Licencia":
-                      case "Curso":
-                      case "CH":
-                      case "L.Ext":
-                        bg = "bg-green-600";
-                        text = "text-white";
-                        fw = "font-bold";
-                        ts =
-                          valor === "Curso" ||
-                          valor === "CH" ||
-                          valor === "L.Ext"
-                            ? "text-xs"
-                            : ts;
-                        break;
-                      case "Licencia médica":
-                        bg = "bg-yellow-300";
-                        text = "text-black";
-                        fw = "font-bold";
-                        break;
-                      case "En Servicio":
-                        bg = "bg-white";
-                        break;
-                      case "BROU":
-                        ts = "text-xs";
-                        break;
-                      case "Custodia":
-                        bg = "bg-blue-600";
-                        text = "text-white";
-                        fw = "font-bold";
-                        ts = "text-xs";
-                        break;
-                      case "1ro":
-                      case "2do":
-                      case "3er":
-                        bg = "bg-blue-600";
-                        text = "text-white";
-                        fw = "font-bold";
-                        break;
-                      case "-":
-                        bg = "bg-gray-300";
-                        text = "text-gray-300";
-                        fw = "font-normal";
-                        ts = "text-xs";
-                        break;
+                      switch (valor) {
+                        case "Descanso":
+                          bg = "bg-black";
+                          text = "text-white";
+                          fw = "font-bold";
+                          break;
+                        case "Licencia":
+                        case "Curso":
+                        case "CH":
+                        case "L.Ext":
+                          bg = "bg-green-600";
+                          text = "text-white";
+                          fw = "font-bold";
+                          ts =
+                            valor === "Curso" ||
+                            valor === "CH" ||
+                            valor === "L.Ext"
+                              ? "text-xs"
+                              : ts;
+                          break;
+                        case "Licencia médica":
+                          bg = "bg-yellow-300";
+                          text = "text-black";
+                          fw = "font-bold";
+                          break;
+                        case "En Servicio":
+                          bg = "bg-white";
+                          break;
+                        case "BROU":
+                          ts = "text-xs";
+                          break;
+                        case "Custodia":
+                          bg = "bg-blue-600";
+                          text = "text-white";
+                          fw = "font-bold";
+                          ts = "text-xs";
+                          break;
+                        case "1ro":
+                        case "2do":
+                        case "3er":
+                          bg = "bg-blue-600";
+                          text = "text-white";
+                          fw = "font-bold";
+                          break;
+                        case "-":
+                          bg = "bg-gray-300";
+                          text = "text-gray-300";
+                          fw = "font-normal";
+                          ts = "text-xs";
+                          break;
+                      }
+
+                      return {
+                        content: valor,
+                        className: `${bg} ${text} ${fw} ${ts} `,
+                      };
                     }
-
-                    return {
-                      content: valor,
-                      className: `${bg} ${text} ${fw} ${ts} `,
-                    };
+                  }}
+                  renderActions={(item) =>
+                    usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ||
+                    usuario?.is_admin === true ? (
+                      <button
+                        onClick={() => abrirModalEditarAsignacion(item)}
+                        className="flex items-center m-auto px-2 text-yellow-600 rounded"
+                      >
+                        <Pencil size={18} />
+                      </button>
+                    ) : (
+                      <span className="text-gray-500">Sin acciones.</span>
+                    )
                   }
-                }}
-                renderActions={(item) =>
-                  usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ||
-                  usuario?.is_admin === true ? (
-                    <button
-                      onClick={() => abrirModalEditarAsignacion(item)}
-                      className="flex items-center m-auto p-1 text-yellow-600 rounded"
-                    >
-                      <Pencil size={18} />
-                    </button>
-                  ) : (
-                    <span className="text-gray-500">Sin acciones.</span>
-                  )
-                }
-              />
-            </section>
-          );
-        })}
-      </main>
+                />
+              </section>
+            );
+          })}
+        </main>
+      </section>
 
       {/* Tabla General */}
-      <Table
-        title="Listado General del Personal"
-        columns={["Grado", "Nombre", "Estado", "Turno"]}
-        data={funcionariosOrdenados}
-        leftAlignColumns={["Nombre", "Estado", "Turno"]}
-        minWidthColumns={{
-          Nombre: "min-w-[12rem]",
-          Estado: "min-w-[10rem]",
-          Turno: "min-w-[10rem]",
-        }}
-        renderCell={(f, col) => {
-          if (col === "Grado") return { content: `G${f.grado}` };
-          if (col === "Nombre") return { content: f.nombre };
-          if (col === "Estado") {
-            const estadoClass =
-              f.estado?.toLowerCase() === "activo"
-                ? "text-green-600 font-semibold"
-                : "text-red-600 font-semibold";
-            return {
-              content: (
-                <span className={estadoClass}>{f.estado || "Sin estado"}</span>
-              ),
-            };
-          }
-          if (col === "Turno") {
-            const turnoNombre =
-              turnos.find((t) => t.id === f.turno_id)?.nombre || "Sin asignar";
-            return { content: turnoNombre };
-          }
-        }}
-        renderActions={(f) => {
-          if (
-            usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ||
-            usuario?.is_admin
-          ) {
-            return (
-              <div className="flex justify-around items-center gap-2">
-                <Link
-                  to={`/funcionario/${f.id}/detalle`}
-                  className="text-blue-600 hover:underline"
-                >
-                  Licencias
-                </Link>
-              </div>
-            );
-          } else {
-            return <span className="text-gray-500">Sin acciones.</span>;
-          }
-        }}
-      />
-
-      {asignarModalOpen && (
-        <AsignarTurnoModal
-          funcionarios={funcionariosOrdenados}
-          turnos={turnos}
-          asignacion={asignacionSeleccionada}
-          isEdit={true}
-          onClose={() => setAsignarModalOpen(false)}
-          onSubmit={handleGuardarAsignacion}
+      <section className="space-y-10 bg-white rounded-md shadow px-2 mb-6">
+        <h1 className="text-xl font-semibold text-blue-900 my-4 py-4  text-center">
+          PERSONAL
+        </h1>
+        <Table
+          title="Listado General"
+          searchable={true}
+          columns={["Grado", "Nombre", "Estado", "Turno"]}
+          data={funcionariosOrdenados}
+          leftAlignColumns={["Nombre", "Estado", "Turno"]}
+          minWidthColumns={{
+            Nombre: "min-w-[12rem]",
+            Estado: "min-w-[10rem]",
+            Turno: "min-w-[10rem]",
+          }}
+          renderCell={(f, col) => {
+            if (col === "Grado") return { content: `G${f.grado}` };
+            if (col === "Nombre") return { content: f.nombre };
+            if (col === "Estado") {
+              const estadoClass =
+                f.estado?.toLowerCase() === "activo"
+                  ? "text-green-600 font-semibold"
+                  : "text-red-600 font-semibold";
+              return {
+                content: (
+                  <span className={estadoClass}>
+                    {f.estado || "Sin estado"}
+                  </span>
+                ),
+              };
+            }
+            if (col === "Turno") {
+              const turnoNombre =
+                turnos.find((t) => t.id === f.turno_id)?.nombre ||
+                "Sin asignar";
+              return { content: turnoNombre };
+            }
+          }}
+          renderActions={(f) => {
+            if (
+              usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ||
+              usuario?.is_admin
+            ) {
+              return (
+                <div className="flex justify-around items-center gap-2">
+                  <Link
+                    to={`/funcionario/${f.id}/detalle`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    Licencias
+                  </Link>
+                </div>
+              );
+            } else {
+              return <span className="text-gray-500">Sin acciones.</span>;
+            }
+          }}
         />
-      )}
 
-      {usuario?.rol_jerarquico === "JEFE_ZONA" && (
-        <button
-          onClick={() => navigate("/jefe-zona")}
-          className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"
-        >
-          ← Volver
-        </button>
-      )}
-      {usuario?.rol_jerarquico === "ADMINISTRADOR" && (
-        <button
-          onClick={() => navigate("/admin")}
-          className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"
-        >
-          ← Volver
-        </button>
-      )}
-      {usuario?.is_admin === true && (
-        <button
-          onClick={() => navigate("/funcionario/" + usuario?.id)}
-          className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"
-        >
-          ← Volver
-        </button>
-      )}
+        {asignarModalOpen && (
+          <AsignarTurnoModal
+            funcionarios={funcionariosOrdenados}
+            turnos={turnos}
+            asignacion={asignacionSeleccionada}
+            isEdit={true}
+            onClose={() => setAsignarModalOpen(false)}
+            onSubmit={handleGuardarAsignacion}
+          />
+        )}
+
+        {usuario?.rol_jerarquico === "JEFE_ZONA" && (
+          <button
+            onClick={() => navigate("/jefe-zona")}
+            className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"
+          >
+            ← Volver
+          </button>
+        )}
+        {usuario?.rol_jerarquico === "ADMINISTRADOR" && (
+          <button
+            onClick={() => navigate("/admin")}
+            className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"
+          >
+            ← Volver
+          </button>
+        )}
+        {usuario?.is_admin === true && (
+          <button
+            onClick={() => navigate("/funcionario/" + usuario?.id)}
+            className="fixed bottom-6 right-6 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-full shadow-lg text-lg font-bold transition"
+          >
+            ← Volver
+          </button>
+        )}
+      </section>
     </div>
   );
 };

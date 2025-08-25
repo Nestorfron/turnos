@@ -115,7 +115,7 @@ const FuncionarioModal = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
-      <div className="bg-white p-6 rounded-md w-full max-w-lg shadow-lg">
+      <div className="bg-white p-6 rounded-md max-w-lg shadow-lg">
         <h2 className="text-xl font-semibold mb-4">
           {isEditing ? "Editar Funcionario" : "Nuevo Funcionario"}
         </h2>

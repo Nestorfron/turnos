@@ -1,5 +1,5 @@
-import React from "react";
-import { Pencil, Trash2, SearchX } from "lucide-react";
+import React, { useState } from "react";
+import { Pencil, Trash2, SearchX, Search } from "lucide-react";
 
 const Table = ({
   columns,
@@ -11,7 +11,12 @@ const Table = ({
   renderCell,
   leftAlignColumns = [],
   minWidthColumns = {},
+  searchable = false,
+  scrollX = true,
 }) => {
+  const [search, setSearch] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+
   const getCellValue = (item, col) => {
     const keysToTry = [
       col.toLowerCase().replace(/\s+/g, "_"),
@@ -25,15 +30,51 @@ const Table = ({
     return "-";
   };
 
+  const filteredData = searchable
+    ? data.filter((item) =>
+        columns.some((col) =>
+          String(getCellValue(item, col))
+            .toLowerCase()
+            .includes(search.toLowerCase())
+        )
+      )
+    : data;
+
   return (
     <section className="mb-8">
       {title && (
-        <div className="flex items-center justify-between text-xl font-semibold text-blue-900 border-b border-blue-900 pb-1 mb-4">
-          {title}
+        <div className="flex items-center text-xl font-semibold text-blue-900 border-b border-blue-900 pb-1 mb-4">
+          <span>{title}</span>
+
+          {searchable && (
+            <button
+              onClick={() => setShowSearch(!showSearch)}
+              className="ml-2 p-1 rounded hover:bg-gray-200 transition"
+              title="Buscar"
+            >
+              <Search size={20} />
+            </button>
+          )}
         </div>
       )}
 
-      <div className="bg-white rounded-md shadow overflow-x-auto">
+      {searchable && showSearch && (
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Buscar..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full sm:w-1/3 px-3 py-2 border rounded shadow-sm focus:outline-none focus:ring focus:border-blue-300"
+          />
+        </div>
+      )}
+
+      <div
+        className={`bg-white rounded-md shadow ${
+          scrollX ? "overflow-x-auto" : ""
+        }`}
+      >
         <table className="min-w-full border-collapse text-sm">
           <thead>
             <tr className="bg-gray-100 text-gray-700 uppercase text-xs font-medium tracking-wide">
@@ -48,15 +89,20 @@ const Table = ({
                 </th>
               ))}
               {(onEdit || onDelete || renderActions) && (
-                <th className="border py-2 px-2 sm:px-4 text-center">Acciones</th>
+                <th className="border py-2 px-2 sm:px-4 text-center">
+                  Acciones
+                </th>
               )}
             </tr>
           </thead>
           <tbody>
-            {data.length === 0 ? (
+            {filteredData.length === 0 ? (
               <tr>
                 <td
-                  colSpan={columns.length + (onEdit || onDelete || renderActions ? 1 : 0)}
+                  colSpan={
+                    columns.length +
+                    (onEdit || onDelete || renderActions ? 1 : 0)
+                  }
                   className="text-center py-4 text-gray-500"
                 >
                   <p className="flex items-center justify-center text-gray-500">
@@ -66,7 +112,7 @@ const Table = ({
                 </td>
               </tr>
             ) : (
-              data.map((item, idx) => (
+              filteredData.map((item, idx) => (
                 <tr
                   key={item.id || idx}
                   className="even:bg-gray-50 hover:bg-blue-50 transition-colors"

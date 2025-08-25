@@ -316,7 +316,7 @@ const FuncionarioPanel = () => {
             let minWidthClass = "min-w-[50px]";
 
             if (col === "Funcionario") {
-              minWidthClass = "min-w-[180px]";
+              minWidthClass = "min-w-[190px]";
             }
 
             switch (value) {
