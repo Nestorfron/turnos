@@ -153,7 +153,7 @@ const SolicitudesLicencia = () => {
       ) : (
         <p>No hay licencias solicitadas registradas.</p>
       )}
-           <button
+      <button
         onClick={() =>
           usuario?.rol_jerarquico === "JEFE_DEPENDENCIA"
             ? navigate("/escalafon-servicio")

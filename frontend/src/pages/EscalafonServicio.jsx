@@ -18,6 +18,7 @@ import { estaTokenExpirado } from "../utils/tokenUtils.js";
 import ExtraordinariaGuardiaModal from "../components/ExtraorindariaGuaridaModal.jsx";
 import Table from "../components/Table.jsx";
 
+
 const EscalafonServicio = () => {
   const { usuario, getSolicitudes } = useAppContext();
   const location = useLocation();
@@ -105,20 +106,52 @@ const EscalafonServicio = () => {
         });
       }
 
+      if (window.confirm("¿Desea enviar notificación al usuario?")) {
+        await enviarNotificacion(
+          extraordinariaGuardiaForm.usuarioId,
+          `Se le asignó ${extraordinariaGuardiaForm.tipo} de ${extraordinariaGuardiaForm.comentario} el dia ${dayjs.utc(extraordinariaGuardiaForm.fechaInicio).format("DD/MM/YYYY")}`,
+          extraordinariaGuardiaForm.fechaInicio,
+          usuario?.token
+        );
+      }
+
       setModalGuardiaOpen(false);
     } catch (error) {
       console.error("Error guardando guardia extraordinaria:", error);
     }
   };
 
-  const handleBorrarExtraordinariaGuardia = async (id) => {
+  const enviarNotificacion = async (usuarioId, mensaje, fecha, token) => {
+    if (!token) return;
+
+    try {
+      await postData(
+        "notificaciones",
+        { usuario_id: usuarioId, mensaje, fecha },
+        token,
+        { "Content-Type": "application/json" }
+      );
+    } catch (error) {
+      console.error("Error enviando notificación:", error);
+    }
+  };
+
+  const handleBorrarExtraordinariaGuardia = async (item) => {
     if (!window.confirm("¿Estás seguro que querés eliminar esta guardia?"))
       return;
 
     try {
-      await deleteData(`extraordinaria-guardias/${id}`, usuario.token);
+      await deleteData(`extraordinaria-guardias/${item.id}`, usuario.token);
 
+      if (window.confirm("¿Desea enviar notificación al usuario?")) {
+        await enviarNotificacion(
+          item.usuario_id,
+          `Se eliminó  ${item.tipo} de ${item.comentario} el dia ${dayjs.utc(item.fecha_inicio).format("DD/MM/YYYY")}`,
+          item.fecha_inicio,
+          usuario?.token
+        );
       setExtraordinariaGuardias((prev) => prev.filter((g) => g.id !== id));
+      }
     } catch (error) {
       console.error("Error eliminando guardia:", error);
       alert("No se pudo eliminar la guardia, intenta nuevamente.");
@@ -458,7 +491,7 @@ const EscalafonServicio = () => {
               usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ||
               usuario?.is_admin === true
             ) {
-              handleBorrarExtraordinariaGuardia(item.id);
+              handleBorrarExtraordinariaGuardia(item);
             } else {
               alert("No tiene permisos para eliminar esta guardia");
             }
@@ -470,7 +503,7 @@ const EscalafonServicio = () => {
             ) {
               return (
                 <button
-                  onClick={() => handleBorrarExtraordinariaGuardia(item.id)}
+                  onClick={() => handleBorrarExtraordinariaGuardia(item)}
                   className="m-auto px-2 text-red-600 rounded hover:bg-red-100"
                   title="Eliminar Guardia"
                 >

@@ -9,7 +9,7 @@ import { estaTokenExpirado } from "../utils/tokenUtils.js";
 import { SearchX, Users } from "lucide-react";
 
 const FuncionarioPanel = () => {
-  const { usuario, logout } = useAppContext();
+  const { usuario, getNotificaciones } = useAppContext();
   const navigate = useNavigate();
   const fechaActual = new Date();
 
@@ -33,6 +33,8 @@ const FuncionarioPanel = () => {
       navigate("/");
       return;
     }
+
+    getNotificaciones();
 
     const cargarDatos = async () => {
       if (!usuario?.dependencia_id) return;
@@ -112,7 +114,6 @@ const FuncionarioPanel = () => {
         console.error("Error cargando datos:", error);
       }
     };
-
     cargarDatos();
   }, [usuario, navigate]);
 

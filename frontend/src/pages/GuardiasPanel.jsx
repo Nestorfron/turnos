@@ -23,8 +23,6 @@ dayjs.locale("es");
 //import html2canvas from "html2canvas";
 
 const GuardiasPanel = () => {
-
-
   const { usuario } = useAppContext();
 
   const location = useLocation();
@@ -46,7 +44,6 @@ const GuardiasPanel = () => {
   const dias = Array.from({ length: daysToShow }, (_, i) =>
     startDate.add(i, "day")
   );
-
 
   // const exportarPDF = () => {
   //   const contenedor = document.getElementById("contenedor-tablas");
@@ -83,17 +80,16 @@ const GuardiasPanel = () => {
 
   const capturar = () => {
     const elemento = document.getElementById("contenedor-tablas");
-  
+
     const originalWidth = elemento.style.width;
     const originalHeight = elemento.style.height;
     const originalPadding = elemento.style.padding;
-  
+
     elemento.style.padding = "20px";
-  
 
     elemento.style.width = elemento.scrollWidth + 40 + "px"; // +40 = 20px izquierda + 20px derecha
     elemento.style.height = elemento.scrollHeight + 40 + "px"; // igual para altura
-  
+
     toPng(elemento, {
       cacheBust: true,
       width: elemento.scrollWidth + 40,
@@ -103,7 +99,7 @@ const GuardiasPanel = () => {
         elemento.style.width = originalWidth;
         elemento.style.height = originalHeight;
         elemento.style.padding = originalPadding;
-  
+
         const link = document.createElement("a");
         link.download = "turnos.png";
         link.href = dataUrl;
@@ -111,20 +107,17 @@ const GuardiasPanel = () => {
       })
       .catch((err) => {
         console.error("Error capturando pantalla:", err);
-  
+
         elemento.style.width = originalWidth;
         elemento.style.height = originalHeight;
         elemento.style.padding = originalPadding;
       });
   };
-  
-
-  
 
   useEffect(() => {
     if (!usuario) {
       navigate("/");
-    };
+    }
 
     if (estaTokenExpirado(usuario?.token)) {
       alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
@@ -132,9 +125,9 @@ const GuardiasPanel = () => {
       navigate("/");
       return;
     }
-    
+
     if (!dependencia?.id) return;
-  
+
     const cargarDatos = async () => {
       try {
         const usuarios = await fetchData("usuarios", usuario.token);
@@ -144,26 +137,33 @@ const GuardiasPanel = () => {
             u.rol_jerarquico !== "JEFE_DEPENDENCIA"
         );
         setFuncionarios(filtrados);
-  
+
         const ids = new Set(filtrados.map((f) => f.id));
-  
+
         const todasGuardias = await fetchData("guardias", usuario.token);
         const guardiasFiltradas = todasGuardias.filter((g) =>
           ids.has(g.usuario_id)
         );
 
-        const todasLicenciasMedicas = await fetchData("licencias-medicas", usuario.token);
+        const todasLicenciasMedicas = await fetchData(
+          "licencias-medicas",
+          usuario.token
+        );
         const licenciasFiltradasMedicas = todasLicenciasMedicas
           .filter((l) => ids.has(l.usuario_id))
           .map((l) => ({ ...l, tipo: "licencia_medica" }));
-  
+
         const todasLicencias = await fetchData("licencias", usuario.token);
         const licenciasFiltradas = todasLicencias
           .filter((l) => ids.has(l.usuario_id))
           .map((l) => ({ ...l, tipo: "licencia" }));
-  
-        setGuardias([...guardiasFiltradas, ...licenciasFiltradas, ...licenciasFiltradasMedicas]);
-  
+
+        setGuardias([
+          ...guardiasFiltradas,
+          ...licenciasFiltradas,
+          ...licenciasFiltradasMedicas,
+        ]);
+
         const turnosData = await fetchData(
           `turnos?dependencia_id=${dependencia.id}`,
           usuario.token
@@ -182,22 +182,25 @@ const GuardiasPanel = () => {
           const ib = ordenDeseado.indexOf(nombreB);
           return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
         });
-  
+
         setTurnos(turnosOrdenados);
       } catch (error) {
         console.error("Error cargando datos:", error);
       }
     };
-  
+
     cargarDatos();
   }, [dependencia, usuario]);
-  
+
   useEffect(() => {
-    if (usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA" && usuario?.is_admin !== true) {
+    if (
+      usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA" &&
+      usuario?.is_admin !== true
+    ) {
       setDaysToShow(14);
     }
   }, [usuario]);
-  
+
   const guardiasMap = useMemo(() => {
     const map = new Map();
     guardias.forEach((g) => {
@@ -210,12 +213,12 @@ const GuardiasPanel = () => {
     });
     return map;
   }, [guardias]);
-  
+
   const getCelda = useCallback(
     (usuario, dia) => {
       const key = `${usuario.id}_${dia.format("YYYY-MM-DD")}`;
       const registro = guardiasMap.get(key);
-  
+
       if (registro) {
         if (registro.tipo === "licencia") return "L";
         if (registro.tipo === "licencia_medica") return "L.Medica";
@@ -225,41 +228,53 @@ const GuardiasPanel = () => {
         if (registro.tipo === "descanso") return "D";
         return registro.tipo;
       }
-  
+
       return "-";
     },
     [guardiasMap]
   );
-  
+
+  const enviarNotificacion = async (usuarioId, mensaje, fecha, token) => {
+    if (!token) return;
+
+    try {
+      await postData(
+        "notificaciones",
+        { usuario_id: usuarioId, mensaje, fecha },
+        token,
+        { "Content-Type": "application/json" }
+      );
+    } catch (error) {
+      console.error("Error enviando notificación:", error);
+    }
+  };
+
   const actualizarCelda = async (usuario, dia, nuevoTipo, token) => {
     if (!token) return;
-  
+
     const fechaStr = dia.format("YYYY-MM-DD");
     const key = `${usuario.id}_${fechaStr}`;
     const existente = guardiasMap.get(key);
-  
+
+    // Eliminar guardia o licencia existente
     if (existente) {
       let endpoint = "";
-  
-      if (existente.tipo === "licencia") {
-        endpoint = `licencias/${existente.id}`;
-      } else if (existente.tipo === "licencia_medica") {
+      if (existente.tipo === "licencia") endpoint = `licencias/${existente.id}`;
+      else if (existente.tipo === "licencia_medica")
         endpoint = `licencias-medicas/${existente.id}`;
-      } else {
-        endpoint = `guardias/${existente.id}`;
-      }
-  
+      else endpoint = `guardias/${existente.id}`;
+
       if (typeof token !== "string" || token.trim() === "") return;
-  
+
       const ok = await deleteData(endpoint, token);
-  
       if (ok) {
         setGuardias((prev) => prev.filter((g) => g.id !== existente.id));
       } else {
         return;
       }
     }
-  
+
+    // Crear descanso
     if (nuevoTipo === "D") {
       const nueva = {
         usuario_id: usuario.id,
@@ -268,40 +283,69 @@ const GuardiasPanel = () => {
         tipo: "descanso",
         comentario: "Agregada manualmente",
       };
-  
+
       const creada = await postData("guardias", nueva, token, {
         "Content-Type": "application/json",
       });
-  
-      if (creada) setGuardias((prev) => [...prev, creada]);
+
+      if (creada) {
+        setGuardias((prev) => [...prev, creada]);
+        if (window.confirm("¿Desea enviar notificación al usuario?")) {
+          await enviarNotificacion(
+            usuario.id,
+            `Se agregó un descanso el ${fechaStr}`,
+            fechaStr,
+            token
+          );
+        }
+      }
       return;
     }
-  
+
+    // Determinar si es un bloque de 5 días (T o Brou)
     let esBloque =
       (nuevoTipo === "T" || nuevoTipo.toLowerCase() === "brou") &&
       Array.from({ length: 5 }).every((_, i) => {
         const fecha = dia.add(i, "day").format("YYYY-MM-DD");
         return !guardiasMap.has(`${usuario.id}_${fecha}`);
       });
-  
+
+    // Crear bloque de 5 días
     if (esBloque) {
       for (let i = 0; i < 5; i++) {
         const fecha = dia.add(i, "day").clone();
+        const fechaBloqueStr = fecha.format("YYYY-MM-DD");
+
         const nueva = {
           usuario_id: usuario.id,
-          fecha_inicio: fecha.format("YYYY-MM-DD"),
-          fecha_fin: fecha.format("YYYY-MM-DD"),
+          fecha_inicio: fechaBloqueStr,
+          fecha_fin: fechaBloqueStr,
           tipo: nuevoTipo,
           comentario: "Agregada manualmente",
         };
-  
+
         const creada = await postData("guardias", nueva, token, {
           "Content-Type": "application/json",
         });
-  
-        if (creada) setGuardias((prev) => [...prev, creada]);
+
+        if (creada) {
+          setGuardias((prev) => [...prev, creada]);
+          if (
+            window.confirm(
+              `¿Desea enviar notificación al usuario por la fecha ${fechaBloqueStr}?`
+            )
+          ) {
+            await enviarNotificacion(
+              usuario.id,
+              `Se agregó ${nuevoTipo} el ${fechaBloqueStr}`,
+              fechaBloqueStr,
+              token
+            );
+          }
+        }
       }
     } else {
+      // Crear guardia individual
       const nueva = {
         usuario_id: usuario.id,
         fecha_inicio: fechaStr,
@@ -309,35 +353,43 @@ const GuardiasPanel = () => {
         tipo: nuevoTipo === "T" ? "guardia" : nuevoTipo,
         comentario: "Agregada manualmente",
       };
-  
+
       const creada = await postData("guardias", nueva, token, {
         "Content-Type": "application/json",
       });
-  
-      if (creada) setGuardias((prev) => [...prev, creada]);
+
+      if (creada) {
+        setGuardias((prev) => [...prev, creada]);
+        if (window.confirm("¿Desea enviar notificación al usuario?")) {
+          await enviarNotificacion(
+            usuario.id,
+            `Se agregó ${nueva.tipo} el ${fechaStr}`,
+            fechaStr,
+            token
+          );
+        }
+      }
     }
   };
-  
-  
+
   const abrirModalLicencia = (usuario_licencia, dia) => {
     setModalData({
       usuario: usuario_licencia,
       fechaInicio: dia,
     });
   };
-  
+
   const eliminarLicencia = async (usuario_licencia, dia) => {
     const token = usuario.token;
     if (!token) {
       console.error("Token no proporcionado para eliminar licencia");
       return false;
     }
-  
+
     const fechaStr = dia.format("YYYY-MM-DD");
     const key = `${usuario_licencia.id}_${fechaStr}`;
     const existente = guardiasMap.get(key);
-  
-    
+
     if (
       !existente ||
       (existente.tipo !== "licencia" && existente.tipo !== "licencia_medica")
@@ -345,20 +397,21 @@ const GuardiasPanel = () => {
       console.warn(`No se encontró licencia válida para el ${fechaStr}`);
       return false;
     }
-  
-    
+
     const endpoint =
       existente.tipo === "licencia_medica"
         ? `licencias-medicas/${existente.id}`
         : `licencias/${existente.id}`;
-  
+
     try {
       const ok = await deleteData(endpoint, token);
       if (ok) {
         setGuardias((prev) => prev.filter((g) => g.id !== existente.id));
         return true;
       } else {
-        console.error(`❌ Error al borrar ${existente.tipo} ID ${existente.id}`);
+        console.error(
+          `❌ Error al borrar ${existente.tipo} ID ${existente.id}`
+        );
         return false;
       }
     } catch (error) {
@@ -366,51 +419,25 @@ const GuardiasPanel = () => {
       return false;
     }
   };
-  
 
-  
-  const abrirModalEditarLicencia = (usuario, dia) => {
-    const fechaStr = dia.format("YYYY-MM-DD");
-    const key = `${usuario.id}_${fechaStr}`;
-    const existente = guardiasMap.get(key);
-  
-    if (
-      !existente ||
-      (existente.tipo !== "licencia" && existente.tipo !== "licencia_medica")
-    )
-      return;
-  
-    setModalData({
-      usuario,
-      id: existente.id,
-      fechaInicio: existente.fecha_inicio,
-      fechaFin: existente.fecha_fin,
-      motivo: existente.motivo,
-      tipo: existente.tipo,
-    });
-  };
-  
-
-  
   const handleLicenciaSubmit = async ({ fechaFin, motivo, esMedica }) => {
     try {
       const usuarioId = modalData.usuario.id;
       const fechaInicio = dayjs(modalData.fechaInicio);
       const fechaFinDayjs = dayjs(fechaFin);
-  
-      
+
       const guardiasAEliminar = guardias.filter((g) => {
         if (g.usuario_id !== usuarioId || g.tipo !== "guardia") return false;
-  
+
         const inicio = dayjs.utc(g.fecha_inicio);
         const fin = dayjs.utc(g.fecha_fin);
-  
+
         return (
           inicio.isSameOrBefore(fechaFinDayjs, "day") &&
           fin.isSameOrAfter(fechaInicio, "day")
         );
       });
-  
+
       await Promise.all(
         guardiasAEliminar.map(async (g) => {
           const ok = await deleteData(`guardias/${g.id}`, usuario.token);
@@ -421,8 +448,7 @@ const GuardiasPanel = () => {
           }
         })
       );
-  
-      
+
       const nuevaLicencia = {
         usuario_id: usuarioId,
         fecha_inicio: fechaInicio.utc().format("YYYY-MM-DD"),
@@ -430,13 +456,11 @@ const GuardiasPanel = () => {
         motivo,
         estado: "activo",
       };
-  
-      
+
       const endpoint = esMedica ? "licencias-medicas" : "licencias";
-  
-      
+
       const creada = await postData(endpoint, nuevaLicencia, usuario.token);
-  
+
       if (creada) {
         const tipo = esMedica ? "licencia_medica" : "licencia";
         setGuardias((prev) => [...prev, { ...creada, tipo }]);
@@ -448,29 +472,28 @@ const GuardiasPanel = () => {
       console.error("❌ Error en handleLicenciaSubmit:", error);
     }
   };
-  
-  
+
   const eliminarGuardiasFiltradas = async ({ desde, hasta, usuario_ids }) => {
     const desdeD = dayjs.utc(desde).startOf("day");
     const hastaD = dayjs.utc(hasta).endOf("day");
-  
+
     const idsObjetivo =
       usuario_ids === "todos"
         ? funcionarios
             .filter((f) => f.turno_id === modalEliminar.turno.id)
             .map((f) => f.id)
         : usuario_ids;
-  
+
     const guardiasFiltradas = guardias.filter((g) => {
       if (g.tipo !== "guardia") return false;
       if (!idsObjetivo.includes(g.usuario_id)) return false;
-  
+
       const inicio = dayjs.utc(g.fecha_inicio).startOf("day");
       if (!inicio.isValid()) return false;
-  
+
       return inicio.isSameOrAfter(desdeD) && inicio.isSameOrBefore(hastaD);
     });
-  
+
     for (const g of guardiasFiltradas) {
       const ok = await deleteData(`guardias/${g.id}`, usuario.token);
       if (ok) {
@@ -479,41 +502,40 @@ const GuardiasPanel = () => {
         console.error("Error al eliminar guardia", g.id);
       }
     }
-  
+
     setModalEliminar(null);
   };
-  
-  
+
   const funcionariosPorTurnoMap = useMemo(() => {
     const map = new Map();
-  
+
     for (const f of funcionarios) {
       if (!map.has(f.turno_id)) map.set(f.turno_id, []);
       map.get(f.turno_id).push(f);
     }
-  
+
     for (const [, lista] of map) {
       lista.sort((a, b) => {
-        
         const diffGrado = (b.grado || 0) - (a.grado || 0);
         if (diffGrado !== 0) return diffGrado;
-  
-        
-        const fechaA = a.fecha_ingreso ? new Date(a.fecha_ingreso) : new Date(9999, 0, 1);
-        const fechaB = b.fecha_ingreso ? new Date(b.fecha_ingreso) : new Date(9999, 0, 1);
+
+        const fechaA = a.fecha_ingreso
+          ? new Date(a.fecha_ingreso)
+          : new Date(9999, 0, 1);
+        const fechaB = b.fecha_ingreso
+          ? new Date(b.fecha_ingreso)
+          : new Date(9999, 0, 1);
         return fechaA - fechaB;
       });
     }
-  
+
     return map;
   }, [funcionarios]);
-  
-  
+
   const funcionariosPorTurno = useCallback(
     (turnoId) => funcionariosPorTurnoMap.get(turnoId) || [],
     [funcionariosPorTurnoMap]
   );
-  
 
   return (
     <div className="p-6 space-y-2 bg-gray-50 min-h-screen">
@@ -543,7 +565,10 @@ const GuardiasPanel = () => {
             value={startDate.format("YYYY-MM-DD")}
             onChange={(e) => setStartDate(dayjs(e.target.value))}
             className="border rounded px-2 py-1"
-            disabled={usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA" && usuario?.is_admin !== true}
+            disabled={
+              usuario?.rol_jerarquico !== "JEFE_DEPENDENCIA" &&
+              usuario?.is_admin !== true
+            }
           />
         </div>
 
@@ -564,7 +589,10 @@ const GuardiasPanel = () => {
       guardias.length === 0 ? (
         <Loading />
       ) : (
-        <div id="contenedor-tablas" className="mb-6 overflow-x-auto bg-white rounded shadow">
+        <div
+          id="contenedor-tablas"
+          className="mb-6 overflow-x-auto bg-white rounded shadow"
+        >
           {turnos.map((turno) => {
             const lista = funcionariosPorTurno(turno.id);
 
@@ -584,7 +612,8 @@ const GuardiasPanel = () => {
                             key={d.format("YYYY-MM-DD")}
                             className="bg-gray-200 border px-2 py-1"
                           >
-                            {d.format("DD")}/{d.format("MM")} <br /> {d.format("ddd")}
+                            {d.format("DD")}/{d.format("MM")} <br />{" "}
+                            {d.format("ddd")}
                           </th>
                         ))}
                       </tr>
@@ -593,7 +622,6 @@ const GuardiasPanel = () => {
                       {lista.map((f) => (
                         <tr key={f.id}>
                           <td className="bg-white border px-2 text-left whitespace-nowrap  w-48 min-w-48 ">
-
                             G{f.grado} {f.nombre}
                           </td>
                           {dias.map((d) => {
@@ -689,7 +717,7 @@ const GuardiasPanel = () => {
                                       "JEFE_DEPENDENCIA" && (
                                       <>
                                         <button
-                                          onClick={() =>  eliminarLicencia(f, d) }
+                                          onClick={() => eliminarLicencia(f, d)}
                                           className="absolute top-0 right-0 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-red-700 transition"
                                           title="Eliminar Licencia"
                                         >
@@ -723,11 +751,11 @@ const GuardiasPanel = () => {
                                         </button>
                                       </>
                                     )}
-                                    {valor === "L" || valor === "L.Medica"
+                                {valor === "L" || valor === "L.Medica"
                                   ? usuario?.is_admin === true && (
                                       <>
                                         <button
-                                          onClick={() =>  eliminarLicencia(f, d) }
+                                          onClick={() => eliminarLicencia(f, d)}
                                           className="absolute top-0 right-0 text-xs text-gray-500 p-1 opacity-0 group-hover:opacity-100 hover:text-red-700 transition"
                                           title="Eliminar Licencia"
                                         >
@@ -819,37 +847,46 @@ const GuardiasPanel = () => {
               Seleccionar tipo de guardia
             </h3>
 
-            {["D", "T", "1ro", "2do", "3er", "Curso", "BROU", "Custodia", "CH", "L.Ext"].map(
-              (tipo) => (
-                <button
-                  key={tipo}
-                  onClick={async () => {
-                    await actualizarCelda(
-                      selectorTipo.usuario,
-                      selectorTipo.dia,
-                      tipo,
-                      usuario.token
-                    );
-                    setSelectorTipo(null);
-                  }}
-                  className={`w-full ${
-                    tipo === "D"
-                      ? "bg-gray-100 hover:bg-gray-200 text-gray-800"
-                      : tipo === "Curso" || tipo === "Custodia"
-                      ? "bg-blue-600 hover:bg-blue-700 text-white font-bold"
-                      : tipo === "BROU"
-                      ? "bg-white hover:bg-gray-100 text-black"
-                      : tipo === "CH"
-                      ? "bg-green-600 hover:bg-green-700 text-white font-bold"
-                      : tipo === "L.Ext"
-                      ? "bg-green-600 hover:bg-green-700 text-white font-bold"
-                      : "bg-blue-100 hover:bg-blue-200 text-blue-900"
-                  } font-medium py-2 px-4 rounded transition`}
-                >
-                  {tipo === "D" ? "Descanso (D)" : tipo}
-                </button>
-              )
-            )}
+            {[
+              "D",
+              "T",
+              "1ro",
+              "2do",
+              "3er",
+              "Curso",
+              "BROU",
+              "Custodia",
+              "CH",
+              "L.Ext",
+            ].map((tipo) => (
+              <button
+                key={tipo}
+                onClick={async () => {
+                  await actualizarCelda(
+                    selectorTipo.usuario,
+                    selectorTipo.dia,
+                    tipo,
+                    usuario.token
+                  );
+                  setSelectorTipo(null);
+                }}
+                className={`w-full ${
+                  tipo === "D"
+                    ? "bg-gray-100 hover:bg-gray-200 text-gray-800"
+                    : tipo === "Curso" || tipo === "Custodia"
+                    ? "bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                    : tipo === "BROU"
+                    ? "bg-white hover:bg-gray-100 text-black"
+                    : tipo === "CH"
+                    ? "bg-green-600 hover:bg-green-700 text-white font-bold"
+                    : tipo === "L.Ext"
+                    ? "bg-green-600 hover:bg-green-700 text-white font-bold"
+                    : "bg-blue-100 hover:bg-blue-200 text-blue-900"
+                } font-medium py-2 px-4 rounded transition`}
+              >
+                {tipo === "D" ? "Descanso (D)" : tipo}
+              </button>
+            ))}
 
             <button
               onClick={() => setSelectorTipo(null)}

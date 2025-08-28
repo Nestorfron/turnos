@@ -124,6 +124,7 @@ class Usuario(db.Model):
     licencias = db.relationship('Licencia', backref='usuario', lazy=True)
     licencias_solicitadas = db.relationship('LicenciaSolicitada', backref='usuario', lazy=True)
     licencias_medicas = db.relationship('LicenciaMedica', backref='usuario', lazy=True)
+    notificaciones = db.relationship('Notificacion', backref='usuario', lazy=True)
 
     solicitudes_cambio = db.relationship(
         'SolicitudCambio',
@@ -153,7 +154,8 @@ class Usuario(db.Model):
             'turno_id': self.turno_id,
             'turno_nombre': self.turno.nombre if self.turno_id and self.turno else None,
             'estado': self.estado,
-            'is_admin': self.is_admin
+            'is_admin': self.is_admin,
+            'notificaciones': [n.serialize() for n in self.notificaciones]
         }
 
 
@@ -402,3 +404,30 @@ class LicenciaMedica(db.Model):
 
     def __repr__(self):
         return f'<Licencia_medica {self.id}>'
+    
+
+# ----------------------------------------------------------------------
+# NOTIFICACIONES
+# ----------------------------------------------------------------------
+
+class Notificacion(db.Model):
+    __tablename__ = 'notificaciones'
+    id = db.Column(db.Integer, primary_key=True)
+    fecha = db.Column(db.DateTime, nullable=False)
+    mensaje = db.Column(db.Text, nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
+
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+
+
+    def serialize(self):
+        return {
+            'id': self.id,
+            'usuario_id': self.usuario_id,
+            'fecha': self.fecha,
+            'mensaje': self.mensaje,
+            'is_read': self.is_read
+        }
+
+    def __repr__(self):
+        return f'<Notificacion {self.id}>'
