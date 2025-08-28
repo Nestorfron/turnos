@@ -7,7 +7,7 @@ from flask_migrate import Migrate # type: ignore
 from extensions import mail # type: ignore
 
 from config import Config
-from api.models import db, Jefatura, Zona, Dependencia, Usuario, RolOperativo, UsuarioRolOperativo, Turno, TurnoAsignado, SolicitudCambio, Guardia, Licencia, LicenciaMedica, LicenciaSolicitada, ExtraordinariaGuardia
+from api.models import db, Jefatura, Zona, Dependencia, Usuario, RolOperativo, UsuarioRolOperativo, Turno, TurnoAsignado, SolicitudCambio, Guardia, Licencia, LicenciaMedica, LicenciaSolicitada, ExtraordinariaGuardia, Notificacion
 
 # Importa tus Blueprints
 from api.routes import api
@@ -40,6 +40,7 @@ admin.add_view(ModelView(Licencia, db.session))
 admin.add_view(ModelView(LicenciaMedica, db.session))
 admin.add_view(ModelView(LicenciaSolicitada, db.session))
 admin.add_view(ModelView(ExtraordinariaGuardia, db.session))
+admin.add_view(ModelView(Notificacion, db.session))
 
 
 app.register_blueprint(api, url_prefix='/api')

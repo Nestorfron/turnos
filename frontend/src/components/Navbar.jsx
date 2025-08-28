@@ -5,10 +5,13 @@ import img from "../assets/logo.png";
 
 
 const Navbar = () => {
-  const { usuario, logout, solicitudes } = useAppContext();
+  const { usuario, logout, solicitudes, notificaciones  } = useAppContext();
   const [open, setOpen] = useState(false);
   const menuRef = useRef();
   const navigate = useNavigate();
+
+  const [ allSolicitudes, setAllSolicitudes ] = useState([]);
+  const [ allNotificaciones, setAllNotificaciones ] = useState([]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -19,6 +22,12 @@ const Navbar = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!usuario) return;
+    setAllSolicitudes(solicitudes);
+    setAllNotificaciones(notificaciones);
+  }, [usuario, notificaciones, solicitudes]);
 
   if (!usuario) {
     return null;
@@ -31,8 +40,10 @@ const Navbar = () => {
   };
 
   const inicial = usuario.nombre?.charAt(0).toUpperCase() || "?";
-  const notificaciones = solicitudes.length || 0;
 
+  const NotificacionesSinLeer = allNotificaciones?.filter((n) => !n.is_read);
+
+  
 
   return (
     <nav className={usuario ? "bg-blue-700 text-white px-6 py-3 flex justify-between items-center relative" : "d-none"}>
@@ -50,8 +61,13 @@ const Navbar = () => {
         >
           {inicial}
           {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" && (
-            <span className={notificaciones !== 0 ? "absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full" : "hidden"}>
-              {notificaciones}
+            <span className={allSolicitudes.length !== 0 ? "absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full" : "hidden"}>
+              {allSolicitudes.length}
+            </span>
+          )}
+          {usuario?.rol_jerarquico === "FUNCIONARIO" && (
+            <span className={NotificacionesSinLeer?.length !== 0 ? "absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full" : "hidden"}>
+              {NotificacionesSinLeer?.length}
             </span>
           )}
         </button>
@@ -69,7 +85,16 @@ const Navbar = () => {
               }}
               className="w-full text-left px-4 py-2 hover:bg-gray-100"
             >
-             Solicitudes {notificaciones > 0 ? `(${notificaciones})` : ""}
+             Solicitudes {allSolicitudes.length > 0 ? `(${allSolicitudes.length})` : ""}
+            </button>}
+            {usuario?.rol_jerarquico === "FUNCIONARIO" && <button
+              onClick={() => {
+                setOpen(false);
+                navigate("/notificaciones");
+              }}
+              className="w-full text-left px-4 py-2 hover:bg-gray-100"
+            >
+             Notificaciones {NotificacionesSinLeer?.length > 0 ? `(${NotificacionesSinLeer?.length})` : ""}
             </button>}
             <Link
               to="/mi-perfil"

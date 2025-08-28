@@ -14,6 +14,7 @@ import Navbar from "./components/Navbar";
 import EscalafonServicio from "./pages/EscalafonServicio";
 import FuncionarioDetallePanel from "./pages/FuncionarioDetallePanel";
 import SolicitudesLicencia from "./pages/SolicitudesLicencia";
+import Notificaciones from "./pages/Notificaciones";
 
 function App() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -54,6 +55,7 @@ function App() {
           <Route path="/funcionario/:id/detalle" element={<FuncionarioDetallePanel />} />
           <Route path="/guardias" element={<GuardiasPanel />} />
           <Route path="/solicitudes-licencia" element={<SolicitudesLicencia />} />
+          <Route path="/notificaciones" element={<Notificaciones />} />
         </Routes>
       </BrowserRouter>
 

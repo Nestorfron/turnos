@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { Pencil, Trash2, SearchX, Search } from "lucide-react";
+import { Pencil, Trash2, SearchX, Search, Check } from "lucide-react";
 
 const Table = ({
   columns,
   data,
   onEdit,
   onDelete,
+  marcarLeida,
   renderActions,
   title,
   renderCell,
@@ -88,7 +89,7 @@ const Table = ({
                   {col}
                 </th>
               ))}
-              {(onEdit || onDelete || renderActions) && (
+              {(onEdit || onDelete || marcarLeida || renderActions) && (
                 <th className="border py-2 px-2 sm:px-4 text-center">
                   Acciones
                 </th>
@@ -101,7 +102,7 @@ const Table = ({
                 <td
                   colSpan={
                     columns.length +
-                    (onEdit || onDelete || renderActions ? 1 : 0)
+                    (onEdit || onDelete || marcarLeida || renderActions ? 1 : 0)
                   }
                   className="text-center py-4 text-gray-500"
                 >
@@ -142,7 +143,7 @@ const Table = ({
                       </td>
                     );
                   })}
-                  {(onEdit || onDelete || renderActions) && (
+                  {(onEdit || onDelete || marcarLeida || renderActions) && (
                     <td className="border py-1 px-1 sm:py-2 sm:px-4 flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
                       {renderActions ? (
                         renderActions(item)
@@ -162,6 +163,14 @@ const Table = ({
                               className="text-red-500 hover:text-red-600"
                             >
                               <Trash2 size={18} />
+                            </button>
+                          )}
+                          {marcarLeida && (
+                            <button
+                              onClick={() => marcarLeida(item)}
+                              className="text-green-500 hover:text-green-600"
+                            >
+                              <Check size={18} />
                             </button>
                           )}
                         </>
