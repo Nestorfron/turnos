@@ -17,6 +17,7 @@ import AsignarTurnoModal from "../components/AsignarTurnoModal";
 import { estaTokenExpirado } from "../utils/tokenUtils.js";
 import ExtraordinariaGuardiaModal from "../components/ExtraorindariaGuaridaModal.jsx";
 import Table from "../components/Table.jsx";
+import ConfirmModal from "../components/ConfirmModal.jsx";
 
 
 const EscalafonServicio = () => {
@@ -49,6 +50,10 @@ const EscalafonServicio = () => {
 
   const diaActual = useMemo(() => startDate, [startDate]);
 
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [accionPendiente, setAccionPendiente] = useState(null);
+  const [mensajeConfirm, setMensajeConfirm] = useState("");
+
   const [asignarModalOpen, setAsignarModalOpen] = useState(false);
   const [asignacionSeleccionada, setAsignacionSeleccionada] = useState(null);
 
@@ -71,6 +76,17 @@ const EscalafonServicio = () => {
   const abrirModalNuevaGuardia = () => {
     setGuardiaSeleccionada(null);
     setModalGuardiaOpen(true);
+  };
+
+  const handleConfirm = async () => {
+    if (accionPendiente) await accionPendiente();
+    setShowConfirm(false);
+    setAccionPendiente(null);
+  };
+
+  const handleCancel = () => {
+    setShowConfirm(false);
+    setAccionPendiente(null);
   };
 
   const handleGuardarExtraordinariaGuardia = async (
@@ -106,15 +122,16 @@ const EscalafonServicio = () => {
         });
       }
 
-      if (window.confirm("¿Desea enviar notificación al usuario?")) {
-        await enviarNotificacion(
+      setAccionPendiente(() => () =>
+        enviarNotificacion(
           extraordinariaGuardiaForm.usuarioId,
           `Se le asignó ${extraordinariaGuardiaForm.tipo} de ${extraordinariaGuardiaForm.comentario} el dia ${dayjs.utc(extraordinariaGuardiaForm.fechaInicio).format("DD/MM/YYYY")}`,
           extraordinariaGuardiaForm.fechaInicio,
           usuario?.token
-        );
-      }
-
+        )
+      );
+      setMensajeConfirm(`¿Desea enviar notificación al Funcionario?`);
+      setShowConfirm(true);
       setModalGuardiaOpen(false);
     } catch (error) {
       console.error("Error guardando guardia extraordinaria:", error);
@@ -143,15 +160,17 @@ const EscalafonServicio = () => {
     try {
       await deleteData(`extraordinaria-guardias/${item.id}`, usuario.token);
 
-      if (window.confirm("¿Desea enviar notificación al usuario?")) {
-        await enviarNotificacion(
+      setAccionPendiente(() => () =>
+        enviarNotificacion(
           item.usuario_id,
           `Se eliminó  ${item.tipo} de ${item.comentario} el dia ${dayjs.utc(item.fecha_inicio).format("DD/MM/YYYY")}`,
           item.fecha_inicio,
           usuario?.token
-        );
-      setExtraordinariaGuardias((prev) => prev.filter((g) => g.id !== id));
-      }
+        )
+      );
+      setMensajeConfirm(`¿Desea enviar notificación al Funcionario?`);
+      setShowConfirm(true);
+      setExtraordinariaGuardias((prev) => prev.filter((g) => g.id !== item.id));
     } catch (error) {
       console.error("Error eliminando guardia:", error);
       alert("No se pudo eliminar la guardia, intenta nuevamente.");
@@ -742,6 +761,15 @@ const EscalafonServicio = () => {
             isEdit={true}
             onClose={() => setAsignarModalOpen(false)}
             onSubmit={handleGuardarAsignacion}
+          />
+        )}
+
+        {showConfirm && (
+          <ConfirmModal
+            open={showConfirm}
+            mensaje={mensajeConfirm}
+            onConfirm={handleConfirm}
+            onCancel={handleCancel}
           />
         )}
 

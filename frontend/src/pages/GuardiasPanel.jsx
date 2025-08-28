@@ -9,6 +9,7 @@ import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import LicenciaModal from "../components/LicenciaModal.jsx";
 import EliminarGuardiasModal from "../components/EliminarGuardiasModal.jsx";
+import ConfirmModal from "../components/ConfirmModal.jsx";
 import Loading from "../components/Loading.jsx";
 import { Camera } from "lucide-react";
 import { toPng } from "html-to-image";
@@ -39,6 +40,10 @@ const GuardiasPanel = () => {
 
   const [modalData, setModalData] = useState(null);
   const [daysToShow, setDaysToShow] = useState(14);
+
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [accionPendiente, setAccionPendiente] = useState(null);
+  const [mensajeConfirm, setMensajeConfirm] = useState("");
 
   const [startDate, setStartDate] = useState(dayjs().startOf("day"));
   const dias = Array.from({ length: daysToShow }, (_, i) =>
@@ -201,6 +206,17 @@ const GuardiasPanel = () => {
     }
   }, [usuario]);
 
+  const handleConfirm = async () => {
+    if (accionPendiente) await accionPendiente();
+    setShowConfirm(false);
+    setAccionPendiente(null);
+  };
+
+  const handleCancel = () => {
+    setShowConfirm(false);
+    setAccionPendiente(null);
+  };
+
   const guardiasMap = useMemo(() => {
     const map = new Map();
     guardias.forEach((g) => {
@@ -251,11 +267,11 @@ const GuardiasPanel = () => {
 
   const actualizarCelda = async (usuario, dia, nuevoTipo, token) => {
     if (!token) return;
-
+  
     const fechaStr = dia.format("YYYY-MM-DD");
     const key = `${usuario.id}_${fechaStr}`;
     const existente = guardiasMap.get(key);
-
+  
     // Eliminar guardia o licencia existente
     if (existente) {
       let endpoint = "";
@@ -263,9 +279,9 @@ const GuardiasPanel = () => {
       else if (existente.tipo === "licencia_medica")
         endpoint = `licencias-medicas/${existente.id}`;
       else endpoint = `guardias/${existente.id}`;
-
+  
       if (typeof token !== "string" || token.trim() === "") return;
-
+  
       const ok = await deleteData(endpoint, token);
       if (ok) {
         setGuardias((prev) => prev.filter((g) => g.id !== existente.id));
@@ -273,7 +289,7 @@ const GuardiasPanel = () => {
         return;
       }
     }
-
+  
     // Crear descanso
     if (nuevoTipo === "D") {
       const nueva = {
@@ -283,25 +299,28 @@ const GuardiasPanel = () => {
         tipo: "descanso",
         comentario: "Agregada manualmente",
       };
-
+  
       const creada = await postData("guardias", nueva, token, {
         "Content-Type": "application/json",
       });
-
+  
       if (creada) {
         setGuardias((prev) => [...prev, creada]);
-        if (window.confirm("¿Desea enviar notificación al usuario?")) {
-          await enviarNotificacion(
+        // Guardar acción pendiente y mensaje para el modal
+        setAccionPendiente(() => () =>
+          enviarNotificacion(
             usuario.id,
             `Se agregó un descanso el ${fechaStr}`,
             fechaStr,
             token
-          );
-        }
+          )
+        );
+        setMensajeConfirm(`¿Desea enviar notificación Funcionario?`);
+        setShowConfirm(true);
       }
       return;
     }
-
+  
     // Determinar si es un bloque de 5 días (T o Brou)
     let esBloque =
       (nuevoTipo === "T" || nuevoTipo.toLowerCase() === "brou") &&
@@ -309,13 +328,13 @@ const GuardiasPanel = () => {
         const fecha = dia.add(i, "day").format("YYYY-MM-DD");
         return !guardiasMap.has(`${usuario.id}_${fecha}`);
       });
-
+  
     // Crear bloque de 5 días
     if (esBloque) {
       for (let i = 0; i < 5; i++) {
         const fecha = dia.add(i, "day").clone();
         const fechaBloqueStr = fecha.format("YYYY-MM-DD");
-
+  
         const nueva = {
           usuario_id: usuario.id,
           fecha_inicio: fechaBloqueStr,
@@ -323,25 +342,23 @@ const GuardiasPanel = () => {
           tipo: nuevoTipo,
           comentario: "Agregada manualmente",
         };
-
+  
         const creada = await postData("guardias", nueva, token, {
           "Content-Type": "application/json",
         });
-
+  
         if (creada) {
           setGuardias((prev) => [...prev, creada]);
-          if (
-            window.confirm(
-              `¿Desea enviar notificación al usuario por la fecha ${fechaBloqueStr}?`
-            )
-          ) {
-            await enviarNotificacion(
+          setAccionPendiente(() => () =>
+            enviarNotificacion(
               usuario.id,
               `Se agregó ${nuevoTipo} el ${fechaBloqueStr}`,
               fechaBloqueStr,
               token
-            );
-          }
+            )
+          );
+          setMensajeConfirm(`¿Desea enviar notificación al usuario por la fecha ${fechaBloqueStr}?`);
+          setShowConfirm(true);
         }
       }
     } else {
@@ -353,25 +370,28 @@ const GuardiasPanel = () => {
         tipo: nuevoTipo === "T" ? "guardia" : nuevoTipo,
         comentario: "Agregada manualmente",
       };
-
+  
       const creada = await postData("guardias", nueva, token, {
         "Content-Type": "application/json",
       });
-
+  
       if (creada) {
         setGuardias((prev) => [...prev, creada]);
-        if (window.confirm("¿Desea enviar notificación al usuario?")) {
-          await enviarNotificacion(
+        setAccionPendiente(() => () =>
+          enviarNotificacion(
             usuario.id,
             `Se agregó ${nueva.tipo} el ${fechaStr}`,
             fechaStr,
             token
-          );
-        }
+          )
+        );
+        setMensajeConfirm(`¿Desea enviar notificación Funcionario?`);
+        setShowConfirm(true);
       }
     }
   };
-
+  
+  
   const abrirModalLicencia = (usuario_licencia, dia) => {
     setModalData({
       usuario: usuario_licencia,
@@ -829,6 +849,15 @@ const GuardiasPanel = () => {
           fechaInicio={modalData.fechaInicio}
           onClose={() => setModalData(null)}
           onSubmit={handleLicenciaSubmit}
+        />
+      )}
+
+      {showConfirm && (
+        <ConfirmModal
+          open={showConfirm}
+          mensaje={mensajeConfirm}
+          onConfirm={handleConfirm}
+          onCancel={handleCancel}
         />
       )}
 

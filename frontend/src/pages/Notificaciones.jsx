@@ -45,7 +45,7 @@ const NotificacionesPage = () => {
   const NotificacionesSinLeer =
     allNotificaciones.filter((n) => !n.is_read) || [];
 
-  const columnas = ["Mensaje", "Leída"];
+  const columnas = ["Mensaje"];
 
   return (
     <div className="p-6">
@@ -57,7 +57,6 @@ const NotificacionesPage = () => {
           data={NotificacionesSinLeer.map((n) => ({
             id: n.id,
             mensaje: n.mensaje,
-            leída: n.is_read === true ? "Sí" : "No",
           }))}
           marcarLeida={marcarLeida}
           searchable={true}
