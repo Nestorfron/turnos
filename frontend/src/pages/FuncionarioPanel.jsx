@@ -13,6 +13,8 @@ const FuncionarioPanel = () => {
   const navigate = useNavigate();
   const fechaActual = new Date();
 
+  const [loading, setLoading] = useState(true);
+
   const [dependencia, setDependencia] = useState(null);
   const [turnos, setTurnos] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
@@ -115,6 +117,8 @@ const FuncionarioPanel = () => {
       }
     };
     cargarDatos();
+    setLoading(false);
+
   }, [usuario, navigate]);
 
   const miTurno = useMemo(() => {
@@ -210,7 +214,7 @@ const FuncionarioPanel = () => {
     [licenciasMap, guardiasMap, licenciasMedicasMap]
   );
 
-  if (!dependencia || !turnos || !funcionarios || !guardias || !licencias || !licenciasMedicas || !extraordinariaGuardias) return <Loading />;
+  if (!dependencia || !turnos || !funcionarios || !guardias || !licencias || !licenciasMedicas || !extraordinariaGuardias || loading ) return <Loading />;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800">
