@@ -4,21 +4,13 @@ import dayjs from "dayjs";
 import Loading from "../components/Loading";
 import { useAppContext } from "../context/AppContext";
 import { fetchData, putData, postData, deleteData } from "../utils/api";
-import {
-  Pencil,
-  Home,
-  Plus,
-  Trash,
-  SearchX,
-  Eye,
-  EyeClosed,
-} from "lucide-react";
+import { Pencil, Home, Plus, Trash, FileText, BarChart3 } from "lucide-react";
 import AsignarTurnoModal from "../components/AsignarTurnoModal";
 import { estaTokenExpirado } from "../utils/tokenUtils.js";
 import ExtraordinariaGuardiaModal from "../components/ExtraorindariaGuaridaModal.jsx";
 import Table from "../components/Table.jsx";
 import ConfirmModal from "../components/ConfirmModal.jsx";
-
+import ModalEstadisticas from "../components/ModalEstadisticas.jsx";
 
 const EscalafonServicio = () => {
   const { usuario, getSolicitudes } = useAppContext();
@@ -59,8 +51,17 @@ const EscalafonServicio = () => {
 
   const [mostrarTabla, setMostrarTabla] = useState(false);
 
+  const [modalEstadisticas, setModalEstadisticas] = useState(null);
+
   const toggleTabla = () => {
     setMostrarTabla(!mostrarTabla);
+  };
+
+  const abrirModalEstadisticas = (funcionario) => {
+    setModalEstadisticas({
+      funcionario,
+      estadisticas: estadisticasFuncionario(funcionario.id),
+    });
   };
 
   const abrirModalEditarAsignacion = useCallback((funcionario) => {
@@ -122,13 +123,18 @@ const EscalafonServicio = () => {
         });
       }
 
-      setAccionPendiente(() => () =>
-        enviarNotificacion(
-          extraordinariaGuardiaForm.usuarioId,
-          `Se le asignó ${extraordinariaGuardiaForm.tipo} de ${extraordinariaGuardiaForm.comentario} el dia ${dayjs.utc(extraordinariaGuardiaForm.fechaInicio).format("DD/MM/YYYY")}`,
-          extraordinariaGuardiaForm.fechaInicio,
-          usuario?.token
-        )
+      setAccionPendiente(
+        () => () =>
+          enviarNotificacion(
+            extraordinariaGuardiaForm.usuarioId,
+            `Se le asignó ${extraordinariaGuardiaForm.tipo} de ${
+              extraordinariaGuardiaForm.comentario
+            } el dia ${dayjs
+              .utc(extraordinariaGuardiaForm.fechaInicio)
+              .format("DD/MM/YYYY")}`,
+            extraordinariaGuardiaForm.fechaInicio,
+            usuario?.token
+          )
       );
       setMensajeConfirm(`¿Desea enviar notificación al Funcionario?`);
       setShowConfirm(true);
@@ -160,13 +166,16 @@ const EscalafonServicio = () => {
     try {
       await deleteData(`extraordinaria-guardias/${item.id}`, usuario.token);
 
-      setAccionPendiente(() => () =>
-        enviarNotificacion(
-          item.usuario_id,
-          `Se eliminó  ${item.tipo} de ${item.comentario} el dia ${dayjs.utc(item.fecha_inicio).format("DD/MM/YYYY")}`,
-          item.fecha_inicio,
-          usuario?.token
-        )
+      setAccionPendiente(
+        () => () =>
+          enviarNotificacion(
+            item.usuario_id,
+            `Se eliminó  ${item.tipo} de ${item.comentario} el dia ${dayjs
+              .utc(item.fecha_inicio)
+              .format("DD/MM/YYYY")}`,
+            item.fecha_inicio,
+            usuario?.token
+          )
       );
       setMensajeConfirm(`¿Desea enviar notificación al Funcionario?`);
       setShowConfirm(true);
@@ -384,6 +393,24 @@ const EscalafonServicio = () => {
     }
   );
 
+  const estadisticasFuncionario = (id) => {
+    const totalLicencias = licencias.filter((l) => l.usuario_id === id);
+    const totalLicenciasMedicas = licenciasMedicas.filter(
+      (l) => l.usuario_id === id
+    );
+    const totalGuardias = guardias.filter((g) => g.usuario_id === id);
+    const totalExtraordinariaGuardias = extraordinariaGuardiasTodas.filter(
+      (g) => g.usuario_id === id
+    );
+
+    return {
+      totalLicencias,
+      totalLicenciasMedicas,
+      totalGuardias,
+      totalExtraordinariaGuardias,
+    };
+  };
+
   const funcionariosPorTurno = useCallback(
     (turnoId) =>
       funcionarios
@@ -406,6 +433,7 @@ const EscalafonServicio = () => {
     cargandoGuardias ||
     cargandoLicencias ||
     cargandoExtraordinariaGuardias ||
+    cargandoLicenciasMedicas ||
     !dependencia
   )
     return <Loading />;
@@ -701,12 +729,12 @@ const EscalafonServicio = () => {
         <Table
           title="Listado General"
           searchable={true}
-          columns={["Grado", "Nombre", "Estado", "Turno"]}
+          columns={["Grado", "Nombre", "Estado", "Turno", " "]}
           data={funcionariosOrdenados}
-          leftAlignColumns={["Nombre", "Estado", "Turno"]}
+          leftAlignColumns={["Nombre", "Turno"]}
           minWidthColumns={{
             Nombre: "min-w-[12rem]",
-            Estado: "min-w-[10rem]",
+            Estado: "min-w-[5rem]",
             Turno: "min-w-[10rem]",
           }}
           renderCell={(f, col) => {
@@ -725,6 +753,34 @@ const EscalafonServicio = () => {
                 ),
               };
             }
+            if (col === " ") {
+              {
+                return {
+                  content: (
+                    <>
+                      {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" || usuario?.is_admin === true ?
+                      <div className="flex justify-around items-center gap-2">
+                        <button
+                          onClick={() => abrirModalEstadisticas(f)}
+                          className="text-blue-600 hover:underline"
+                          title="Estadísticas"
+                        >
+                          <BarChart3 size={18} />
+                        </button>
+                        <Link
+                          to={`/funcionario/${f.id}/detalle`}
+                          className="text-blue-600 hover:underline"
+                          title="Licencias"
+                        >
+                          <FileText size={18} />
+                        </Link>
+                      </div> : "-"}
+                    </>
+                  ),
+                };
+              }
+            }
+
             if (col === "Turno") {
               const turnoNombre =
                 turnos.find((t) => t.id === f.turno_id)?.nombre ||
@@ -732,26 +788,15 @@ const EscalafonServicio = () => {
               return { content: turnoNombre };
             }
           }}
-          renderActions={(f) => {
-            if (
-              usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" ||
-              usuario?.is_admin
-            ) {
-              return (
-                <div className="flex justify-around items-center gap-2">
-                  <Link
-                    to={`/funcionario/${f.id}/detalle`}
-                    className="text-blue-600 hover:underline"
-                  >
-                    Licencias
-                  </Link>
-                </div>
-              );
-            } else {
-              return <span className="text-gray-500">Sin acciones.</span>;
-            }
-          }}
         />
+
+        {modalEstadisticas && (
+          <ModalEstadisticas
+            funcionario={modalEstadisticas.funcionario}
+            onClose={() => setModalEstadisticas(null)}
+            estadisticas={modalEstadisticas.estadisticas}
+          />
+        )}
 
         {asignarModalOpen && (
           <AsignarTurnoModal

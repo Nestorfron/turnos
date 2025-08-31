@@ -219,6 +219,14 @@ def listar_guardias():
     data = Guardia.query.all()
     return jsonify([x.serialize() for x in data]), 200
 
+@api.route('/usuarios/<int:usuario_id>/guardias', methods=['GET'])
+def obtener_todas_guardias_usuario(usuario_id):
+    usuario = Usuario.query.get_or_404(usuario_id)
+
+    return jsonify({
+        "guardias": [g.serialize() for g in usuario.guardias],
+    })
+
 # -------------------------------------------------------------------
 # EXTRAORDINARIA GUARDIAS
 # -------------------------------------------------------------------
@@ -450,6 +458,7 @@ def eliminar_licencia_medica(id):
 def listar_licencias_medicas():
     data = LicenciaMedica.query.all()
     return jsonify([x.serialize() for x in data]), 200
+
 
 # -------------------------------------------------------------------
 # SOLICITUDES CAMBIO
