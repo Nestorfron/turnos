@@ -315,8 +315,7 @@ const GuardiasPanel = () => {
             token
           )
         );
-        setMensajeConfirm(`¿Desea enviar notificación Funcionario?`);
-        setShowConfirm(true);
+        setModalData(null);
       }
       return;
     }
@@ -385,8 +384,7 @@ const GuardiasPanel = () => {
             token
           )
         );
-        setMensajeConfirm(`¿Desea enviar notificación Funcionario?`);
-        setShowConfirm(true);
+        setModalData(null);
       }
     }
   };
