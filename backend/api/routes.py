@@ -645,47 +645,77 @@ def obtener_usuario(id):
 
 @api.route('/usuarios/<int:id>', methods=['PUT'])
 @jwt_required()
-def actualizar_usuario(id):
-    body = request.json
-
+def editar_usuario(id):
     usuario = Usuario.query.get(id)
     if not usuario:
         return jsonify({"error": "Usuario no encontrado"}), 404
 
-    grado = body.get("grado", usuario.grado)
-    nombre = body.get("nombre", usuario.nombre)
-    correo = body.get("correo", usuario.correo)
-    rol_jerarquico = body.get("rol_jerarquico", usuario.rol_jerarquico)
-    fecha_ingreso = body.get("fecha_ingreso", usuario.fecha_ingreso)
-    dependencia_id = body.get("dependencia_id", usuario.dependencia_id)
-    zona_id = body.get("zona_id", usuario.zona_id)
-    estado = body.get("estado", usuario.estado)
-    turno_id = body.get("turno_id", usuario.turno_id)  
-    is_admin = body.get("is_admin", usuario.is_admin)
+    body = request.json
+    grado = body.get("grado")
+    nombre = body.get("nombre")
+    correo = body.get("correo")
+    password = body.get("password")
+    rol_jerarquico = body.get("rol_jerarquico")
+    dependencia_id = body.get("dependencia_id")
+    zona_id = body.get("zona_id")
+    estado = body.get("estado")
+    turno_id = body.get("turno_id")
 
-    if rol_jerarquico == 'JEFE_ZONA':
-        if not zona_id:
+    ROLES_VALIDOS = ['JEFE_ZONA', 'ADMINISTRADOR', 'FUNCIONARIO', 'JEFE_DEPENDENCIA']
+
+    # Validación de rol si se actualiza
+    if rol_jerarquico and rol_jerarquico not in ROLES_VALIDOS:
+        return jsonify({
+            "error": f"Rol jerárquico inválido. Debe ser uno de: {', '.join(ROLES_VALIDOS)}"
+        }), 400
+
+    # Validación de correo si cambia
+    if correo and correo != usuario.correo:
+        if Usuario.query.filter_by(correo=correo).first():
+            return jsonify({"error": "El correo ya está en uso"}), 400
+        usuario.correo = correo
+
+    # Validaciones según rol
+    rol_final = rol_jerarquico or usuario.rol_jerarquico
+
+    if rol_final == 'JEFE_ZONA':
+        if not zona_id and not usuario.zona_id:
             return jsonify({"error": "Un jefe de zona debe tener zona_id"}), 400
         dependencia_id = None
-    else:
-        if not dependencia_id:
-            return jsonify({"error": "Este usuario debe tener dependencia_id"}), 400
+
+    elif rol_final == 'ADMINISTRADOR':
+        dependencia_id = None
         zona_id = None
 
+    else:  # FUNCIONARIO o JEFE_DEPENDENCIA
+        if not dependencia_id and not usuario.dependencia_id:
+            return jsonify({
+                "error": f"Un usuario con rol {rol_final} debe tener dependencia_id"
+            }), 400
+        zona_id = None
 
-    usuario.grado = grado
-    usuario.nombre = nombre
-    usuario.correo = correo
-    usuario.rol_jerarquico = rol_jerarquico
-    usuario.fecha_ingreso = fecha_ingreso
-    usuario.dependencia_id = dependencia_id
-    usuario.zona_id = zona_id
-    usuario.estado = estado
-    usuario.turno_id = turno_id
-    usuario.is_admin = is_admin
+    # Actualizar los campos enviados
+    if grado is not None:
+        usuario.grado = grado
+    if nombre is not None:
+        usuario.nombre = nombre
+    if password:
+        usuario.password = generate_password_hash(password)
+    if rol_jerarquico is not None:
+        usuario.rol_jerarquico = rol_jerarquico
+    if dependencia_id is not None:
+        usuario.dependencia_id = dependencia_id
+    if zona_id is not None:
+        usuario.zona_id = zona_id
+    if estado is not None:
+        usuario.estado = estado
+    if turno_id is not None:
+        usuario.turno_id = turno_id
 
     db.session.commit()
+
     return jsonify(usuario.serialize()), 200
+
 
 @api.route('/usuarios/<int:id>/cambiar-password', methods=['PUT'])
 @jwt_required()
