@@ -774,6 +774,13 @@ const EscalafonServicio = () => {
                         >
                           <FileText size={18} />
                         </Link>
+                        <button
+                          onClick={() => abrirModalEditarAsignacion(f)}
+                          className="text-blue-600 hover:underline"
+                          title="Editar"
+                        >
+                          <Pencil size={18} />
+                          </button>
                       </div> : "-"}
                     </>
                   ),
