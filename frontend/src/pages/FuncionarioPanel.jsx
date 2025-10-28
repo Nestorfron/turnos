@@ -304,11 +304,11 @@ const FuncionarioPanel = () => {
         {/* Mis Próximas Guardias */}
         <Table
           title={`Mis Próximas Guardias`}
-          columns={["Funcionario", ...dias.map((d) => d.format("DD/MM"))]}
+          columns={["Funcionario", ...dias.map((d) => d.format("DD/MM") + " " + d.format("ddd"))]}
           data={funcionariosPorTurno(miTurno.id).map((f) => {
             const row = { Funcionario: `G${f.grado} ${f.nombre}` };
             dias.forEach((d) => {
-              row[d.format("DD/MM")] = getCelda(f, d);
+              row[d.format("DD/MM") + " " + d.format("ddd")] = getCelda(f, d);
             });
             return row;
           })}

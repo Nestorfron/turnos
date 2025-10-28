@@ -307,15 +307,15 @@ const GuardiasPanel = () => {
       if (creada) {
         setGuardias((prev) => [...prev, creada]);
         // Guardar acción pendiente y mensaje para el modal
-        setAccionPendiente(() => () =>
-          enviarNotificacion(
-            usuario.id,
-            `Se agregó un descanso el ${fechaStr}`,
-            fechaStr,
-            token
-          )
-        );
-        setModalData(null);
+        // setAccionPendiente(() => () =>
+        //   enviarNotificacion(
+        //     usuario.id,
+        //     `Se agregó un descanso el ${fechaStr}`,
+        //     fechaStr,
+        //     token
+        //   )
+        // );
+        // setModalData(null);
       }
       return;
     }
@@ -348,16 +348,16 @@ const GuardiasPanel = () => {
   
         if (creada) {
           setGuardias((prev) => [...prev, creada]);
-          setAccionPendiente(() => () =>
-            enviarNotificacion(
-              usuario.id,
-              `Se agregó ${nuevoTipo} el ${fechaBloqueStr}`,
-              fechaBloqueStr,
-              token
-            )
-          );
-          setMensajeConfirm(`¿Desea enviar notificación al usuario por la fecha ${fechaBloqueStr}?`);
-          setShowConfirm(true);
+          // setAccionPendiente(() => () =>
+          //   enviarNotificacion(
+          //     usuario.id,
+          //     `Se agregó ${nuevoTipo} el ${fechaBloqueStr}`,
+          //     fechaBloqueStr,
+          //     token
+          //   )
+          // );
+          // setMensajeConfirm(`¿Desea enviar notificación al usuario por la fecha ${fechaBloqueStr}?`);
+          // setShowConfirm(true);
         }
       }
     } else {
@@ -376,15 +376,15 @@ const GuardiasPanel = () => {
   
       if (creada) {
         setGuardias((prev) => [...prev, creada]);
-        setAccionPendiente(() => () =>
-          enviarNotificacion(
-            usuario.id,
-            `Se agregó ${nueva.tipo} el ${fechaStr}`,
-            fechaStr,
-            token
-          )
-        );
-        setModalData(null);
+        // setAccionPendiente(() => () =>
+        //   enviarNotificacion(
+        //     usuario.id,
+        //     `Se agregó ${nueva.tipo} el ${fechaStr}`,
+        //     fechaStr,
+        //     token
+        //   )
+        // );
+        // setModalData(null);
       }
     }
   };
