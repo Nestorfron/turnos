@@ -575,6 +575,7 @@ const EscalafonServicio = () => {
         <div
           className={mostrarTabla ? "bg-gray-100 rounded-md shadow mb-6" : ""}
         >
+          {usuario?.rol_jerarquico === "JEFE_DEPENDENCIA" || usuario?.is_admin === true ? 
           <div className="flex items-center justify-between">
             <button
               onClick={abrirModalNuevaGuardia}
@@ -588,7 +589,7 @@ const EscalafonServicio = () => {
             >
               {mostrarTabla ? "Cerrar" : "Ver todas"}
             </button>
-          </div>
+          </div>: ""}
 
           {mostrarTabla && (
             <Table
