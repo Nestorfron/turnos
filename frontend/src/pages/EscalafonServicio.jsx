@@ -439,7 +439,7 @@ const EscalafonServicio = () => {
     return <Loading />;
 
   return (
-    <div className="min-h-screen bg-gray-50 px-2 font-sans text-gray-800">
+    <div className="min-h-screen bg-gray-50 px-2 font-sans text-gray-800 pb-6">
       <header className="mb-8">
         <div className="bg-white rounded-md shadow p-4 my-4 py-4">
           <h2 className="text-2xl font-bold text-blue-900 mb-2">
@@ -723,7 +723,7 @@ const EscalafonServicio = () => {
       </section>
 
       {/* Tabla General */}
-      <section className="space-y-10 bg-white rounded-md shadow px-2 mb-6">
+      <section className="space-y-10 bg-white rounded-md shadow px-2 mb-6 pb-10">
         <h1 className="text-xl font-semibold text-blue-900 my-4 py-4  text-center">
           PERSONAL
         </h1>
