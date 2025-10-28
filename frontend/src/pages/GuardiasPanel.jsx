@@ -556,7 +556,7 @@ const GuardiasPanel = () => {
   );
 
   return (
-    <div className="p-6 space-y-2 bg-gray-50 min-h-screen">
+    <div className="mb-6 p-6 space-y-2 bg-gray-50 min-h-screen">
       <h1 className="text-2xl font-bold text-blue-900 mb-6">
         Escalafón de Servicio
       </h1>
@@ -609,7 +609,7 @@ const GuardiasPanel = () => {
       ) : (
         <div
           id="contenedor-tablas"
-          className="mb-6 overflow-x-auto bg-white rounded shadow"
+          className="mb-6 pb-6 overflow-x-auto bg-white rounded shadow"
         >
           {turnos.map((turno) => {
             const lista = funcionariosPorTurno(turno.id);
