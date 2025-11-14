@@ -25,7 +25,7 @@ jwt = JWTManager(app)
 migrate = Migrate(app, db)
 
 # Flask-Admin
-admin = Admin(app, name='Panel Admin', template_mode='bootstrap3')
+admin = Admin(app, name='Panel Admin')
 admin.add_view(ModelView(Jefatura, db.session))
 admin.add_view(ModelView(Zona, db.session))
 admin.add_view(ModelView(Dependencia, db.session))
