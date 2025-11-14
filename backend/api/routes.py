@@ -780,10 +780,6 @@ def login():
 
     if not usuario or not check_password_hash(usuario.password, password):
         return jsonify({"error": "Usuario o contraseña incorrectos"}), 401
-
-    if usuario.estado and usuario.estado != "activo":
-        return jsonify({"error": "Usuario no activo"}), 403
-
     token = create_access_token(identity=str(usuario.id))
 
     return jsonify({
